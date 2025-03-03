@@ -38,7 +38,6 @@ _coq_project
 # Ignore compiled files from CMake
 CMakeFiles/
 CMakeCache.txt
-Makefile
 
 
 # Ignore all `.log` files
@@ -62,3 +61,7 @@ Thumbs.db
 # Ignore build artifacts
 /dist/
 /build/
+
+my_first_proof.v
+
+.DS_Store
