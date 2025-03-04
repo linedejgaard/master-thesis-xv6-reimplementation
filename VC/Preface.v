@@ -168,9 +168,9 @@
 (*** Check for the right version of VST *)
 Require Import Coq.Strings.String.
 Open Scope string.
-Require Import VST.veric.version.  (* If this line fails, it means
+Require Import VST.veric.version. (* If this line fails, it means
   you don't have a VST installed. *)
-Definition release_needed := "2.13".
+Definition release_needed := "2.15".
 Goal release = release_needed.
 reflexivity ||
 let need := constr:(release_needed) in let need := eval hnf in need in

@@ -61,6 +61,9 @@
   We start by importing floyd.proofauto, as usual, but also
   the floyd.VSU support. *)
 
+Require Import VST.msl.Coqlib2.
+  
+
 Require Import VST.floyd.proofauto.
 Require Import VST.floyd.VSU.
 

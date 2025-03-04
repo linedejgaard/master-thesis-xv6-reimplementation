@@ -18,6 +18,7 @@ struct run {
   struct run *next; 
 };
 
+// kmem is now a single instance of this struct, allocated in global memory.
 struct {
   struct spinlock lock;
   struct run *freelist;
@@ -44,7 +45,7 @@ freerange(void *pa_start, void *pa_end)
 // call to kalloc().  (The exception is when
 // initializing the allocator; see kinit above.)
 void
-kfree(void *pa)
+kfree(void *pa) // LINE: kind of add ( push)
 {
   struct run *r;
 
@@ -66,7 +67,7 @@ kfree(void *pa)
 // Returns a pointer that the kernel can use.
 // Returns 0 if the memory cannot be allocated.
 void *
-kalloc(void)
+kalloc(void) // LINE: kind of remove / pop
 {
   struct run *r;
 
