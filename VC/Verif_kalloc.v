@@ -101,7 +101,7 @@ Require Import VC.kalloc.
 Definition Vprog : varspecs.  mk_varspecs prog. Defined.
 Require Import VC.hints.  (* Import special hints for this tutorial. *)
 
-
+From iris.heap_lang Require Import lang proofmode notation.
 
 
 (*  
@@ -110,7 +110,8 @@ Require Import VC.hints.  (* Import special hints for this tutorial. *)
     - Function-body correctness proofs, one per file. 
 *)
 
-(* Functional model *)
+(* ----Functional model---- *)
+
 (* Define the type of memory addresses *)
 Definition addr := nat.
 
@@ -123,6 +124,8 @@ Record kmem := {
   lock : bool;            (* Indicates whether the lock is acquired or not *)
   freelist : option run;  (* Pointer to the free list of memory blocks *)
 }.
+
+
 
 (*Definition lock : base.val :=
   λ: "l", repeat (CAS "l" unlocked locked).
