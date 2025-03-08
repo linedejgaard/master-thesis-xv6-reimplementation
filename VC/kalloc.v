@@ -76,22 +76,15 @@ Definition ___compcert_va_float64 : ident := $"__compcert_va_float64".
 Definition ___compcert_va_int32 : ident := $"__compcert_va_int32".
 Definition ___compcert_va_int64 : ident := $"__compcert_va_int64".
 Definition ___stringlit_1 : ident := $"__stringlit_1".
-Definition ___stringlit_2 : ident := $"__stringlit_2".
-Definition _acquire : ident := $"acquire".
-Definition _cpu : ident := $"cpu".
 Definition _end : ident := $"end".
 Definition _freelist : ident := $"freelist".
 Definition _freerange : ident := $"freerange".
-Definition _initlock : ident := $"initlock".
 Definition _kalloc : ident := $"kalloc".
 Definition _kfree : ident := $"kfree".
 Definition _kinit : ident := $"kinit".
 Definition _kmem : ident := $"kmem".
-Definition _lock : ident := $"lock".
-Definition _locked : ident := $"locked".
 Definition _main : ident := $"main".
 Definition _memset : ident := $"memset".
-Definition _name : ident := $"name".
 Definition _next : ident := $"next".
 Definition _p : ident := $"p".
 Definition _pa : ident := $"pa".
@@ -99,27 +92,16 @@ Definition _pa_end : ident := $"pa_end".
 Definition _pa_start : ident := $"pa_start".
 Definition _panic : ident := $"panic".
 Definition _r : ident := $"r".
-Definition _release : ident := $"release".
 Definition _run : ident := $"run".
-Definition _spinlock : ident := $"spinlock".
 Definition _t'1 : ident := 128%positive.
 Definition _t'2 : ident := 129%positive.
 Definition _t'3 : ident := 130%positive.
 
-Definition v___stringlit_2 := {|
+Definition v___stringlit_1 := {|
   gvar_info := (tarray tschar 6);
   gvar_init := (Init_int8 (Int.repr 107) :: Init_int8 (Int.repr 102) ::
                 Init_int8 (Int.repr 114) :: Init_int8 (Int.repr 101) ::
                 Init_int8 (Int.repr 101) :: Init_int8 (Int.repr 0) :: nil);
-  gvar_readonly := true;
-  gvar_volatile := false
-|}.
-
-Definition v___stringlit_1 := {|
-  gvar_info := (tarray tschar 5);
-  gvar_init := (Init_int8 (Int.repr 107) :: Init_int8 (Int.repr 109) ::
-                Init_int8 (Int.repr 101) :: Init_int8 (Int.repr 109) ::
-                Init_int8 (Int.repr 0) :: nil);
   gvar_readonly := true;
   gvar_volatile := false
 |}.
@@ -133,7 +115,7 @@ Definition v_end := {|
 
 Definition v_kmem := {|
   gvar_info := (Tstruct __595 noattr);
-  gvar_init := (Init_space 32 :: nil);
+  gvar_init := (Init_space 8 :: nil);
   gvar_readonly := false;
   gvar_volatile := false
 |}.
@@ -145,26 +127,16 @@ Definition f_kinit := {|
   fn_vars := nil;
   fn_temps := nil;
   fn_body :=
-(Ssequence
-  (Scall None
-    (Evar _initlock (Tfunction
-                      ((tptr (Tstruct _spinlock noattr)) :: (tptr tschar) ::
-                       nil) tvoid cc_default))
-    ((Eaddrof
-       (Efield (Evar _kmem (Tstruct __595 noattr)) _lock
-         (Tstruct _spinlock noattr)) (tptr (Tstruct _spinlock noattr))) ::
-     (Evar ___stringlit_1 (tarray tschar 5)) :: nil))
-  (Scall None
-    (Evar _freerange (Tfunction ((tptr tvoid) :: (tptr tvoid) :: nil) tvoid
-                       cc_default))
-    ((Evar _end (tarray tschar 0)) ::
-     (Ecast
-       (Ebinop Oadd (Econst_long (Int64.repr 2147483648) tlong)
-         (Ebinop Omul
-           (Ebinop Omul (Econst_int (Int.repr 128) tint)
-             (Econst_int (Int.repr 1024) tint) tint)
-           (Econst_int (Int.repr 1024) tint) tint) tlong) (tptr tvoid)) ::
-     nil)))
+(Scall None
+  (Evar _freerange (Tfunction ((tptr tvoid) :: (tptr tvoid) :: nil) tvoid
+                     cc_default))
+  ((Evar _end (tarray tschar 0)) ::
+   (Ecast
+     (Ebinop Oadd (Econst_long (Int64.repr 2147483648) tlong)
+       (Ebinop Omul
+         (Ebinop Omul (Econst_int (Int.repr 128) tint)
+           (Econst_int (Int.repr 1024) tint) tint)
+         (Econst_int (Int.repr 1024) tint) tint) tlong) (tptr tvoid)) :: nil))
 |}.
 
 Definition f_freerange := {|
@@ -235,7 +207,7 @@ Definition f_kfree := {|
     (Sifthenelse (Etempvar _t'2 tint)
       (Scall None
         (Evar _panic (Tfunction ((tptr tschar) :: nil) tvoid cc_default))
-        ((Evar ___stringlit_2 (tarray tschar 6)) :: nil))
+        ((Evar ___stringlit_1 (tarray tschar 6)) :: nil))
       Sskip))
   (Ssequence
     (Scall None
@@ -247,37 +219,19 @@ Definition f_kfree := {|
       (Sset _r
         (Ecast (Etempvar _pa (tptr tvoid)) (tptr (Tstruct _run noattr))))
       (Ssequence
-        (Scall None
-          (Evar _acquire (Tfunction
-                           ((tptr (Tstruct _spinlock noattr)) :: nil) tvoid
-                           cc_default))
-          ((Eaddrof
-             (Efield (Evar _kmem (Tstruct __595 noattr)) _lock
-               (Tstruct _spinlock noattr)) (tptr (Tstruct _spinlock noattr))) ::
-           nil))
         (Ssequence
-          (Ssequence
-            (Sset _t'3
-              (Efield (Evar _kmem (Tstruct __595 noattr)) _freelist
-                (tptr (Tstruct _run noattr))))
-            (Sassign
-              (Efield
-                (Ederef (Etempvar _r (tptr (Tstruct _run noattr)))
-                  (Tstruct _run noattr)) _next (tptr (Tstruct _run noattr)))
-              (Etempvar _t'3 (tptr (Tstruct _run noattr)))))
-          (Ssequence
-            (Sassign
-              (Efield (Evar _kmem (Tstruct __595 noattr)) _freelist
-                (tptr (Tstruct _run noattr)))
-              (Etempvar _r (tptr (Tstruct _run noattr))))
-            (Scall None
-              (Evar _release (Tfunction
-                               ((tptr (Tstruct _spinlock noattr)) :: nil)
-                               tvoid cc_default))
-              ((Eaddrof
-                 (Efield (Evar _kmem (Tstruct __595 noattr)) _lock
-                   (Tstruct _spinlock noattr))
-                 (tptr (Tstruct _spinlock noattr))) :: nil))))))))
+          (Sset _t'3
+            (Efield (Evar _kmem (Tstruct __595 noattr)) _freelist
+              (tptr (Tstruct _run noattr))))
+          (Sassign
+            (Efield
+              (Ederef (Etempvar _r (tptr (Tstruct _run noattr)))
+                (Tstruct _run noattr)) _next (tptr (Tstruct _run noattr)))
+            (Etempvar _t'3 (tptr (Tstruct _run noattr)))))
+        (Sassign
+          (Efield (Evar _kmem (Tstruct __595 noattr)) _freelist
+            (tptr (Tstruct _run noattr)))
+          (Etempvar _r (tptr (Tstruct _run noattr))))))))
 |}.
 
 Definition f_kalloc := {|
@@ -289,62 +243,40 @@ Definition f_kalloc := {|
                (_t'1, (tptr (Tstruct _run noattr))) :: nil);
   fn_body :=
 (Ssequence
-  (Scall None
-    (Evar _acquire (Tfunction ((tptr (Tstruct _spinlock noattr)) :: nil)
-                     tvoid cc_default))
-    ((Eaddrof
-       (Efield (Evar _kmem (Tstruct __595 noattr)) _lock
-         (Tstruct _spinlock noattr)) (tptr (Tstruct _spinlock noattr))) ::
-     nil))
+  (Sset _r
+    (Efield (Evar _kmem (Tstruct __595 noattr)) _freelist
+      (tptr (Tstruct _run noattr))))
   (Ssequence
-    (Sset _r
-      (Efield (Evar _kmem (Tstruct __595 noattr)) _freelist
-        (tptr (Tstruct _run noattr))))
+    (Sifthenelse (Etempvar _r (tptr (Tstruct _run noattr)))
+      (Ssequence
+        (Sset _t'1
+          (Efield
+            (Ederef (Etempvar _r (tptr (Tstruct _run noattr)))
+              (Tstruct _run noattr)) _next (tptr (Tstruct _run noattr))))
+        (Sassign
+          (Efield (Evar _kmem (Tstruct __595 noattr)) _freelist
+            (tptr (Tstruct _run noattr)))
+          (Etempvar _t'1 (tptr (Tstruct _run noattr)))))
+      Sskip)
     (Ssequence
       (Sifthenelse (Etempvar _r (tptr (Tstruct _run noattr)))
-        (Ssequence
-          (Sset _t'1
-            (Efield
-              (Ederef (Etempvar _r (tptr (Tstruct _run noattr)))
-                (Tstruct _run noattr)) _next (tptr (Tstruct _run noattr))))
-          (Sassign
-            (Efield (Evar _kmem (Tstruct __595 noattr)) _freelist
-              (tptr (Tstruct _run noattr)))
-            (Etempvar _t'1 (tptr (Tstruct _run noattr)))))
-        Sskip)
-      (Ssequence
         (Scall None
-          (Evar _release (Tfunction
-                           ((tptr (Tstruct _spinlock noattr)) :: nil) tvoid
-                           cc_default))
-          ((Eaddrof
-             (Efield (Evar _kmem (Tstruct __595 noattr)) _lock
-               (Tstruct _spinlock noattr)) (tptr (Tstruct _spinlock noattr))) ::
-           nil))
-        (Ssequence
-          (Sifthenelse (Etempvar _r (tptr (Tstruct _run noattr)))
-            (Scall None
-              (Evar _memset (Tfunction ((tptr tvoid) :: tint :: tuint :: nil)
-                              (tptr tvoid) cc_default))
-              ((Ecast (Etempvar _r (tptr (Tstruct _run noattr)))
-                 (tptr tschar)) :: (Econst_int (Int.repr 5) tint) ::
-               (Econst_int (Int.repr 4096) tint) :: nil))
-            Sskip)
-          (Sreturn (Some (Ecast (Etempvar _r (tptr (Tstruct _run noattr)))
-                           (tptr tvoid)))))))))
+          (Evar _memset (Tfunction ((tptr tvoid) :: tint :: tuint :: nil)
+                          (tptr tvoid) cc_default))
+          ((Ecast (Etempvar _r (tptr (Tstruct _run noattr))) (tptr tschar)) ::
+           (Econst_int (Int.repr 5) tint) ::
+           (Econst_int (Int.repr 4096) tint) :: nil))
+        Sskip)
+      (Sreturn (Some (Ecast (Etempvar _r (tptr (Tstruct _run noattr)))
+                       (tptr tvoid)))))))
 |}.
 
 Definition composites : list composite_definition :=
-(Composite _spinlock Struct
-   (Member_plain _locked tuint :: Member_plain _name (tptr tschar) ::
-    Member_plain _cpu (tptr (Tstruct _cpu noattr)) :: nil)
-   noattr ::
- Composite _run Struct
+(Composite _run Struct
    (Member_plain _next (tptr (Tstruct _run noattr)) :: nil)
    noattr ::
  Composite __595 Struct
-   (Member_plain _lock (Tstruct _spinlock noattr) ::
-    Member_plain _freelist (tptr (Tstruct _run noattr)) :: nil)
+   (Member_plain _freelist (tptr (Tstruct _run noattr)) :: nil)
    noattr :: nil).
 
 Definition global_definitions : list (ident * globdef fundef type) :=
@@ -427,8 +359,7 @@ Definition global_definitions : list (ident * globdef fundef type) :=
    Gfun(External (EF_runtime "__compcert_i64_umulh"
                    (mksignature (AST.Xlong :: AST.Xlong :: nil) AST.Xlong
                      cc_default)) (tulong :: tulong :: nil) tulong
-     cc_default)) :: (___stringlit_2, Gvar v___stringlit_2) ::
- (___stringlit_1, Gvar v___stringlit_1) ::
+     cc_default)) :: (___stringlit_1, Gvar v___stringlit_1) ::
  (___builtin_bswap64,
    Gfun(External (EF_builtin "__builtin_bswap64"
                    (mksignature (AST.Xlong :: nil) AST.Xlong cc_default))
@@ -603,20 +534,6 @@ Definition global_definitions : list (ident * globdef fundef type) :=
    Gfun(External (EF_external "panic"
                    (mksignature (AST.Xptr :: nil) AST.Xvoid cc_default))
      ((tptr tschar) :: nil) tvoid cc_default)) ::
- (_acquire,
-   Gfun(External (EF_external "acquire"
-                   (mksignature (AST.Xptr :: nil) AST.Xvoid cc_default))
-     ((tptr (Tstruct _spinlock noattr)) :: nil) tvoid cc_default)) ::
- (_initlock,
-   Gfun(External (EF_external "initlock"
-                   (mksignature (AST.Xptr :: AST.Xptr :: nil) AST.Xvoid
-                     cc_default))
-     ((tptr (Tstruct _spinlock noattr)) :: (tptr tschar) :: nil) tvoid
-     cc_default)) ::
- (_release,
-   Gfun(External (EF_external "release"
-                   (mksignature (AST.Xptr :: nil) AST.Xvoid cc_default))
-     ((tptr (Tstruct _spinlock noattr)) :: nil) tvoid cc_default)) ::
  (_memset,
    Gfun(External (EF_external "memset"
                    (mksignature (AST.Xptr :: AST.Xint :: AST.Xint :: nil)
@@ -630,26 +547,26 @@ Definition global_definitions : list (ident * globdef fundef type) :=
 
 Definition public_idents : list ident :=
 (_kalloc :: _kfree :: _freerange :: _kinit :: _kmem :: _end :: _memset ::
- _release :: _initlock :: _acquire :: _panic :: ___builtin_debug ::
- ___builtin_write32_reversed :: ___builtin_write16_reversed ::
- ___builtin_read32_reversed :: ___builtin_read16_reversed ::
- ___builtin_fnmsub :: ___builtin_fnmadd :: ___builtin_fmsub ::
- ___builtin_fmadd :: ___builtin_fmin :: ___builtin_fmax ::
- ___builtin_expect :: ___builtin_unreachable :: ___builtin_va_end ::
- ___builtin_va_copy :: ___builtin_va_arg :: ___builtin_va_start ::
- ___builtin_membar :: ___builtin_annot_intval :: ___builtin_annot ::
- ___builtin_sel :: ___builtin_memcpy_aligned :: ___builtin_sqrt ::
- ___builtin_fsqrt :: ___builtin_fabsf :: ___builtin_fabs ::
- ___builtin_ctzll :: ___builtin_ctzl :: ___builtin_ctz :: ___builtin_clzll ::
- ___builtin_clzl :: ___builtin_clz :: ___builtin_bswap16 ::
- ___builtin_bswap32 :: ___builtin_bswap :: ___builtin_bswap64 ::
- ___compcert_i64_umulh :: ___compcert_i64_smulh :: ___compcert_i64_sar ::
- ___compcert_i64_shr :: ___compcert_i64_shl :: ___compcert_i64_umod ::
- ___compcert_i64_smod :: ___compcert_i64_udiv :: ___compcert_i64_sdiv ::
- ___compcert_i64_utof :: ___compcert_i64_stof :: ___compcert_i64_utod ::
- ___compcert_i64_stod :: ___compcert_i64_dtou :: ___compcert_i64_dtos ::
- ___compcert_va_composite :: ___compcert_va_float64 ::
- ___compcert_va_int64 :: ___compcert_va_int32 :: nil).
+ _panic :: ___builtin_debug :: ___builtin_write32_reversed ::
+ ___builtin_write16_reversed :: ___builtin_read32_reversed ::
+ ___builtin_read16_reversed :: ___builtin_fnmsub :: ___builtin_fnmadd ::
+ ___builtin_fmsub :: ___builtin_fmadd :: ___builtin_fmin ::
+ ___builtin_fmax :: ___builtin_expect :: ___builtin_unreachable ::
+ ___builtin_va_end :: ___builtin_va_copy :: ___builtin_va_arg ::
+ ___builtin_va_start :: ___builtin_membar :: ___builtin_annot_intval ::
+ ___builtin_annot :: ___builtin_sel :: ___builtin_memcpy_aligned ::
+ ___builtin_sqrt :: ___builtin_fsqrt :: ___builtin_fabsf ::
+ ___builtin_fabs :: ___builtin_ctzll :: ___builtin_ctzl :: ___builtin_ctz ::
+ ___builtin_clzll :: ___builtin_clzl :: ___builtin_clz ::
+ ___builtin_bswap16 :: ___builtin_bswap32 :: ___builtin_bswap ::
+ ___builtin_bswap64 :: ___compcert_i64_umulh :: ___compcert_i64_smulh ::
+ ___compcert_i64_sar :: ___compcert_i64_shr :: ___compcert_i64_shl ::
+ ___compcert_i64_umod :: ___compcert_i64_smod :: ___compcert_i64_udiv ::
+ ___compcert_i64_sdiv :: ___compcert_i64_utof :: ___compcert_i64_stof ::
+ ___compcert_i64_utod :: ___compcert_i64_stod :: ___compcert_i64_dtou ::
+ ___compcert_i64_dtos :: ___compcert_va_composite ::
+ ___compcert_va_float64 :: ___compcert_va_int64 :: ___compcert_va_int32 ::
+ nil).
 
 Definition prog : Clight.program := 
   mkprogram composites global_definitions public_idents _main Logic.I.
