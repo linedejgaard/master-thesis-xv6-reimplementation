@@ -203,7 +203,7 @@ Proof. intros [|][|]; simpl; congruence. Qed.
 Definition is_list_pre (P : val → iProp Σ) (F : option loc -d> iPropO Σ) :option loc -d> iPropO Σ := 
   λ v, match v with
   | None => True
-  | Some l => ∃(t : option loc), l ↦□ (option_loc_to_val t)%V ∗ (*P (#l)%V ∗ *) ▷ F t
+  | Some l => ∃(t : option loc), l ↦□ (option_loc_to_val t)%V (*∗ P (option_loc_to_val t)%V*) ∗ ▷ F t
 end%I.
 
 (* Ensures that the function used in the fixpoint combinator converges and is well-behaved.
@@ -236,8 +236,8 @@ destruct v as [l|].
 - rewrite is_list_unfold; iSplitR; eauto.
 Qed.
 
-Definition kmem_inv P v :=
-  (∃ l ol', ⌜v = #l⌝ ∗ l ↦ option_loc_to_val ol' ∗ is_list P ol')%I.
+Definition kmem_inv P n := (* hd is stored at location l *)
+  (∃ l next, ⌜n = #l⌝ ∗ l ↦ option_loc_to_val next ∗ is_list P next)%I.
 
 (*
   inv is a construct in the Iris framework used to define invariants.
@@ -281,8 +281,8 @@ Theorem kfree_spec P hd :
   iInv N as (ℓ'' v'') "(>% & >Hl & Hlist)" "Hclose"; simplify_eq.
   destruct (decide (v' = v'')) as [->|Hne].
   - wp_cmpxchg_suc. { destruct v''; left; done. }
-    iMod (pointsto_persist with "Hl'") as "Hl'".
-    iMod ("Hclose" with "[HP  Hl Hl' Hlist]") as "_".
+    iMod (pointsto_persist with "Hl'") as "Hl'". (* takes a points-to assertion Hl', makes it persistent, and renames the resulting hypothesis to Hl'. *)
+    iMod ("Hclose" with "[HP  Hl Hl' Hlist]") as "_". (* this line closes an invariant (or performs a necessary logical step) using the specified hypotheses HP, Hl, Hl', and Hlist, and then discards the result. *)
     { iNext; iExists _, (Some ℓ'); iFrame; iSplit; first done;
       rewrite (is_list_unfold _ (Some _)) /=. 
       iExists v''; iFrame.
