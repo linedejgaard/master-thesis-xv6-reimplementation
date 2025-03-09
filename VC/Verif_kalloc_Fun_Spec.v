@@ -200,7 +200,7 @@ Proof. intros [|][|]; simpl; congruence. Qed.
     - Returns a non-expansive function of type `option loc -d> iPropO Σ` that describes the properties of the entire list.
     The function returns another non-expansive function (option loc -d> iPropO Σ) that takes an option loc and returns an Iris proposition (iPropO Σ).
 *)
-Definition is_list_pre (P : val → iProp Σ) (F : option loc -d> iPropO Σ) :option loc -d> iPropO Σ := 
+Definition is_list_pre (F : option loc -d> iPropO Σ) :option loc -d> iPropO Σ := 
   λ v, match v with
   | None => True
   | Some l => ∃(t : option loc), l ↦□ (option_loc_to_val t)%V (*∗ P (option_loc_to_val t)%V*) ∗ ▷ F t
@@ -209,22 +209,22 @@ end%I.
 (* Ensures that the function used in the fixpoint combinator converges and is well-behaved.
    This means proving properties like contractiveness to guarantee that the recursive definition is sound, terminates correctly, and is suitable for use in formal proofs and reasoning. 
 *)
-Local Instance is_list_contr (P : val → iProp Σ) : Contractive (is_list_pre P).
+Local Instance is_list_contr  : Contractive (is_list_pre).
 Proof. solve_contractive. Qed.
 
-Definition is_list_def (P : val -> iProp Σ) := fixpoint (is_list_pre P).
-Definition is_list_aux P : seal (@is_list_def P). Proof. by eexists. Qed.
-Definition is_list P := unseal (is_list_aux P).
-Definition is_list_eq P : @is_list P = @is_list_def P := seal_eq (is_list_aux P).
+Definition is_list_def := fixpoint (is_list_pre).
+Definition is_list_aux : seal (@is_list_def ). Proof. by eexists. Qed.
+Definition is_list := unseal (is_list_aux ).
+Definition is_list_eq : @is_list = @is_list_def := seal_eq (is_list_aux ).
 
-Lemma is_list_unfold (P : val → iProp Σ) v :
-is_list P v ⊣⊢ is_list_pre P (is_list P) v.
+Lemma is_list_unfold  v :
+  is_list v ⊣⊢ is_list_pre (is_list) v.
 Proof.
-rewrite is_list_eq. apply (fixpoint_unfold (is_list_pre P)).
+rewrite is_list_eq. apply (fixpoint_unfold (is_list_pre)).
 Qed.
 
-Lemma is_list_dup (P : val → iProp Σ) v :
-is_list P v -∗ is_list P v ∗ match v with
+Lemma is_list_dup  v :
+is_list v -∗ is_list v ∗ match v with
   | None => True
   | Some l => ∃ t, l ↦□ (option_loc_to_val t)%V
   end.
@@ -232,12 +232,12 @@ Proof.
 iIntros "Hkmem". iDestruct (is_list_unfold with "Hkmem") as "Hkmem".
 destruct v as [l|].
 - iDestruct "Hkmem" as (next) "(#Hl & ?)".
-  rewrite (is_list_unfold _ (Some _)). iSplitL; iExists _; by iFrame.
+  rewrite (is_list_unfold (Some _)). iSplitL; iExists _; by iFrame.
 - rewrite is_list_unfold; iSplitR; eauto.
 Qed.
 
-Definition kmem_inv P n := (* hd is stored at location l *)
-  (∃ l next, ⌜n = #l⌝ ∗ l ↦ option_loc_to_val next ∗ is_list P next)%I.
+Definition kmem_inv n := (* hd is stored at location l *)
+  (∃ l next, ⌜n = #l⌝ ∗ l ↦ option_loc_to_val next ∗ is_list next)%I.
 
 (*
   inv is a construct in the Iris framework used to define invariants.
@@ -248,24 +248,24 @@ Definition kmem_inv P n := (* hd is stored at location l *)
   kmem_inv: Describes the properties that the value v must satisfy, which involve being a location that points to the head of a linked list.
 
 *)
-Definition is_kmem (P : val → iProp Σ)  hd :=
-  inv N (kmem_inv P hd).
+Definition is_kmem hd :=
+  inv N (kmem_inv hd).
 
-Theorem new_kmem_spec P :
-  {{{ True }}} new_kmem #() {{{ s, RET s; is_kmem P s }}}.
+Theorem new_kmem_spec :
+  {{{ True }}} new_kmem #() {{{ s, RET s; is_kmem s }}}.
   Proof.
     iIntros (ϕ) "_ Hpost".
     wp_lam. (* lambda functions *)
     wp_alloc ℓ as "Hl". (* used where ref?? *)
     (* allocates an invariant kmem_inv P #ℓ using the resources provided by the hypothesis Hl, and names the invariant Hinv. *)
-    iMod (inv_alloc N ⊤ (kmem_inv P #ℓ) with "[Hl]") as "Hinv".
+    iMod (inv_alloc N ⊤ (kmem_inv #ℓ) with "[Hl]") as "Hinv".
     { iNext; iExists ℓ, None; iFrame;
       by iSplit; last (iApply is_list_unfold). }
     by iApply "Hpost".
   Qed.
 
 Theorem kfree_spec P hd :
-  {{{ is_kmem P hd ∗ P hd }}} kfree_rep hd {{{ RET #(); True }}} . (* panic also returns #() *)
+  {{{ is_kmem hd ∗ P hd }}} kfree_rep hd {{{ RET #(); True }}} . (* panic also returns #() *)
   Proof.
   iStartProof.
   iIntros (Φ) "[#Hkmem HP] HΦ".
@@ -284,7 +284,7 @@ Theorem kfree_spec P hd :
     iMod (pointsto_persist with "Hl'") as "Hl'". (* takes a points-to assertion Hl', makes it persistent, and renames the resulting hypothesis to Hl'. *)
     iMod ("Hclose" with "[HP  Hl Hl' Hlist]") as "_". (* this line closes an invariant (or performs a necessary logical step) using the specified hypotheses HP, Hl, Hl', and Hlist, and then discards the result. *)
     { iNext; iExists _, (Some ℓ'); iFrame; iSplit; first done;
-      rewrite (is_list_unfold _ (Some _)) /=. 
+      rewrite (is_list_unfold (Some _)) /=. 
       iExists v''; iFrame.
       }
     iModIntro.
@@ -302,8 +302,8 @@ Qed.
 
 
 
-Theorem kalloc_spec P hd :
-  {{{ is_kmem P hd }}} kalloc_rep hd {{{ ov, RET ov; ⌜ov = NONEV⌝ ∨ ∃ v, ⌜ov = SOMEV v⌝  }}}.
+Theorem kalloc_spec hd :
+  {{{ is_kmem hd }}} kalloc_rep hd {{{ ov, RET ov; ⌜ov = NONEV⌝ ∨ ∃ v, ⌜ov = SOMEV v⌝  }}}.
   Proof.
     iIntros (Φ) "#Hkmem HΦ".
     iLöb as "IH".
