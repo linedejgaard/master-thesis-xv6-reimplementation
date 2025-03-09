@@ -93,25 +93,43 @@
 (* ================================================================= *)
 (** ** Let's verify! *)
 
-Require VC.Preface. (* Check for the right version of VST *)
+(*Require VC.Preface. (* Check for the right version of VST *)
 Require Import VST.floyd.proofauto.
 Require Import VST.floyd.library.
 Require Import VC.kalloc.
 #[export] Instance CompSpecs : compspecs. make_compspecs prog. Defined.
 Definition Vprog : varspecs.  mk_varspecs prog. Defined.
 Require Import VC.hints.  (* Import special hints for this tutorial. *)
+*)
+
+(*---------------------------------------------------------------------------------------------------*)
+(* In this file we explain how to do the "list examples" from the
+   Chapter on Separation Logic for Sequential Programs in the
+   Iris Lecture Notes *)
 
 
-From iris.base_logic Require Export gen_heap invariants.
-From iris.program_logic Require Import ectx_lifting weakestpre.
-From iris.proofmode Require Import tactics.
-From iris.algebra Require Import auth gmap excl.
-From iris.base_logic.lib Require Import invariants token.
-From iris.heap_lang Require Import notation lang proofmode lock.
-From stdpp Require Import fin_maps.
-Require Import Reals.
-Set Default Proof Using "Type".
-Import uPred.
+(* Contains definitions of the weakest precondition assertion, and its basic rules. *)
+From iris.program_logic Require Export weakestpre.
+
+(* Instantiation of Iris with the particular language. The notation file
+   contains many shorthand notations for the programming language constructs, and
+   the lang file contains the actual language syntax. *)
+From iris.heap_lang Require Export notation lang.
+
+(* Files related to the interactive proof mode. The first import includes the
+   general tactics of the proof mode. The second provides some more specialized
+   tactics particular to the instantiation of Iris to a particular programming
+   language. *)
+From iris.proofmode Require Export proofmode.
+From iris.heap_lang Require Import proofmode.
+
+(* The following line imports some Coq configuration we commonly use in Iris
+   projects, mostly with the goal of catching common mistakes. *)
+From iris.prelude Require Import options.
+
+(*  ---------------------------------------------------------------------- *)
+
+
 
 (*  
     - Functional model (often in the form of a Coq function)
@@ -121,21 +139,70 @@ Import uPred.
 
 (* ----Functional model---- *)
 
+
+
 Section free_list.
 Context `{!heapGS Σ}.
+Notation iProp := (iProp Σ).
 
-(* Define the kmem location *)
-Definition kmem : iProp Σ := ∃ (l : loc), _kmem_loc ↦ #l ∗ isFreeList (SOMEV #l) [].
+(** Stack without values **)
 
+Definition free_list : val := λ: "_", ref NONEV.
+Definition kfree : val :=
+  rec: "kfree" "s" :=
+    let: "tail" := ! "s" in
+    let: "new" := SOME (ref "tail") in
+    if: CAS "s" "tail" "new" then #() else "kfree" "s".
+
+Definition kalloc : val :=
+  rec: "kalloc" "s" :=
+    match: !"s" with
+      NONE => NONEV
+    | SOME "l" =>
+      let: "next" := !"l" in
+      if: CAS "s" (SOME "l") "next"
+      then SOME #()
+      else "kalloc" "s"
+    end.
 
 (* Define the state of the linked list of run pointers *)
-Fixpoint isFreeList (l : val) (xs : list loc) : iProp Σ :=
+(*
+  xs is a list of pointers,
+  hd is kind of the start pointer, 
+  and hd' becomes the next pointer?
+*)
+Fixpoint free_list (hd : val) (xs : list loc) : iProp :=
   match xs with
-  | [] => ⌜l = NONEV⌝
-  | x :: xs => ∃ l', ⌜l = SOMEV #x⌝ ∗ x ↦ SOMEV l' ∗ isFreeList l' xs
+  | [] => ⌜hd = NONEV⌝
+  | x :: xs => ∃ hd', ⌜hd= SOMEV #x⌝ ∗ x ↦ SOMEV hd' ∗ free_list hd' xs  
+  (* x ↦ SOMEV hd' means x is pointing to somev hd'.
+    hd contains the pointer x
+    xs is a list of locations/points
+    *)
   end.
 
+Definition empty_list : val := NONEV.
+
+
+Definition cons : val := (λ: "x" "xs",
+  let: "p" := ("x", "xs") in
+  SOME (Alloc("p"))).
+
+
+
+
+
+
+
 (* Initialize the linked list *)
+Definition mk_kmem : val :=
+  λ: <>, ref NONEV.
+
+
+
+  Definition reverse : val :=
+    λ: "l", reverse_append "l" NONE.
+  
 Definition kinit : val :=
   λ: <>,
     kmem <- NONEV.
@@ -772,27 +839,4 @@ Definition free_spec_example :=
      PROP () RETURN () SEP (mem_mgr gv).*)
 
 (* Function-body correctness proofs *)
-
-
-(* skraldespand **)
-
-(*Definition kfree_rep : val :=
-  rec: "kfree_rep" "fl" :=
-    let: "tail" := ! "fl" in           (* tail = next; the free list is going to be the tail *)
-    let: "new" := SOME (ref "tail") in (* new = r; a pointer to the tail *)
-    if: CAS "fl" "tail" "new" then #() else "kfree_rep" "fl". (* this counts as the lock *)
-
-Definition kalloc : val :=
-  rec: "kalloc" "fl" :=
-    match: !"fl" with
-      NONE => NONEV
-    | SOME "l" =>
-      let: "next" := !"l" in
-      if: CAS "fl" (SOME "l") "next"
-      then SOME #()
-      else "kalloc" "fl"
-    end.*)
-
-
-    (* skraldespand **)
 *)
