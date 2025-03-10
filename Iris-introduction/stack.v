@@ -93,7 +93,8 @@ Section stacks.
     {{{ is_stack P s ∗ P v }}} push s v {{{ RET #(); True }}}.
   Proof.
     iStartProof.
-    iIntros (Φ) "[#Hstack HP] HΦ".
+    iIntros (Φ).
+    iIntros "[#Hstack HP] HΦ".
     iLöb as "IH".
     wp_lam. wp_let. wp_bind (Load _).
     iInv N as (ℓ v') "(>% & Hl & Hlist)" "Hclose"; subst.
