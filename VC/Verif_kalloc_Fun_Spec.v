@@ -99,7 +99,6 @@ From iris.base_logic.lib Require Import invariants.
 From iris.program_logic Require Export weakestpre.
 From iris.heap_lang Require Import notation proofmode.
 From iris.prelude Require Import options.
-From VC Require Import specs.
 (*  
     - Functional model (often in the form of a Coq function)
     - API specification (also independent from the c-code)
@@ -345,7 +344,7 @@ Theorem kalloc_spec hd :
     Qed.
 End freelist.
 
-Program Definition spec {Σ} N `{heapGS Σ} : concurrent_bag Σ :=
+(*Program Definition spec {Σ} N `{heapGS Σ} : concurrent_bag Σ :=
   {| is_bag := is_kmem N; new_bag := new_kmem; bag_push := kfree_rep; bag_pop := kalloc_rep |} .
 Solve Obligations of spec with eauto using kalloc_spec, kfree_spec, new_kmem_spec.
-
+*)
