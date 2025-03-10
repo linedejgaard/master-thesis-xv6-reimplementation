@@ -72,4 +72,3 @@ Require Import VST.floyd.VSU.
   from our stdlib module), we import [Spec_stdlib] as well
   as [Spec_stack]. *)
 
-Require Import VC.Spec_kalloc.
