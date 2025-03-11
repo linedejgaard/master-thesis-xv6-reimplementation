@@ -9,6 +9,5 @@ int sum_2_2(void) {
 
 int main(void) {
     int result = sum_2_2();
-    printf("%d\n", result);
-    return 0;
+    return result;
 }

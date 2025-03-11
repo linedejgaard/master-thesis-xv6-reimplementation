@@ -26,8 +26,8 @@ DECLARE _sum_2_2
   PROP  ()
   PARAMS ()
   SEP   ()
- POST [ tuint ]
-  PROP () RETURN (Vint (Int.repr 4))
+ POST [ tint ]
+  PROP () RETURN (Vint (Int.repr sum_2_2))
   SEP ().
 
 Definition main_spec :=
@@ -36,17 +36,31 @@ DECLARE _main
     PRE [] main_pre prog tt gv
     POST [ tint ] main_post prog gv.
 
+Definition main_spec' :=
+    DECLARE _main
+        WITH gv : globals
+        PRE [] main_pre prog tt gv
+        POST [ tint ]
+        PROP()
+        RETURN (Vint (Int.repr (sum_2_2)))
+        SEP(TT).
+        
+
 (** ** Prove that the c-code satisfies the specification *)
-(*Definition Gprog := [sum_2_2_spec; main_spec].*)
-Definition Gprog : funspecs :=   ltac:(with_library prog [sum_2_2_spec; main_spec]).
+Definition Gprog := [sum_2_2_spec; main_spec']. (* Packaging the Gprog and Vprog *)
+(* OBS: main_spec also works *)
 
 Lemma body_sum_2_2: semax_body Vprog Gprog f_sum_2_2 sum_2_2_spec.
 Proof.
-Admitted.
+    start_function.
+    repeat forward.
+Qed.
 
-Lemma body_main: semax_body Vprog Gprog f_main main_spec.
+Lemma body_main: semax_body Vprog Gprog f_main main_spec'.
 Proof.
-Admitted.
+    start_function.
+    forward_call. forward. 
+Qed.
 
 #[export] Existing Instance NullExtension.Espec.
 
