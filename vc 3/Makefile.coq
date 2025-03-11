@@ -45,7 +45,7 @@ HASNATDYNLINK     := $(COQMF_HASNATDYNLINK)
 OCAMLWARN         := $(COQMF_WARN)
 
 Makefile.coq.conf: 
-	coq_makefile -Q . VC -Q /Users/linemeitongmaodejgaard/.opam/coq-8.17.1/lib/coq/user-contrib/iris iris -o Makefile.coq hints.v Preface.v kalloc.v umalloc.v Verif_kalloc_Fun_Spec.v Spec_umalloc.v VSU_kalloc.v
+	coq_makefile -Q . VC -o Makefile.coq sumarray.v reverse.v append.v stack.v strlib.v hash.v hints.v stdlib.v stdlib2.v stack2.v triang2.v main2.v Preface.v Verif_sumarray.v Verif_reverse.v Verif_stack.v Verif_triang.v Verif_append1.v Verif_append2.v Verif_strlib.v Hashfun.v Verif_hash.v VSU_intro.v Spec_stack.v Spec_triang.v Spec_stdlib.v VSU_stack.v VSU_triang.v VSU_stdlib.v VSU_main.v VSU_stdlib2.v VSU_main2.v Postscript.v Bib.v ccode.v
 
 # This file can be created by the user to hook into double colon rules or
 # add any other Makefile code he may need
