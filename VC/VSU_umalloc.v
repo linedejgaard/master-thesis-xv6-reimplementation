@@ -128,15 +128,15 @@ Require Import VC.Spec_umalloc.
     which is just a linked list much as in [VSU_stack].*)
 
 Definition theader := Tunion _header noattr.
-Compute (reptype theader).
+(* Compute (reptype theader). *)
 
 
 Fixpoint freelistrep (n: nat) (p: val) : mpred :=
  match n with
- | S n' => EX y: val, 
-        !! malloc_compatible (sizeof theader) p && 
-        data_at Ews theader (inl (y, Vundef)) p * (* inl and inr are constructors for the sum type (+) in Coq. They are used to distinguish between the two possible cases in a sum type. Use inl to get the left value, use inr to get the right value *)
-        freelistrep n' y
+ | S n' => EX next: val, 
+        !! malloc_compatible (sizeof theader) p &&  (* p is compatible with a memory block of size sizeof theader. *)
+        data_at Ews theader (inl (next, Vundef)) p * (* at the location p, there is a theader structure with the value inl (y, Vundef). inl and inr are constructors for the sum type (+) in Coq. They are used to distinguish between the two possible cases in a sum type. Use inl to get the left value, use inr to get the right value *)
+        freelistrep n' next
  | O => !! (p = nullval) && emp
  end.
 
@@ -144,13 +144,26 @@ Arguments freelistrep n p : simpl never.
 
 Lemma freelistrep_local_prop: forall n p, 
    freelistrep n p |--  !! (is_pointer_or_null p /\ (n=0<->p=nullval) /\ (n>0<->isptr p))%nat.
-(* FILL IN HERE *) Admitted.
+Proof.
+  intros.
+  induction n as [| n' IH].
+  - unfold freelistrep. entailer!. split; auto.
+    + split; auto.
+    + split; try lia. intros. simpl in *. inversion H.
+  - unfold freelistrep. destruct p; Intro y; entailer!. split.
+    + split; intros; inversion H2.
+    + split; intros; auto. try lia. 
+   Qed.
 #[export] Hint Resolve freelistrep_local_prop : saturate_local.
 
 Lemma freelistrep_valid_pointer:
   forall n p,
    freelistrep n p |-- valid_pointer p.
-(* FILL IN HERE *) Admitted.
+Proof.
+  intros. destruct n.
+  - unfold freelistrep. entailer!.
+  - unfold freelistrep. Intro y; entailer.
+Qed.
 #[export] Hint Resolve freelistrep_valid_pointer : valid_pointer.
 (** [] *)
 
@@ -177,85 +190,36 @@ Lemma freelistrep_valid_pointer:
    the two parts of the split block. *)
  
 Definition malloc_token_sz (sh: share) (n: Z) (p: val) : mpred := 
-  !! (field_compatible tcell [] p 
-      /\ malloc_compatible (sizeof tcell) p
-      /\ 0 <= n <= sizeof tcell) 
- &&  memory_block Ews (sizeof tcell - n) (offset_val n p).
+  !! (field_compatible theader [] p 
+      /\ malloc_compatible (sizeof theader) p
+      /\ 0 <= n <= sizeof theader) 
+ &&  memory_block Ews (sizeof theader - n) (offset_val n p).
 
 (** **** Exercise: 2 stars, standard (malloc_token_properties) *)
 Lemma malloc_token_sz_valid_pointer:
     forall (sh : share) (sz : Z)  (p : val),
             sz <= 0 ->
               malloc_token_sz sh sz p |-- valid_pointer p.
-(* FILL IN HERE *) Admitted.
+Proof.
+  intros. 
+  induction sz.
+  - unfold malloc_token_sz. simpl. entailer!.
+  - unfold malloc_token_sz. simpl. entailer!.
+  - unfold malloc_token_sz. entailer!. inversion H2. 
+    assert (0 = Z.neg p0). { try lia. }
+    inversion H7.
+Qed.
 
 Lemma  malloc_token_sz_local_facts : 
    forall (sh : share) (sz : Z) (p : val),
      malloc_token_sz sh sz p |-- !! malloc_compatible sz p.
-(* FILL IN HERE *) Admitted.
+Proof.
+  intros. 
+  unfold malloc_token_sz. simpl. entailer!.
+  unfold malloc_compatible in *. destruct p; simpl; auto. split; destruct H0; auto. 
+    try lia.
+Qed. 
 (** [] *)
-
-(** The next three lines define an opaque constant that, nevertheless,
-  rep_lia can unfold.     See VC.pdf, chapter 65 "Opaque Constants". *)
-Definition N : Z := proj1_sig (opaque_constant 80000).
-Definition N_eq : N=_ := proj2_sig (opaque_constant _).
-#[export] Hint Rewrite N_eq : rep_lia.
-
-(* ----------------------------------------------------------------- *)
-(** *** Digression (feel free to skip this) *)
-
-Module Digression.
-(** Suppose someone changes the source program stdlib2.c,  putting a
-  different constant than 80000.  You would like your verification 
-  script to automatically adjust.    We will revise the line,
-  [Definition N : Z := ...]  to find the constant automagically.
-
-  Step one is to find the constant.  You can look in stdlib2.v, which
-  is produced by CompCert clightgen from stdlib2.c, for the variable
-  definition v_pool.  And now look where the number 80000 appears
-  in [gvar_info(v_pool)]: *)
-Compute gvar_info (stdlib2.v_pool).
-  (*   = Tarray
-         (Tstruct 57 {| attr_volatile := false; attr_alignas := None |})
-         80000
-         {| attr_volatile := false; attr_alignas := None |}
-     : type *)
-
-(** It's easy to extract that number automatically: *)
-
-Compute match gvar_info (stdlib2.v_pool) with Tarray _ n _ => n | _ => 0 end.
-  (*  = 80000: Z *)
-
-(** The following definition of [N] won't work well, because N will 
-  not be a constant, it'll be a match expression: *)
-Definition N' := match gvar_info (stdlib2.v_pool) with Tarray _ n _ => n | _ => 0 end.
-Print N'.  (* N' = match gvar_info v_pool with Tarray _ n _ => n | _ => 0 end *)
-
-(** So instead, use this Coq trick: *)
-
-Definition N'' := 
-  ltac:(let x := constr:(match gvar_info (stdlib2.v_pool) with
-                         | Tarray _ n _ => n
-			 | _ => 0 end)
-        in let x := eval compute in x in exact x).
-Print N''. (* N'' = 80000 : Z *)
-
-(** Now, throw away N'' and we'll combine the two tricks together:
- - [opaque_constant] to define a constant that won't unfold except 
-    by explicit rewriting; and
- - extract the value of the constant from the program itself. *)
-Definition N := proj1_sig (opaque_constant 
-                            (ltac:(let x := constr:(match gvar_info (stdlib2.v_pool) with
-                                          Tarray _ n _ => n | _ => 0 end)
-                                    in let x := eval compute in x in exact x))).
-Definition N_eq : N=_ := proj2_sig (opaque_constant _).
-#[export] Hint Rewrite N_eq : rep_lia.
-Check N_eq.  (* : N = 80000 *)
-
-End Digression.
-
-(* ----------------------------------------------------------------- *)
-(** *** End of digression. Aren't you glad you skipped it? *)
 
 (* ################################################################# *)
 (** * Defining the mem_mgr APD *)
