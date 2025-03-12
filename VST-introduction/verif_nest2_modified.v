@@ -23,7 +23,7 @@ Definition get_spec :=
 
 Definition get_spec' :=
  DECLARE _get
-  WITH v : (int * (float * int))%type, gv: globals
+  WITH v : (int * (int * int))%type, gv: globals
   PRE  []
         PROP ()
         PARAMS() GLOBALS (gv)
@@ -86,24 +86,31 @@ Time forward. (* 1.23 sec *)
 entailer!!.
 Time Qed.  (*  28 sec -> 3.45 sec *)
 
-Definition fortytwo := 42.
+Definition fortytwo := (Int.repr 42).
+Definition v : (int * (int * int))%type :=  (Int.repr 0, (Int.repr 0, Int.repr 0)).
 
-(*Lemma body_main: semax_body Vprog Gprog f_main main_spec.
+Lemma body_main: semax_body Vprog Gprog f_main main_spec. (* Lost here *)
 Proof.
     start_function.
-    (* i : int, v : reptype' t_struct_b, gv: globals *)
-    forward_call (fortytwo, gv _p, gv).
-    forward_call. forward. 
-Qed.
+    forward_call (fortytwo, v, gv).
+    2 : {
+       forward_call (update22 (Int.repr 42) v, gv).
+       - entailer!.
+       - entailer!.
+       - forward.
+    }
+Admitted.
+
 
 #[export] Existing Instance NullExtension.Espec. (* boilerplate, when you don't have input/output *)
 
 Lemma prog_correct: semax_prog prog tt Vprog Gprog.
 Proof.
 prove_semax_prog.
-semax_func_cons body_sum.
+semax_func_cons body_get.
+semax_func_cons body_set.
 semax_func_cons body_main.
-Qed.*)
+Qed.
 
 
 

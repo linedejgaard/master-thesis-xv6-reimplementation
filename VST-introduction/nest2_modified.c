@@ -1,4 +1,4 @@
-struct a {double x1; int x2;};
+struct a {int x1; int x2;};
 struct b {int y1; struct a y2;};
 
 struct b p;

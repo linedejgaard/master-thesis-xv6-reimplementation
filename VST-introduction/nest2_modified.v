@@ -90,7 +90,7 @@ Definition _t'1 : ident := 128%positive.
 
 Definition v_p := {|
   gvar_info := (Tstruct _b noattr);
-  gvar_init := (Init_space 24 :: nil);
+  gvar_init := (Init_space 12 :: nil);
   gvar_readonly := false;
   gvar_volatile := false
 |}.
@@ -138,7 +138,7 @@ Definition f_main := {|
 
 Definition composites : list composite_definition :=
 (Composite _a Struct
-   (Member_plain _x1 tdouble :: Member_plain _x2 tint :: nil)
+   (Member_plain _x1 tint :: Member_plain _x2 tint :: nil)
    noattr ::
  Composite _b Struct
    (Member_plain _y1 tint :: Member_plain _y2 (Tstruct _a noattr) :: nil)
