@@ -1,7 +1,7 @@
 COQMFFLAGS := -Q . VC \
 			-Q /Users/linemeitongmaodejgaard/.opam/coq-8.17.1/lib/coq/user-contrib/iris iris 
 
-ALLVFILES := hints.v Preface.v sum.v
+ALLVFILES := hints.v Preface.v sum.v nest2_modified.v
 
 build: Makefile.coq
 	$(MAKE) -f Makefile.coq
