@@ -38,20 +38,30 @@ void free(void *pa, struct node *tail) // LINE: kind of add ( push) -- more simi
   tail = r;
 }
 
-
-
-//  remove - not verified..
-
-struct node *remove(struct node *tail) {
+struct node *remove(struct node *lst) {
 
   struct node *head;
-  head = tail;
+  head = lst;
+
+  //if (head) 
+  lst = head->next;
+
+  return (struct node*)lst;
+}
+
+
+//  not verified..
+void remove_only_if_lst(struct node *lst) {
+
+  struct node *head;
+  head = lst;
 
   if (head) 
-    tail = head->next;
+    lst = head->next;
 
-  return (struct node*)tail;
+  //return (struct node*)lst;
 }
+
 
 
 

@@ -181,6 +181,32 @@ Definition free_spec := (** uses listrep_cons*)
       RETURN () (* no return value *)
       SEP (data_at sh (t_node) q n;  listrep sh il q).
 
+Definition remove_spec := (* assume the list isn't empty *)
+  DECLARE _remove
+   WITH sh : share, q: val, il: list val, n:val            
+   PRE [ tptr t_node]
+      PROP(writable_share sh) (* not sure this is ok to say *)
+      PARAMS (n) GLOBALS()
+      SEP (data_at sh (t_node) q n; listrep sh il q)
+   POST [ tptr t_node ]
+  (* EX r:val,*)
+      PROP()
+      RETURN (q)
+      SEP (data_at sh (t_node) q n; listrep sh il q). (* I did not free the node.. *)
+
+Definition remove_only_if_lst_spec := (* assume the list isn't empty *)
+ DECLARE _remove
+   WITH sh : share, q: val, il: list val, n:val            
+   PRE [ tptr t_node]
+      PROP(writable_share sh) (* not sure this is ok to say *)
+      PARAMS (n) GLOBALS()
+      SEP (data_at sh (t_node) q n; listrep sh il q)
+   POST [ tvoid ]
+      PROP()
+      RETURN ()
+      SEP (data_at sh (t_node) q n; listrep sh il q). (* I did not free the node.. *)
+
+
 (*Definition remove_spec :=
 DECLARE _remove
    WITH sh : share, x: val, s:val, ss: list val
@@ -233,17 +259,41 @@ DECLARE _add
       RETURN (r)
       SEP (listrep sh (s1++s2) r).
 *)
-Definition Gprog := [add_spec; add_spec'; add_void_spec; add_void_spec'; free_spec].
+Definition Gprog := [add_spec; add_spec'; add_void_spec; add_void_spec'; free_spec; remove_spec; remove_only_if_lst_spec].
 (*Definition Gprog := [add_spec; add_void_spec; remove_spec].*)
 
 (*Definition lseg (sh: share) (contents: list val) (x z: val) : mpred :=
   ALL cts2:list val, listrep sh cts2 z -* listrep sh (contents++cts2) x.*)
 
+Lemma body_remove: semax_body Vprog Gprog f_remove remove_spec.
+Proof.
+start_function.
+  forward.
+  repeat forward.
+Qed.
+
+Lemma body_remove_only_if_lst: semax_body Vprog Gprog f_remove_only_if_lst remove_only_if_lst_spec.
+Proof.
+start_function.
+forward.
+forward_if.
+- forward. entailer!.
+- forward. entailer!.
+Qed.
 
 
 
 
 
+
+
+
+
+
+
+
+
+(*    all the add verified... *)
 Lemma body_add: semax_body Vprog Gprog f_add add_spec.
 Proof.
 start_function.
@@ -335,43 +385,7 @@ Qed.
 (******** ikke nået hertil endnu *******************)
 (******** ikke nået hertil endnu *******************)
 
-Lemma body_remove: semax_body Vprog Gprog f_remove remove_spec.
-Proof.
-start_function.
-forward.
-forward_if (x <> nullval); try contradiction.
-- unfold listrep_cons; fold listrep_cons. Intros y. forward.
-   entailer!.
 
-
-
-unfold listrep; fold listrep. entailer.
-   unfold listrep; fold listrep. EExists. entailer!.
-
-entailer!. Exists y. 
-
-y. forward. unfold listrep; fold listrep.
-
-
-   entailer. unfold listrep; fold listrep. Exists y. entailer!.
-   rewrite (listrep_nonnull _ _ x) by auto.
-Intros h hs y. forward. entailer.
-
-(* if head *) inversion H0. subst. forward. entailer!.  
-
-2: {} 
-forward_if (x = nullval); try contradiction. (* if head *)
-- forward. (* head == nullval, which is not possible by assumption.. *)
-- rewrite (listrep_nonnull _ _ x) by auto. 
-   Intros h hs y0.
-   forward.
-   forward.
-   forward.
-   Exists x. simpl. unfold listrep; fold listrep. entailer!. Exists y. entailer!.
-   destruct hs.
-   + simpl. unfold listrep; entailer!.
-   + inversion H1. 
-Qed.
 
 (** compiles until this..*)
    
