@@ -62,7 +62,15 @@ void remove_only_if_lst(struct node *lst) {
   //return (struct node*)lst;
 }
 
+void *alloc(struct node *lst) { 
+  struct node *head;
+  head = lst;
 
+  if (head) 
+    lst = head->next;
+
+  return (struct node*)head;
+}
 
 
 /// wait with this..
