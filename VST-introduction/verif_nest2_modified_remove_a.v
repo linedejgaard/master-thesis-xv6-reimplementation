@@ -9,7 +9,7 @@ Local Open Scope logic.
 
 Definition t_struct_b := Tstruct _b noattr.
 
-Definition get_spec :=
+Definition get_spec' :=
  DECLARE _get
   WITH v : reptype' t_struct_b, gv: globals
   PRE  []
@@ -21,17 +21,17 @@ Definition get_spec :=
          RETURN (Vint (v))
          SEP (data_at Ews t_struct_b (repinj _ v) (gv _p)).
 
-Definition get_spec' :=
+Definition get_spec :=
  DECLARE _get
   WITH v : (int)%type, gv: globals
   PRE  []
         PROP ()
         PARAMS() GLOBALS (gv)
-        SEP(data_at Ews t_struct_b (repinj t_struct_b v) (gv _p))
+        SEP(data_at Ews t_struct_b (Vint v) (gv _p))
   POST [ tint ]
          PROP()
          RETURN (Vint (v))
-         SEP (data_at Ews t_struct_b (repinj t_struct_b v) (gv _p)).
+         SEP (data_at Ews t_struct_b (Vint v) (gv _p)).
 
 Definition update22 (i: int) (v: reptype' t_struct_b) : reptype' t_struct_b :=
    (i).
@@ -42,12 +42,12 @@ Definition set_spec :=
   PRE  [ tint ]
          PROP  ()
          PARAMS (Vint i) GLOBALS (gv)
-         SEP   (data_at Ews t_struct_b (repinj _ v) (gv _p))
+         SEP   (data_at Ews t_struct_b (Vint v) (gv _p))
   POST [ tvoid ]
          PROP() RETURN()
-        SEP(data_at Ews t_struct_b (repinj _ (update22 i v)) (gv _p)).
+        SEP(data_at Ews t_struct_b (Vint (update22 i v)) (gv _p)).
 
-Definition main_spec :=
+Definition main_spec' :=
        DECLARE _main
        WITH gv : globals
        PRE [] main_pre prog tt gv
@@ -55,6 +55,12 @@ Definition main_spec :=
        PROP()
        RETURN (Vint (Int.repr (42)))
        SEP(TT).
+
+Definition main_spec :=
+       DECLARE _main
+       WITH gv : globals
+       PRE [] main_pre prog tt gv
+       POST [ tint ] main_post prog gv.
               
 Definition Gprog : funspecs :=   ltac:(with_library prog [get_spec; set_spec; main_spec]).
 
@@ -94,19 +100,25 @@ Proof.
     start_function.
     forward_call (fortytwo, v, gv).
     2 : {
-       forward_call (update22 (Int.repr 42) v, gv).
-       - entailer!.
-       - entailer!.
-       - forward.
-    } 
+       forward_call (update22 (Int.repr 42) v, gv); try entailer!.
+       forward.
+    }
+    unfold t_struct_b.
+    sep_apply data_at_data_at_ .
+    
+    entailer!.
+
+
+    Check data_at__local_facts.
+    sep_apply data_at__local_facts. 
 Admitted.
 
 
 #[export] Existing Instance NullExtension.Espec. (* boilerplate, when you don't have input/output *)
 
 Lemma prog_correct: semax_prog prog tt Vprog Gprog.
-Proof.
 prove_semax_prog.
+Proof.
 semax_func_cons body_get.
 semax_func_cons body_set.
 semax_func_cons body_main.

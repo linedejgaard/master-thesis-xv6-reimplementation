@@ -51,10 +51,7 @@ Definition main_spec :=
        DECLARE _main
        WITH gv : globals
        PRE [] main_pre prog tt gv
-       POST [ tint ]
-       PROP()
-       RETURN (Vint (Int.repr (42)))
-       SEP(TT).
+       POST [ tint ] main_post prog gv.
               
 Definition Gprog : funspecs :=   ltac:(with_library prog [get_spec; set_spec; main_spec]).
 
@@ -89,7 +86,7 @@ Time Qed.  (*  28 sec -> 3.45 sec *)
 Definition fortytwo := (Int.repr 42).
 Definition v : (int * (int * int))%type :=  (Int.repr 0, (Int.repr 0, Int.repr 0)).
 
-Lemma body_main: semax_body Vprog Gprog f_main main_spec. (* Lost here *)
+Lemma body_main: semax_body Vprog Gprog f_main main_spec. 
 Proof.
     start_function.
     forward_call (fortytwo, v, gv).
@@ -99,6 +96,7 @@ Proof.
        - entailer!.
        - forward.
     }
+    sep_apply data_at_data_at_. 
 Admitted.
 
 
