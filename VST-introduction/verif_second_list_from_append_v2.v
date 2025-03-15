@@ -216,6 +216,17 @@ Definition alloc_spec := (* assume the list isn't empty *)
       RETURN (n) (* we return the head like in the pop function*)
       SEP (data_at sh (t_node) q n; listrep sh il q). 
 
+Definition alloc_spec' := (* this doesn't assume that the list is empty, but that q is either a pointer or a nullval *)
+ DECLARE _alloc
+   WITH sh : share, q: val, il: list val, n:val            
+   PRE [ tptr t_node]
+      PROP(writable_share sh; is_pointer_or_null q) 
+      PARAMS (n) GLOBALS()
+      SEP (data_at sh (t_node) q n) (* q can be nullval meaning that there is only one node *)
+   POST [ tptr tvoid ]
+      PROP()
+      RETURN (n) (* we return the head like in the pop function*)
+      SEP (data_at sh (t_node) q n). 
 
 
 (*Definition add_kmem_spec :=
@@ -231,7 +242,7 @@ DECLARE _add
       RETURN (r)
       SEP (listrep sh (s1++s2) r).
 *)
-Definition Gprog := [add_spec; add_spec'; add_void_spec; add_void_spec'; free_spec; remove_spec; remove_only_if_lst_spec; alloc_spec].
+Definition Gprog := [add_spec; add_spec'; add_void_spec; add_void_spec'; free_spec; remove_spec; remove_only_if_lst_spec; alloc_spec;alloc_spec'].
 (*Definition Gprog := [add_spec; add_void_spec; remove_spec].*)
 
 (*Definition lseg (sh: share) (contents: list val) (x z: val) : mpred :=
@@ -331,6 +342,20 @@ forward_if (PROP () LOCAL (temp _lst (if eq_dec n nullval then nullval else q);
 - forward. entailer!.
 - forward.
 Qed.
+
+Lemma body_alloc': semax_body Vprog Gprog f_alloc alloc_spec'.
+Proof.
+start_function.
+forward. 
+forward_if (PROP () LOCAL (temp _lst (if eq_dec n nullval then nullval else q);
+                            temp _head n)
+                 SEP (data_at sh t_node q n)).
+
+- forward. entailer!. destruct (eq_dec n nullval); auto. subst. inversion H0. 
+- forward. entailer!.
+- forward.
+Qed.
+
 
 
 
