@@ -207,45 +207,6 @@ Definition remove_only_if_lst_spec := (* assume the list isn't empty *)
       SEP (data_at sh (t_node) q n; listrep sh il q). (* I did not free the node.. *)
 
 
-(*Definition remove_spec :=
-DECLARE _remove
-   WITH sh : share, x: val, s:val, ss: list val
-   PRE [ tptr t_node]
-      PROP(writable_share sh; x <> nullval) (* not sure this is ok to say *)
-      PARAMS (x) GLOBALS()
-      SEP (listrep_cons sh (s::ss) x)
-   POST [ tptr t_node ]
-   EX r:val,
-      PROP()
-      RETURN (r)
-      SEP (listrep_cons sh ss r).*)
-
-   
-(*Definition remove_spec' := (* uses listrep_cons*)
-   DECLARE _remove
-      WITH sh : share, p: val, i: Z, il: list val 
-      PRE [ tptr t_node]
-         PROP(writable_share sh) (* not sure this is ok to say *)
-         PARAMS (p) GLOBALS()
-         SEP (data_at sh (t_node) q n; listrep sh il q)
-      POST [ tptr t_node ]
-      EX r:val,
-         PROP()
-         RETURN (r)
-         SEP (listrep_cons sh il r).
-
-
-         Definition pop_spec : ident * funspec :=
-            DECLARE _pop
-            WITH p: val, i: Z, il: list Z, gv: globals
-            PRE [ tptr (Tstruct _stack noattr) ] 
-               PROP () 
-               PARAMS (p) GLOBALS(gv) 
-               SEP (stack (i::il) p; mem_mgr gv)
-            POST [ tint ] 
-               PROP ( ) RETURN (Vint (Int.repr i)) SEP (stack il p; mem_mgr gv).
-           
-*)
 (*Definition add_kmem_spec :=
 DECLARE _add
    WITH sh : share, x: val, y: val, s1: list val, s2: list val, gv: globals
@@ -265,35 +226,9 @@ Definition Gprog := [add_spec; add_spec'; add_void_spec; add_void_spec'; free_sp
 (*Definition lseg (sh: share) (contents: list val) (x z: val) : mpred :=
   ALL cts2:list val, listrep sh cts2 z -* listrep sh (contents++cts2) x.*)
 
-Lemma body_remove: semax_body Vprog Gprog f_remove remove_spec.
-Proof.
-start_function.
-  forward.
-  repeat forward.
-Qed.
 
-Lemma body_remove_only_if_lst: semax_body Vprog Gprog f_remove_only_if_lst remove_only_if_lst_spec.
-Proof.
-start_function.
-forward.
-forward_if.
-- forward. entailer!.
-- forward. entailer!.
-Qed.
+(**************** ADD ****************)
 
-
-
-
-
-
-
-
-
-
-
-
-
-(*    all the add verified... *)
 Lemma body_add: semax_body Vprog Gprog f_add add_spec.
 Proof.
 start_function.
@@ -355,6 +290,23 @@ Qed.
 
 
 
+(**************** REMOVE ****************)
+
+Lemma body_remove: semax_body Vprog Gprog f_remove remove_spec.
+Proof.
+start_function.
+  forward.
+  repeat forward.
+Qed.
+
+Lemma body_remove_only_if_lst: semax_body Vprog Gprog f_remove_only_if_lst remove_only_if_lst_spec.
+Proof.
+start_function.
+forward.
+forward_if.
+- forward. entailer!.
+- forward. entailer!.
+Qed.
 
 
 
@@ -375,17 +327,4 @@ Qed.
 
 
 
-
-
-
-
-
-
-(******** ikke nået hertil endnu *******************)
-(******** ikke nået hertil endnu *******************)
-(******** ikke nået hertil endnu *******************)
-
-
-
-(** compiles until this..*)
    
