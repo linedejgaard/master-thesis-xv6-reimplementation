@@ -168,6 +168,19 @@ Definition add_void_spec' := (** uses listrep_cons*)
       RETURN (if eq_dec q nullval then nullval else n) (* returns 0 when there is no tail, and head otherwise, so n *)
       SEP (data_at sh (t_node) q n;  listrep sh il q).
 
+
+Definition free_spec := (** uses listrep_cons*)
+   DECLARE _free
+   WITH sh : share, p: val, q: val, il: list val, n:val
+   PRE [ tptr tvoid , tptr t_node]
+      PROP(writable_share sh) (* not sure this is ok to say *)
+      PARAMS (n; q) GLOBALS()
+      SEP (data_at sh (t_node) nullval n; listrep sh il q)
+   POST [ tvoid ]
+      PROP()
+      RETURN () (* no return value *)
+      SEP (data_at sh (t_node) q n;  listrep sh il q).
+
 (*Definition remove_spec :=
 DECLARE _remove
    WITH sh : share, x: val, s:val, ss: list val
@@ -220,11 +233,16 @@ DECLARE _add
       RETURN (r)
       SEP (listrep sh (s1++s2) r).
 *)
-Definition Gprog := [add_spec; add_spec'; add_void_spec; add_void_spec'].
+Definition Gprog := [add_spec; add_spec'; add_void_spec; add_void_spec'; free_spec].
 (*Definition Gprog := [add_spec; add_void_spec; remove_spec].*)
 
 (*Definition lseg (sh: share) (contents: list val) (x z: val) : mpred :=
   ALL cts2:list val, listrep sh cts2 z -* listrep sh (contents++cts2) x.*)
+
+
+
+
+
 
 Lemma body_add: semax_body Vprog Gprog f_add add_spec.
 Proof.
@@ -279,7 +297,43 @@ forward_if. (* if head *)
 - forward. forward. forward. entailer!!. destruct (eq_dec q nullval); try contradiction; auto.
 Qed.
 
+Lemma body_free: semax_body Vprog Gprog f_free free_spec.
+Proof.
+start_function.
+forward. forward. forward. entailer!.
+Qed.
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+(******** ikke nået hertil endnu *******************)
+(******** ikke nået hertil endnu *******************)
+(******** ikke nået hertil endnu *******************)
 
 Lemma body_remove: semax_body Vprog Gprog f_remove remove_spec.
 Proof.

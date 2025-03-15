@@ -2,9 +2,7 @@ struct node {
   struct node *next;
 };
 
-struct {
-  struct node *freelist;
-} kmem;
+
 
 struct node *add(struct node *head, struct node *tail) {
   if (!head) {
@@ -29,6 +27,39 @@ struct node *add_void(void *p, struct node *tail) {
   head->next = tail;
   return head;
 }
+
+void free(void *pa, struct node *tail) // LINE: kind of add ( push) -- more similar to kfree, just don't use locks nor global variables..
+{
+  struct node *r;
+
+  r = (struct node*)pa;
+
+  r->next = tail;
+  tail = r;
+}
+
+
+
+//  remove - not verified..
+
+struct node *remove(struct node *tail) {
+
+  struct node *head;
+  head = tail;
+
+  if (head) 
+    tail = head->next;
+
+  return (struct node*)tail;
+}
+
+
+
+/// wait with this..
+
+struct {
+  struct node *freelist;
+} kmem;
 
 struct node *add_kmem(void *p) {
   if (!kmem.freelist) {
