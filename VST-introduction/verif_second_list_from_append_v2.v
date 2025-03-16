@@ -1,11 +1,13 @@
 Require Import VST.floyd.proofauto.
+(*Require Import VST.floyd.library. (* import this for kmem *)*)
 Require Import VC.second_list_v2.
 
 #[export] Instance CompSpecs : compspecs. make_compspecs prog. Defined.
 Definition Vprog : varspecs. mk_varspecs prog. Defined.
-Definition t_node := Tstruct _node noattr.
+
 
 (************************ list rep *************************)
+Definition t_node := Tstruct _node noattr.
 
 Fixpoint listrep (sh: share) (contents: list val) (x: val) : mpred :=
  match contents with
@@ -203,6 +205,7 @@ Definition free_spec := (** uses listrep_cons*)
       PROP()
       RETURN () (* no return value *)
       SEP (data_at sh (t_node) q n;  listrep sh il q).
+      
 
 Definition alloc_spec := (* assume the list isn't empty *)
  DECLARE _alloc
@@ -228,6 +231,25 @@ Definition alloc_spec' := (* this doesn't assume that the list is empty, but tha
       RETURN (n) (* we return the head like in the pop function*)
       SEP (data_at sh (t_node) q n). 
 
+(*** get freelist  ***)
+(*Definition t_kmem := Tstruct _kmem noattr.*)
+
+
+
+(*** KMEM!!  ***)
+
+(*Definition kfree1_spec := 
+ DECLARE _kfree1
+   WITH sh : share, p: val, q: val, il: list val, n:val, gv: globals
+   PRE [ tptr tvoid]
+      PROP(writable_share sh) (* not sure this is ok to say *)
+      PARAMS (n) GLOBALS(gv)
+      SEP (mem_mgr gv; data_at sh (t_node) nullval (gv _pa); listrep sh il (gv _freelist))
+   POST [ tvoid ]
+      PROP()
+      RETURN () (* no return value *)
+      SEP (mem_mgr gv; data_at sh (t_node) q n;  listrep sh il (gv _freelist)).
+*)
 
 (*Definition add_kmem_spec :=
 DECLARE _add
@@ -242,8 +264,9 @@ DECLARE _add
       RETURN (r)
       SEP (listrep sh (s1++s2) r).
 *)
-Definition Gprog := [add_spec; add_spec'; add_void_spec; add_void_spec'; free_spec; remove_spec; remove_only_if_lst_spec; alloc_spec;alloc_spec'].
-(*Definition Gprog := [add_spec; add_void_spec; remove_spec].*)
+Definition Gprog := [add_spec; add_spec'; add_void_spec; 
+add_void_spec'; free_spec; remove_spec; remove_only_if_lst_spec; 
+alloc_spec;alloc_spec'].
 
 (*Definition lseg (sh: share) (contents: list val) (x z: val) : mpred :=
   ALL cts2:list val, listrep sh cts2 z -* listrep sh (contents++cts2) x.*)
@@ -356,7 +379,39 @@ forward_if (PROP () LOCAL (temp _lst (if eq_dec n nullval then nullval else q);
 - forward.
 Qed.
 
+(***************************** GET ******************************)
 
+(*Lemma body_get_freelist: semax_body Vprog Gprog f_get_freelist get_freelist_spec.
+Proof.
+start_function.
+forward.
+
+(***************************** KMEM ******************************)
+
+Lemma body_kfree1: semax_body Vprog Gprog f_kfree1 kfree1_spec.
+Proof.
+start_function.
+forward.
+
+nået her til: få kmem eller bare en global variabel til at virke...e
+
+2 : {
+   forward.
+}
+
+simpl. intros. entailer!!.
+unfold gv.
+
+entailer.
+forward. 
+forward_if (PROP () LOCAL (temp _lst (if eq_dec n nullval then nullval else q);
+                            temp _head n)
+                 SEP (data_at sh t_node q n)).
+
+- forward. entailer!. destruct (eq_dec n nullval); auto. subst. inversion H0. 
+- forward. entailer!.
+- forward.
+Qed.*)
 
 
 
