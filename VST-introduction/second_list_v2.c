@@ -3,6 +3,7 @@ struct node {
 };
 
 
+// add
 
 struct node *add(struct node *head, struct node *tail) {
   if (!head) {
@@ -38,6 +39,8 @@ void free(void *pa, struct node *tail) // LINE: kind of add ( push) -- more simi
   tail = r;
 }
 
+// remove
+
 struct node *remove(struct node *lst) {
 
   struct node *head;
@@ -49,8 +52,6 @@ struct node *remove(struct node *lst) {
   return (struct node*)lst;
 }
 
-
-//  not verified..
 void remove_only_if_lst(struct node *lst) {
 
   struct node *head;
@@ -79,15 +80,18 @@ struct {
   struct node *freelist;
 } kmem;
 
-struct node *add_kmem(void *p) {
-  if (!kmem.freelist) {
-    return 0;
-  }
-  struct node *head;
-  head = (struct node*) p;
+struct node *get_freelist() {
+  return kmem.freelist;
+}
 
-  head->next = kmem.freelist;
-  return head;
+void kfree(void *pa) // LINE: kind of add ( push)
+{
+  struct node *r;
+
+  r = (struct node*)pa;
+
+  r->next = kmem.freelist;
+  kmem.freelist = r;
 }
 
 
