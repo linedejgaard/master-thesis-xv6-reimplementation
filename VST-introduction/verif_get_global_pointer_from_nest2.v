@@ -198,8 +198,24 @@ DECLARE _get_freelist
               PROP()
               RETURN (Vptr b p)
               SEP (data_at sh t_struct_kmem (Vint (Int.repr xx), Vptr b p) (gv _kmem)).
+              
 
-(************************ free freelist global *************************)
+(************************ free freelist non_global *************************)
+
+Definition free_spec := (** uses listrep_cons*)
+ DECLARE _free
+   WITH sh : share, p: val, q: val, il: list val, n:val
+   PRE [ tptr tvoid , tptr t_run]
+      PROP(writable_share sh) (* not sure this is ok to say *)
+      PARAMS (n; q) GLOBALS()
+      SEP (data_at sh (t_run) nullval n; listrep sh il q)
+   POST [ tvoid ]
+      PROP()
+      RETURN () (* no return value *)
+      SEP (data_at sh (t_run) q n;  listrep sh il q).
+
+
+
 
 (************************************)
 Definition Gprog : funspecs := [get_freelist1_input_spec; get_freelist1_input_spec'; get_freelist1_spec; get_i_spec; get_xx_spec; get_freelist_spec].
@@ -223,3 +239,8 @@ Proof. start_function. simpl in v. unfold_repinj. repeat forward. Qed.
 
 Lemma body_get_freelist : semax_body Vprog Gprog f_get_freelist get_freelist_spec.
 Proof. start_function. forward. forward. Qed.
+
+Lemma body_free: semax_body Vprog Gprog f_free free_spec.
+Proof. start_function. repeat forward. entailer!. Qed.
+
+

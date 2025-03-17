@@ -20,8 +20,6 @@ int get_i() {
   return i;
 }
 
-// working in progress
-
 struct struct_kmem { // eaiser that it has a name is isn't anonymous
   int xx; //kind of lock
   struct run *freelist; //kind of freelist
@@ -35,3 +33,15 @@ struct run *get_freelist(void) {
   return kmem.freelist;
 }
 
+
+// working in progress 
+
+void free(void *pa, struct run *tail) // LINE: kind of add ( push) -- more similar to kfree, just don't use locks nor global variables..
+{
+  struct run *r;
+
+  r = (struct run*)pa;
+
+  r->next = tail;
+  tail = r;
+}
