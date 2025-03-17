@@ -373,7 +373,6 @@ forward.
 forward_if (PROP () LOCAL (temp _lst (if eq_dec n nullval then nullval else q);
                             temp _head n)
                  SEP (data_at sh t_node q n)).
-
 - forward. entailer!. destruct (eq_dec n nullval); auto. subst. inversion H0. 
 - forward. entailer!.
 - forward.
