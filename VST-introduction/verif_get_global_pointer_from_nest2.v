@@ -93,14 +93,16 @@ Proof.
    Qed.
 #[export] Hint Resolve freelistrep_local_prop : saturate_local.
 
+
 Lemma freelistrep_valid_pointer:
-  forall sh n p,
-   freelistrep sh n p |-- valid_pointer p.
+  forall sh n p, 
+  readable_share sh ->
+   freelistrep Ews n p |-- valid_pointer p.
 Proof.
   intros. destruct n.
   - unfold freelistrep. entailer!.
   - unfold freelistrep. Intro y; entailer.
-Qed.
+Qed. 
 #[export] Hint Resolve freelistrep_valid_pointer : valid_pointer.
 
 
