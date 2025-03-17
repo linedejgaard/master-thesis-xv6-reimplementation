@@ -6,7 +6,7 @@ Definition Vprog : varspecs. mk_varspecs prog. Defined.
 
 Local Open Scope logic.
 
-Definition t_node := Tstruct _node noattr.
+Definition t_run := Tstruct _run noattr.
 
 (************************ list rep  *************************)
 
@@ -14,7 +14,7 @@ Fixpoint listrep (sh: share) (contents: list val) (x: val) : mpred :=
  match contents with
  | h::hs =>
               EX y:val,
-                data_at sh t_node (y) x * listrep sh hs y
+                data_at sh t_run (y) x * listrep sh hs y
  | nil => !! (x = nullval) && emp
  end.
 
@@ -58,11 +58,11 @@ Qed.
 Definition get_freelist1_input_spec :=
  DECLARE _get_freelist1_input
        WITH sh: share, sigma : list val, p: val
-       PRE  [ tptr t_node ]
+       PRE  [ tptr t_run ]
        PROP ()
        PARAMS (p)
        SEP (listrep sh sigma p)
-       POST [ (tptr t_node) ]
+       POST [ (tptr t_run) ]
        PROP () RETURN (p)
        SEP (listrep sh sigma p).
 
@@ -70,8 +70,8 @@ Definition get_freelist1_input_spec :=
 Fixpoint freelistrep (sh: share) (n: nat) (p: val) : mpred :=
  match n with
  | S n' => EX next: val, 
-        !! malloc_compatible (sizeof t_node) p &&  (* p is compatible with a memory block of size sizeof theader. *)
-        data_at sh t_node next p * (* at the location p, there is a t_node structure with the value next *)
+        !! malloc_compatible (sizeof t_run) p &&  (* p is compatible with a memory block of size sizeof theader. *)
+        data_at sh t_run next p * (* at the location p, there is a t_run structure with the value next *)
         freelistrep sh n' next
  | O => !! (p = nullval) && emp
  end.
@@ -123,7 +123,7 @@ Lemma freelistrep_nonnull: forall n sh x,
    x <> nullval ->
    freelistrep sh n x =
    EX m : nat, EX next:val,
-          !! (n = S m) && !! malloc_compatible (sizeof t_node) x && data_at sh t_node next x * freelistrep sh m next.
+          !! (n = S m) && !! malloc_compatible (sizeof t_run) x && data_at sh t_run next x * freelistrep sh m next.
    Proof.
        intros; apply pred_ext.
        - destruct n. 
@@ -136,16 +136,16 @@ Qed.
 Definition get_freelist1_input_spec' :=
 DECLARE _get_freelist1_input
        WITH sh: share, n : nat, p: val
-       PRE  [ tptr t_node ]
+       PRE  [ tptr t_run ]
        PROP ()
        PARAMS (p)
        SEP (freelistrep sh n p)
-       POST [ (tptr t_node) ]
+       POST [ (tptr t_run) ]
        PROP () RETURN (p)
        SEP (freelistrep sh n p).
 
 (************************ get i global *************************)
-Definition t_i := Tstruct _node noattr.
+Definition t_i := Tstruct _run noattr.
 
 Definition get_i_spec := (* only works for Ews*)
  DECLARE _get_i
@@ -166,10 +166,10 @@ Definition get_freelist1_spec :=
        PRE  [ ]
        PROP (readable_share sh)
        PARAMS () GLOBALS (gv)
-       SEP (data_at sh (tptr t_node) (Vptr b p) (gv _freelist1)) (* what _freelist stores is a pointer *)
-       POST [ (tptr t_node) ]
+       SEP (data_at sh (tptr t_run) (Vptr b p) (gv _freelist1)) (* what _freelist stores is a pointer *)
+       POST [ (tptr t_run) ]
        PROP () RETURN (Vptr b p)
-       SEP (data_at sh (tptr t_node) (Vptr b p) (gv _freelist1)).
+       SEP (data_at sh (tptr t_run) (Vptr b p) (gv _freelist1)).
 
 
 (************************ get innerlist global *************************)
@@ -194,7 +194,7 @@ DECLARE _get_freelist
        PROP (readable_share sh)
        PARAMS() GLOBALS (gv)
        SEP(data_at sh t_struct_kmem (Vint (Int.repr xx), Vptr b p) (gv _kmem))
-       POST [ tptr t_node ]
+       POST [ tptr t_run ]
               PROP()
               RETURN (Vptr b p)
               SEP (data_at sh t_struct_kmem (Vint (Int.repr xx), Vptr b p) (gv _kmem)).

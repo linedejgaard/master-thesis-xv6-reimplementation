@@ -1,16 +1,16 @@
-struct node {
-  struct node *next;
+struct run {
+  struct run *next;
 };
 
-struct node *freelist1;
+struct run *freelist1;
 
 
-struct node *get_freelist1() {
+struct run *get_freelist1() {
     return freelist1;
 }
 
 // this is kind of working
-struct node *get_freelist1_input(struct node *fl) {
+struct run *get_freelist1_input(struct run *fl) {
   return fl;
 }
 
@@ -24,14 +24,14 @@ int get_i() {
 
 struct struct_kmem { // eaiser that it has a name is isn't anonymous
   int xx; //kind of lock
-  struct node *freelist; //kind of freelist
+  struct run *freelist; //kind of freelist
 } kmem;
 
 int get_xx(void) {
   return kmem.xx;
 }
 
-struct node *get_freelist(void) {
+struct run *get_freelist(void) {
   return kmem.freelist;
 }
 
