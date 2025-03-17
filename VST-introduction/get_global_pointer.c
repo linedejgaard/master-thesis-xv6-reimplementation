@@ -22,11 +22,10 @@ int get_i() {
 
 // working in progress
 
-struct b {int xx; struct node *innerlist;};
-
-struct b p;
+struct b {int xx; struct node *innerlist;} p;
 
 int get_xx(void) {
   return p.xx;
 }
+
 
