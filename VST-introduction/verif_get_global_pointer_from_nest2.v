@@ -166,7 +166,7 @@ Definition get_freelist1_spec :=
        PRE  [ ]
        PROP (readable_share sh)
        PARAMS () GLOBALS (gv)
-       SEP (data_at sh (tptr t_node) (Vptr b p) (gv _freelist))
+       SEP (data_at sh (tptr t_node) (Vptr b p) (gv _freelist)) (* what _freelist stores is a pointer *)
        POST [ (tptr t_node) ]
        PROP () RETURN (Vptr b p)
        SEP (data_at sh (tptr t_node) (Vptr b p) (gv _freelist)).
