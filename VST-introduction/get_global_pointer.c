@@ -33,8 +33,6 @@ struct run *get_freelist(void) {
   return kmem.freelist;
 }
 
-// working in progress 
-
 void free(void *pa, struct run *tail) // LINE: kind of add ( push) -- more similar to kfree, just don't use locks nor global variables..
 {
   struct run *r;
@@ -51,3 +49,12 @@ void *alloc(struct run *lst) {
   return (struct run*)head;
 }
 
+
+// working in progress 
+void kfree1(void *pa) // LINE: kind of add ( push)
+{
+  struct run *r;
+  r = (struct run*)pa;
+  r->next = kmem.freelist;
+  kmem.freelist = r;
+}
