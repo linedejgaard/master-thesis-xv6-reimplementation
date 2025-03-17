@@ -22,7 +22,6 @@ int get_i() {
 
 // working in progress
 
-struct a {int x1; int x2;};
 struct b {int y1; struct node *innerlist;};
 
 struct b p;
