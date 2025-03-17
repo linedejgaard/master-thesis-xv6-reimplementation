@@ -214,7 +214,21 @@ Definition free_spec := (** uses listrep_cons*)
       RETURN () (* no return value *)
       SEP (data_at sh (t_run) q n;  listrep sh il q).
 
-(************************ alloc listrep non_global *************************)
+(************************ free freelistrep non_global *************************)
+
+Definition free_spec' := 
+ DECLARE _free
+   WITH sh : share, p: val, q: val, n:nat, f:val
+   PRE [ tptr tvoid , tptr t_run]
+      PROP(writable_share sh) (* not sure this is ok to say *)
+      PARAMS (f; q) GLOBALS()
+      SEP (data_at sh (t_run) nullval f; freelistrep sh n q)
+   POST [ tvoid ]
+      PROP()
+      RETURN () (* no return value *)
+      SEP (data_at sh (t_run) q f;  freelistrep sh n q).      
+
+(************************ alloc non_global *************************)
 
 Definition alloc_spec := (* assume the list isn't empty *)
  DECLARE _alloc
@@ -244,7 +258,7 @@ Definition alloc_spec' := (* this doesn't assume that the list is empty, but tha
 Definition Gprog : funspecs := [get_freelist1_input_spec; 
 get_freelist1_input_spec'; get_freelist1_spec; get_i_spec; 
 get_xx_spec; get_freelist_spec;
-free_spec; alloc_spec; alloc_spec'].
+free_spec; alloc_spec; alloc_spec'; free_spec'].
 
 
 Lemma body_get_freelist_input_spec:  semax_body Vprog Gprog f_get_freelist1_input get_freelist1_input_spec.
@@ -268,6 +282,9 @@ Proof. start_function. forward. forward. Qed.
 Lemma body_free: semax_body Vprog Gprog f_free free_spec.
 Proof. start_function. repeat forward. entailer!. Qed.
 
+Lemma body_free': semax_body Vprog Gprog f_free free_spec'.
+Proof. start_function. repeat forward. entailer!. Qed.
+
 Lemma body_alloc: semax_body Vprog Gprog f_alloc alloc_spec.
 Proof.
 start_function. forward. 
@@ -288,4 +305,4 @@ forward_if (PROP () LOCAL (temp _lst (if eq_dec n nullval then nullval else q);
 - forward. entailer!. destruct (eq_dec n nullval); auto. subst. inversion H0. 
 - forward. entailer!.
 - forward.
-Qed.
+Qed. 
