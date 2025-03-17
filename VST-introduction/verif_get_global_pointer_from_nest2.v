@@ -172,7 +172,7 @@ Definition get_freelist1_spec :=
        SEP (data_at sh (tptr t_run) (Vptr b p) (gv _freelist1)).
 
 
-(************************ get innerlist global *************************)
+(************************ get freelist global *************************)
 Definition t_struct_kmem := Tstruct _struct_kmem noattr.
 
 Definition get_xx_spec :=
@@ -199,6 +199,8 @@ DECLARE _get_freelist
               RETURN (Vptr b p)
               SEP (data_at sh t_struct_kmem (Vint (Int.repr xx), Vptr b p) (gv _kmem)).
 
+(************************ free freelist global *************************)
+
 (************************************)
 Definition Gprog : funspecs := [get_freelist1_input_spec; get_freelist1_input_spec'; get_freelist1_spec; get_i_spec; get_xx_spec; get_freelist_spec].
 
@@ -219,5 +221,5 @@ Proof. start_function. repeat forward. Qed.
 Lemma body_get_xx : semax_body Vprog Gprog f_get_xx get_xx_spec.
 Proof. start_function. simpl in v. unfold_repinj. repeat forward. Qed.
 
-Lemma body_get_innerlist : semax_body Vprog Gprog f_get_freelist get_freelist_spec.
+Lemma body_get_freelist : semax_body Vprog Gprog f_get_freelist get_freelist_spec.
 Proof. start_function. forward. forward. Qed.
