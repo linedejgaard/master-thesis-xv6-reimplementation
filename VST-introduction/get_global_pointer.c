@@ -57,16 +57,8 @@ void kfree1(void *pa) // LINE: kind of add ( push)
   kmem.freelist = r;
 }
 
-// working in progress 
-void *kalloc1(void) // LINE: without if
-{
-  struct run *r;
-  r = kmem.freelist;
-  kmem.freelist = r->next;
-  return (void*)r;
-}
 
-void *kalloc2(void) // LINE: kind of remove / pop
+void *kalloc1(void) 
 {
   struct run *r;
   r = kmem.freelist;

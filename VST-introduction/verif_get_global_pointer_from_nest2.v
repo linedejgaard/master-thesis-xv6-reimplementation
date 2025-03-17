@@ -245,7 +245,7 @@ Definition kfree1_spec :=
       RETURN () (* no return value *)
       SEP (
          data_at sh (t_run) (Vptr b p) new_head;
-         data_at sh t_struct_kmem (Vint (Int.repr xx), new_head) (gv _kmem)
+         data_at sh t_struct_kmem (Vint (Int.repr xx), new_head) (gv _kmem) (** should gv _kmem still point at the tail?*)
          ).     
        
 
@@ -266,7 +266,7 @@ Definition alloc_spec := (* assume the list isn't empty *)
 Definition alloc_spec' := (* this doesn't assume that the list is empty, but that q is either a pointer or a nullval *)
  DECLARE _alloc
    WITH sh : share, q: val, il: list val, n:val            
-   PRE [ tptr t_run]
+   PRE [ tptr t_run ]
       PROP(writable_share sh; is_pointer_or_null q) 
       PARAMS (n) GLOBALS()
       SEP (data_at sh (t_run) q n) (* q can be nullval meaning that there is only one run *)
@@ -277,24 +277,29 @@ Definition alloc_spec' := (* this doesn't assume that the list is empty, but tha
 
 
 (************************ alloc global *************************)
-(*Definition kalloc1_spec := (* this doesn't assume that the list is empty, but that q is either a pointer or a nullval *)
+Definition kalloc1_spec := (* this doesn't assume that the list is empty, but that q is either a pointer or a nullval *)
  DECLARE _kalloc1
-   WITH sh : share, q: val, il: list val           
+   WITH sh : share, il: list val, top:val, b:block, p:ptrofs, xx:Z, next:val, gv:globals         (*b:block, p:ptrofs,*)
    PRE [ ]
-      PROP(writable_share sh; is_pointer_or_null q) 
-      PARAMS () GLOBALS()
-      SEP (data_at sh (t_run) q n) (* q can be nullval meaning that there is only one run *)
+      PROP(writable_share sh; is_pointer_or_null next)  
+      PARAMS () GLOBALS(gv)
+      SEP ( data_at sh (t_run) next top;
+         data_at sh t_struct_kmem (Vint (Int.repr xx), top) (gv _kmem)) (* q can be nullval meaning that there is only one run *)
    POST [ tptr tvoid ]
       PROP()
-      RETURN (n) (* we return the head like in the pop function*)
-      SEP (data_at sh (t_run) q n). *)
+      RETURN (top) (* we return the head like in the pop function*)
+      SEP (
+         data_at sh (t_run) next top;
+         data_at sh t_struct_kmem (Vint (Int.repr xx), next) (gv _kmem)
+         ).   
+       
 
 (************************************)
 Definition Gprog : funspecs := [get_freelist1_input_spec; 
 get_freelist1_input_spec'; get_freelist1_spec; get_i_spec; 
 get_xx_spec; get_freelist_spec;
 free_spec; free_spec'; alloc_spec; alloc_spec'; 
-kfree1_spec].
+kfree1_spec; kalloc1_spec].
 
 
 Lemma body_get_freelist_input_spec:  semax_body Vprog Gprog f_get_freelist1_input get_freelist1_input_spec.
@@ -345,3 +350,17 @@ forward_if (PROP () LOCAL (temp _lst (if eq_dec n nullval then nullval else q);
 - forward. entailer!.
 - forward.
 Qed. 
+
+
+Lemma body_kalloc1: semax_body Vprog Gprog f_kalloc1 kalloc1_spec.
+Proof. start_function. forward. 
+forward_if (PROP ()
+           LOCAL (temp _r top; temp _t'1 (if eq_dec top nullval then nullval else next); gvars gv)
+           SEP (data_at sh t_run next top; data_at sh t_struct_kmem (Vint (Int.repr xx), next) (gv _kmem))).
+- forward. forward. entailer!. destruct (eq_dec top nullval); auto. subst. inversion H0.
+- forward. entailer!. inversion H1. inversion H0. 
+- destruct (eq_dec top nullval).
+   + forward. 
+   + forward. 
+Qed.
+
