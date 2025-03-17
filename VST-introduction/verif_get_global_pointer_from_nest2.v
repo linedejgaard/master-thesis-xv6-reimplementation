@@ -162,7 +162,7 @@ Definition get_i_spec := (* only works for Ews*)
 
 Definition get_freelist1_spec :=
  DECLARE _get_freelist1
-       WITH b:block, p: ptrofs, sh: share, n : nat, gv: globals
+       WITH b:block, p: ptrofs, sh: share, gv: globals
        PRE  [ ]
        PROP (readable_share sh)
        PARAMS () GLOBALS (gv)
@@ -204,7 +204,7 @@ DECLARE _get_freelist
 
 Definition free_spec := (** uses listrep_cons*)
  DECLARE _free
-   WITH sh : share, p: val, q: val, il: list val, n:val
+   WITH sh : share, q: val, il: list val, n:val
    PRE [ tptr tvoid , tptr t_run]
       PROP(writable_share sh) (* not sure this is ok to say *)
       PARAMS (n; q) GLOBALS()
@@ -218,7 +218,7 @@ Definition free_spec := (** uses listrep_cons*)
 
 Definition free_spec' := 
  DECLARE _free
-   WITH sh : share, p: val, q: val, n:nat, f:val
+   WITH sh : share, q: val, n:nat, f:val
    PRE [ tptr tvoid , tptr t_run]
       PROP(writable_share sh) (* not sure this is ok to say *)
       PARAMS (f; q) GLOBALS()
@@ -226,7 +226,28 @@ Definition free_spec' :=
    POST [ tvoid ]
       PROP()
       RETURN () (* no return value *)
-      SEP (data_at sh (t_run) q f;  freelistrep sh n q).      
+      SEP (data_at sh (t_run) q f;  freelistrep sh n q).     
+       
+
+(************************ kfree1 freelistrep global *************************)
+
+Definition kfree1_spec := 
+ DECLARE _kfree1
+   WITH sh : share, n:nat, new_head:val, b1:block, p1:ptrofs,b2:block, p2:ptrofs, xx:Z, gv:globals
+   PRE [ tptr tvoid]
+      PROP(writable_share sh) (* readable_share is this necessary *)
+      PARAMS (new_head) GLOBALS(gv)
+      SEP (data_at sh (t_run) nullval new_head;
+      data_at sh t_struct_kmem (Vint (Int.repr xx), Vptr b1 p1) (gv _kmem)
+      )
+   POST [ tvoid ]
+      PROP()
+      RETURN () (* no return value *)
+      SEP (
+         data_at sh (t_run) (Vptr b1 p1) new_head;
+         data_at sh t_struct_kmem (Vint (Int.repr xx), new_head) (gv _kmem)
+         ).     
+       
 
 (************************ alloc non_global *************************)
 
@@ -258,7 +279,7 @@ Definition alloc_spec' := (* this doesn't assume that the list is empty, but tha
 Definition Gprog : funspecs := [get_freelist1_input_spec; 
 get_freelist1_input_spec'; get_freelist1_spec; get_i_spec; 
 get_xx_spec; get_freelist_spec;
-free_spec; alloc_spec; alloc_spec'; free_spec'].
+free_spec; alloc_spec; alloc_spec'; free_spec'; kfree1_spec].
 
 
 Lemma body_get_freelist_input_spec:  semax_body Vprog Gprog f_get_freelist1_input get_freelist1_input_spec.
@@ -283,6 +304,9 @@ Lemma body_free: semax_body Vprog Gprog f_free free_spec.
 Proof. start_function. repeat forward. entailer!. Qed.
 
 Lemma body_free': semax_body Vprog Gprog f_free free_spec'.
+Proof. start_function. repeat forward. entailer!. Qed.
+
+Lemma body_kfree1: semax_body Vprog Gprog f_kfree1 kfree1_spec.
 Proof. start_function. repeat forward. entailer!. Qed.
 
 Lemma body_alloc: semax_body Vprog Gprog f_alloc alloc_spec.
