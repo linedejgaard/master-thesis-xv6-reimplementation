@@ -182,8 +182,25 @@ Definition get_freelist1_spec :=
        PROP () RETURN (gv _freelist)
        SEP (freelistrep sh n (gv _freelist)).*)
 
+(************************ get innerlist global *************************)
+Definition t_struct_b := Tstruct _b noattr.
+
+Definition get_spec :=
+ DECLARE _get
+  WITH sh: share, v : reptype' t_struct_b, gv: globals
+  PRE  []
+        PROP (readable_share sh)
+        PARAMS() GLOBALS (gv)
+        SEP(data_at sh t_struct_b (repinj _ v) (gv _p))
+  POST [ tint ]
+         PROP()
+         RETURN (Vint (fst v))
+         SEP (data_at sh t_struct_b (repinj _ v) (gv _p)).
+
+
+
 (************************************)
-Definition Gprog : funspecs := [get_freelist_input_spec; get_freelist_input_spec'; get_freelist1_spec; get_i_spec].
+Definition Gprog : funspecs := [get_freelist_input_spec; get_freelist_input_spec'; get_freelist1_spec; get_i_spec; get_spec].
 
 
 Lemma body_get_freelist_input_spec:  semax_body Vprog Gprog f_get_freelist_input get_freelist_input_spec.
@@ -196,6 +213,18 @@ Lemma body_get_i_spec: semax_body Vprog Gprog f_get_i get_i_spec.
 Proof. 
 start_function. repeat forward. Qed.
 
-
 Lemma body_get_freelist1: semax_body Vprog Gprog f_get_freelist1 get_freelist1_spec.
 Proof. start_function. repeat forward. Qed.
+
+Lemma body_get : semax_body Vprog Gprog f_get get_spec.
+Proof. start_function. simpl in v. unfold_repinj. repeat forward. Qed.
+
+(*
+Lemma body_get_xx : semax_body Vprog Gprog f_get_xx get_xx_spec.
+Proof. start_function. 
+simpl in v.
+unfold_repinj. forward.
+
+
+Lemma body_get_innerlist: semax_body Vprog Gprog f_get_innerlist get_innerlist_spec.
+Proof. start_function. forward. Qed.*)
