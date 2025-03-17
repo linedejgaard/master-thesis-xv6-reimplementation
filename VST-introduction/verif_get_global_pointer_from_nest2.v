@@ -233,18 +233,18 @@ Definition free_spec' :=
 
 Definition kfree1_spec := 
  DECLARE _kfree1
-   WITH sh : share, n:nat, new_head:val, b1:block, p1:ptrofs,b2:block, p2:ptrofs, xx:Z, gv:globals
+   WITH sh : share, n:nat, new_head:val, b:block, p:ptrofs, xx:Z, gv:globals
    PRE [ tptr tvoid]
       PROP(writable_share sh) (* readable_share is this necessary *)
       PARAMS (new_head) GLOBALS(gv)
       SEP (data_at sh (t_run) nullval new_head;
-      data_at sh t_struct_kmem (Vint (Int.repr xx), Vptr b1 p1) (gv _kmem)
+      data_at sh t_struct_kmem (Vint (Int.repr xx), Vptr b p) (gv _kmem)
       )
    POST [ tvoid ]
       PROP()
       RETURN () (* no return value *)
       SEP (
-         data_at sh (t_run) (Vptr b1 p1) new_head;
+         data_at sh (t_run) (Vptr b p) new_head;
          data_at sh t_struct_kmem (Vint (Int.repr xx), new_head) (gv _kmem)
          ).     
        
@@ -275,11 +275,26 @@ Definition alloc_spec' := (* this doesn't assume that the list is empty, but tha
       RETURN (n) (* we return the head like in the pop function*)
       SEP (data_at sh (t_run) q n). 
 
+
+(************************ alloc global *************************)
+(*Definition kalloc1_spec := (* this doesn't assume that the list is empty, but that q is either a pointer or a nullval *)
+ DECLARE _kalloc1
+   WITH sh : share, q: val, il: list val           
+   PRE [ ]
+      PROP(writable_share sh; is_pointer_or_null q) 
+      PARAMS () GLOBALS()
+      SEP (data_at sh (t_run) q n) (* q can be nullval meaning that there is only one run *)
+   POST [ tptr tvoid ]
+      PROP()
+      RETURN (n) (* we return the head like in the pop function*)
+      SEP (data_at sh (t_run) q n). *)
+
 (************************************)
 Definition Gprog : funspecs := [get_freelist1_input_spec; 
 get_freelist1_input_spec'; get_freelist1_spec; get_i_spec; 
 get_xx_spec; get_freelist_spec;
-free_spec; alloc_spec; alloc_spec'; free_spec'; kfree1_spec].
+free_spec; free_spec'; alloc_spec; alloc_spec'; 
+kfree1_spec].
 
 
 Lemma body_get_freelist_input_spec:  semax_body Vprog Gprog f_get_freelist1_input get_freelist1_input_spec.
