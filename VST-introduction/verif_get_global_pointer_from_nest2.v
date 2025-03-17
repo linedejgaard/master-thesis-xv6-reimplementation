@@ -200,7 +200,7 @@ DECLARE _get_freelist
               SEP (data_at sh t_struct_kmem (Vint (Int.repr xx), Vptr b p) (gv _kmem)).
               
 
-(************************ free freelist non_global *************************)
+(************************ free listrep non_global *************************)
 
 Definition free_spec := (** uses listrep_cons*)
  DECLARE _free
@@ -214,11 +214,37 @@ Definition free_spec := (** uses listrep_cons*)
       RETURN () (* no return value *)
       SEP (data_at sh (t_run) q n;  listrep sh il q).
 
+(************************ alloc listrep non_global *************************)
 
+Definition alloc_spec := (* assume the list isn't empty *)
+ DECLARE _alloc
+   WITH sh : share, q: val, il: list val, n:val            
+   PRE [ tptr t_run]
+      PROP(writable_share sh)
+      PARAMS (n) GLOBALS()
+      SEP (data_at sh (t_run) q n; listrep sh il q) (* q can be nullval meaning that there is only one run *)
+   POST [ tptr tvoid ]
+      PROP()
+      RETURN (n) (* we return the head like in the pop function*)
+      SEP (data_at sh (t_run) q n; listrep sh il q). 
 
+Definition alloc_spec' := (* this doesn't assume that the list is empty, but that q is either a pointer or a nullval *)
+ DECLARE _alloc
+   WITH sh : share, q: val, il: list val, n:val            
+   PRE [ tptr t_run]
+      PROP(writable_share sh; is_pointer_or_null q) 
+      PARAMS (n) GLOBALS()
+      SEP (data_at sh (t_run) q n) (* q can be nullval meaning that there is only one run *)
+   POST [ tptr tvoid ]
+      PROP()
+      RETURN (n) (* we return the head like in the pop function*)
+      SEP (data_at sh (t_run) q n). 
 
 (************************************)
-Definition Gprog : funspecs := [get_freelist1_input_spec; get_freelist1_input_spec'; get_freelist1_spec; get_i_spec; get_xx_spec; get_freelist_spec].
+Definition Gprog : funspecs := [get_freelist1_input_spec; 
+get_freelist1_input_spec'; get_freelist1_spec; get_i_spec; 
+get_xx_spec; get_freelist_spec;
+free_spec; alloc_spec; alloc_spec'].
 
 
 Lemma body_get_freelist_input_spec:  semax_body Vprog Gprog f_get_freelist1_input get_freelist1_input_spec.
@@ -228,8 +254,7 @@ Lemma body_get_freelist_input_spec':  semax_body Vprog Gprog f_get_freelist1_inp
 Proof. start_function. forward. Qed.
 
 Lemma body_get_i_spec: semax_body Vprog Gprog f_get_i get_i_spec.
-Proof. 
-start_function. repeat forward. Qed.
+Proof. start_function. repeat forward. Qed.
 
 Lemma body_get_freelist1: semax_body Vprog Gprog f_get_freelist1 get_freelist1_spec.
 Proof. start_function. repeat forward. Qed.
@@ -243,4 +268,24 @@ Proof. start_function. forward. forward. Qed.
 Lemma body_free: semax_body Vprog Gprog f_free free_spec.
 Proof. start_function. repeat forward. entailer!. Qed.
 
+Lemma body_alloc: semax_body Vprog Gprog f_alloc alloc_spec.
+Proof.
+start_function. forward. 
+forward_if (PROP () LOCAL (temp _lst (if eq_dec n nullval then nullval else q);
+                            temp _head n)
+                 SEP (data_at sh t_run q n; listrep sh il q)).
+- forward. entailer!. destruct (eq_dec n nullval); auto. subst. inversion H.
+- forward. entailer!.
+- forward.
+Qed.
 
+Lemma body_alloc': semax_body Vprog Gprog f_alloc alloc_spec'.
+Proof.
+start_function. forward. 
+forward_if (PROP () LOCAL (temp _lst (if eq_dec n nullval then nullval else q);
+                            temp _head n)
+                 SEP (data_at sh t_run q n)).
+- forward. entailer!. destruct (eq_dec n nullval); auto. subst. inversion H0. 
+- forward. entailer!.
+- forward.
+Qed.
