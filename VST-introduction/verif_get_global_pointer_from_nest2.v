@@ -55,8 +55,8 @@ Qed.
 #[export] Hint Resolve listrep_valid_pointer : valid_pointer.
 
 
-Definition get_freelist_input_spec :=
- DECLARE _get_freelist_input
+Definition get_freelist1_input_spec :=
+ DECLARE _get_freelist1_input
        WITH sh: share, sigma : list val, p: val
        PRE  [ tptr t_node ]
        PROP ()
@@ -133,8 +133,8 @@ Lemma freelistrep_nonnull: forall n sh x,
        - Intros m y. rewrite H0. unfold freelistrep at 2; fold freelistrep. Exists y. entailer!.
 Qed.
 
-Definition get_freelist_input_spec' :=
-DECLARE _get_freelist_input
+Definition get_freelist1_input_spec' :=
+DECLARE _get_freelist1_input
        WITH sh: share, n : nat, p: val
        PRE  [ tptr t_node ]
        PROP ()
@@ -166,14 +166,14 @@ Definition get_freelist1_spec :=
        PRE  [ ]
        PROP (readable_share sh)
        PARAMS () GLOBALS (gv)
-       SEP (data_at sh (tptr t_node) (Vptr b p) (gv _freelist)) (* what _freelist stores is a pointer *)
+       SEP (data_at sh (tptr t_node) (Vptr b p) (gv _freelist1)) (* what _freelist stores is a pointer *)
        POST [ (tptr t_node) ]
        PROP () RETURN (Vptr b p)
-       SEP (data_at sh (tptr t_node) (Vptr b p) (gv _freelist)).
+       SEP (data_at sh (tptr t_node) (Vptr b p) (gv _freelist1)).
 
 
 (************************ get innerlist global *************************)
-Definition t_struct_kmem := Tstruct _kmem noattr.
+Definition t_struct_kmem := Tstruct _struct_kmem noattr.
 
 Definition get_xx_spec :=
  DECLARE _get_xx
@@ -181,32 +181,32 @@ Definition get_xx_spec :=
   PRE  []
         PROP (readable_share sh)
         PARAMS() GLOBALS (gv)
-        SEP(data_at sh t_struct_kmem (repinj _ v) (gv _kmem_p))
+        SEP(data_at sh t_struct_kmem (repinj _ v) (gv _kmem))
   POST [ tint ]
          PROP()
          RETURN (Vint (fst v))
-         SEP (data_at sh t_struct_kmem (repinj _ v) (gv _kmem_p)).
+         SEP (data_at sh t_struct_kmem (repinj _ v) (gv _kmem)).
 
-Definition get_innerlist_spec :=
-DECLARE _get_innerlist
+Definition get_freelist_spec :=
+DECLARE _get_freelist
        WITH sh: share, b:block, p: ptrofs, xx : Z , gv: globals
        PRE  []
        PROP (readable_share sh)
        PARAMS() GLOBALS (gv)
-       SEP(data_at sh t_struct_kmem (Vint (Int.repr xx), Vptr b p) (gv _kmem_p))
+       SEP(data_at sh t_struct_kmem (Vint (Int.repr xx), Vptr b p) (gv _kmem))
        POST [ tptr t_node ]
               PROP()
               RETURN (Vptr b p)
-              SEP (data_at sh t_struct_kmem (Vint (Int.repr xx), Vptr b p) (gv _kmem_p)).
+              SEP (data_at sh t_struct_kmem (Vint (Int.repr xx), Vptr b p) (gv _kmem)).
 
 (************************************)
-Definition Gprog : funspecs := [get_freelist_input_spec; get_freelist_input_spec'; get_freelist1_spec; get_i_spec; get_xx_spec; get_innerlist_spec].
+Definition Gprog : funspecs := [get_freelist1_input_spec; get_freelist1_input_spec'; get_freelist1_spec; get_i_spec; get_xx_spec; get_freelist_spec].
 
 
-Lemma body_get_freelist_input_spec:  semax_body Vprog Gprog f_get_freelist_input get_freelist_input_spec.
+Lemma body_get_freelist_input_spec:  semax_body Vprog Gprog f_get_freelist1_input get_freelist1_input_spec.
 Proof. start_function. forward. Qed.
 
-Lemma body_get_freelist_input_spec':  semax_body Vprog Gprog f_get_freelist_input get_freelist_input_spec'.
+Lemma body_get_freelist_input_spec':  semax_body Vprog Gprog f_get_freelist1_input get_freelist1_input_spec'.
 Proof. start_function. forward. Qed.
 
 Lemma body_get_i_spec: semax_body Vprog Gprog f_get_i get_i_spec.
@@ -219,5 +219,5 @@ Proof. start_function. repeat forward. Qed.
 Lemma body_get_xx : semax_body Vprog Gprog f_get_xx get_xx_spec.
 Proof. start_function. simpl in v. unfold_repinj. repeat forward. Qed.
 
-Lemma body_get_innerlist : semax_body Vprog Gprog f_get_innerlist get_innerlist_spec.
+Lemma body_get_innerlist : semax_body Vprog Gprog f_get_freelist get_freelist_spec.
 Proof. start_function. forward. forward. Qed.
