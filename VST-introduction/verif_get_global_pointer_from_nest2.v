@@ -183,19 +183,19 @@ Definition get_freelist1_spec :=
        SEP (freelistrep sh n (gv _freelist)).*)
 
 (************************ get innerlist global *************************)
-Definition t_struct_b := Tstruct _b noattr.
+Definition t_struct_kmem := Tstruct _kmem noattr.
 
 Definition get_xx_spec :=
  DECLARE _get_xx
-  WITH sh: share, v : reptype' t_struct_b, gv: globals
+  WITH sh: share, v : reptype' t_struct_kmem, gv: globals
   PRE  []
         PROP (readable_share sh)
         PARAMS() GLOBALS (gv)
-        SEP(data_at sh t_struct_b (repinj _ v) (gv _p))
+        SEP(data_at sh t_struct_kmem (repinj _ v) (gv _kmem_p))
   POST [ tint ]
          PROP()
          RETURN (Vint (fst v))
-         SEP (data_at sh t_struct_b (repinj _ v) (gv _p)).
+         SEP (data_at sh t_struct_kmem (repinj _ v) (gv _kmem_p)).
 
 
 
