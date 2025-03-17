@@ -182,6 +182,21 @@ Definition remove_spec := (* assume the list isn't empty *)
       RETURN (q)
       SEP (data_at sh (t_node) q n; listrep sh il q). (* I did not free the node.. *)
 
+Definition remove_spec' := (* assume the list isn't empty *)
+   DECLARE _remove
+      WITH sh : share, q: val, il: list val, n:val            
+      PRE [ tptr t_node]
+         PROP(writable_share sh; is_pointer_or_null q) (* not sure this is ok to say *)
+         PARAMS (n) GLOBALS()
+         SEP (data_at sh (t_node) q n)
+      POST [ tptr t_node ]
+   (* EX r:val,*)
+         PROP()
+         RETURN (q)
+         SEP (data_at sh (t_node) q n). (* I did not free the node.. *)
+   
+
+
 Definition remove_only_if_lst_spec := (* assume the list isn't empty *)
  DECLARE _remove_only_if_lst
    WITH sh : share, q: val, il: list val, n:val            
@@ -265,7 +280,7 @@ DECLARE _add
       SEP (listrep sh (s1++s2) r).
 *)
 Definition Gprog := [add_spec; add_spec'; add_void_spec; 
-add_void_spec'; free_spec; remove_spec; remove_only_if_lst_spec; 
+add_void_spec'; free_spec; remove_spec; remove_spec'; remove_only_if_lst_spec; 
 alloc_spec;alloc_spec'].
 
 (*Definition lseg (sh: share) (contents: list val) (x z: val) : mpred :=
@@ -338,6 +353,14 @@ Qed.
 (**************** REMOVE ****************)
 
 Lemma body_remove: semax_body Vprog Gprog f_remove remove_spec.
+Proof.
+start_function.
+  forward.
+  repeat forward.
+Qed.
+
+
+Lemma body_remove': semax_body Vprog Gprog f_remove remove_spec'.
 Proof.
 start_function.
   forward.
