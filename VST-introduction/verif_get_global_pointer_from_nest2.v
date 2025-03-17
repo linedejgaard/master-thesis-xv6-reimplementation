@@ -261,7 +261,7 @@ Definition alloc_spec := (* assume the list isn't empty *)
    POST [ tptr tvoid ]
       PROP()
       RETURN (n) (* we return the head like in the pop function*)
-      SEP (data_at sh (t_run) q n; listrep sh il q). 
+      SEP (data_at sh (t_run) q n; listrep sh il q). (** I AM NOT SURE THE GARBAGE COLLECTION TAKES THE HEAD?*)
 
 Definition alloc_spec' := (* this doesn't assume that the list is empty, but that q is either a pointer or a nullval *)
  DECLARE _alloc
@@ -273,7 +273,7 @@ Definition alloc_spec' := (* this doesn't assume that the list is empty, but tha
    POST [ tptr tvoid ]
       PROP()
       RETURN (n) (* we return the head like in the pop function*)
-      SEP (data_at sh (t_run) q n). 
+      SEP (data_at sh (t_run) q n). (** I THINK THE HEAD IS STILL IN MEMORY, I AM NOT SURE WE CAN SAY SOMETHING ABOUT THE REST OF THE LIST *)
 
 
 (************************ alloc global *************************)
