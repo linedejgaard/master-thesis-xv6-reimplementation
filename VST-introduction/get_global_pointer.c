@@ -22,32 +22,11 @@ int get_i() {
 
 // working in progress
 
-struct b {int y1; struct node *innerlist;};
+struct b {int xx; struct node *innerlist;};
 
 struct b p;
 
-int get(void) {
-  return p.y1;
+int get_xx(void) {
+  return p.xx;
 }
 
-
-
-
-
-
-
-// not verified_
-
-
-struct {
-  int xx; // lock
-  struct node *innerlist;
-} kmem;
-
-struct node *get_innerlist() {
-  return kmem.innerlist;
-}
-
-int get_xx_2() {
-  return kmem.xx;
-}
