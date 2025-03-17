@@ -197,10 +197,20 @@ Definition get_xx_spec :=
          RETURN (Vint (fst v))
          SEP (data_at sh t_struct_kmem (repinj _ v) (gv _kmem_p)).
 
-
+Definition get_innerlist_spec :=
+DECLARE _get_innerlist
+       WITH sh: share, b:block, p: ptrofs, xx : Z , gv: globals
+       PRE  []
+       PROP (readable_share sh)
+       PARAMS() GLOBALS (gv)
+       SEP(data_at sh t_struct_kmem (Vint (Int.repr xx), Vptr b p) (gv _kmem_p))
+       POST [ tptr t_node ]
+              PROP()
+              RETURN (Vptr b p)
+              SEP (data_at sh t_struct_kmem (Vint (Int.repr xx), Vptr b p) (gv _kmem_p)).
 
 (************************************)
-Definition Gprog : funspecs := [get_freelist_input_spec; get_freelist_input_spec'; get_freelist1_spec; get_i_spec; get_xx_spec].
+Definition Gprog : funspecs := [get_freelist_input_spec; get_freelist_input_spec'; get_freelist1_spec; get_i_spec; get_xx_spec; get_innerlist_spec].
 
 
 Lemma body_get_freelist_input_spec:  semax_body Vprog Gprog f_get_freelist_input get_freelist_input_spec.
@@ -216,8 +226,11 @@ start_function. repeat forward. Qed.
 Lemma body_get_freelist1: semax_body Vprog Gprog f_get_freelist1 get_freelist1_spec.
 Proof. start_function. repeat forward. Qed.
 
-Lemma body_get : semax_body Vprog Gprog f_get_xx get_xx_spec.
+Lemma body_get_xx : semax_body Vprog Gprog f_get_xx get_xx_spec.
 Proof. start_function. simpl in v. unfold_repinj. repeat forward. Qed.
+
+Lemma body_get_innerlist : semax_body Vprog Gprog f_get_innerlist get_innerlist_spec.
+Proof. start_function. forward. forward. Qed.
 
 (*
 Lemma body_get_xx : semax_body Vprog Gprog f_get_xx get_xx_spec.

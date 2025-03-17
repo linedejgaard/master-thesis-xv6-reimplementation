@@ -22,10 +22,16 @@ int get_i() {
 
 // working in progress
 
-struct kmem {int xx; struct node *innerlist;} kmem_p;
+struct kmem {
+  int xx; //kind of lock
+  struct node *innerlist; //kind of freelist
+} kmem_p;
 
 int get_xx(void) {
   return kmem_p.xx;
 }
 
+struct node *get_innerlist(void) {
+  return kmem_p.innerlist;
+}
 
