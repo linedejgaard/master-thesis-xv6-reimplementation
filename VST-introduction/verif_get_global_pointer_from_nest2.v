@@ -171,16 +171,6 @@ Definition get_freelist1_spec :=
        PROP () RETURN (Vptr b p)
        SEP (data_at sh (tptr t_node) (Vptr b p) (gv _freelist)).
 
-(*Definition get_freelist1_spec' :=
- DECLARE _get_freelist1
-       WITH sh: share, n : nat, gv: globals
-       PRE  [ ]
-       PROP ()
-       PARAMS () GLOBALS (gv)
-       SEP (freelistrep sh n (gv _freelist))
-       POST [ (tptr t_node) ]
-       PROP () RETURN (gv _freelist)
-       SEP (freelistrep sh n (gv _freelist)).*)
 
 (************************ get innerlist global *************************)
 Definition t_struct_kmem := Tstruct _kmem noattr.
@@ -231,13 +221,3 @@ Proof. start_function. simpl in v. unfold_repinj. repeat forward. Qed.
 
 Lemma body_get_innerlist : semax_body Vprog Gprog f_get_innerlist get_innerlist_spec.
 Proof. start_function. forward. forward. Qed.
-
-(*
-Lemma body_get_xx : semax_body Vprog Gprog f_get_xx get_xx_spec.
-Proof. start_function. 
-simpl in v.
-unfold_repinj. forward.
-
-
-Lemma body_get_innerlist: semax_body Vprog Gprog f_get_innerlist get_innerlist_spec.
-Proof. start_function. forward. Qed.*)
