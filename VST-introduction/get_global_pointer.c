@@ -49,12 +49,20 @@ void *alloc(struct run *lst) {
   return (struct run*)head;
 }
 
-
-// working in progress 
 void kfree1(void *pa) // LINE: kind of add ( push)
 {
   struct run *r;
   r = (struct run*)pa;
   r->next = kmem.freelist;
   kmem.freelist = r;
+}
+
+// working in progress 
+void *kalloc1(void) // LINE: kind of remove / pop
+{
+  struct run *r;
+  r = kmem.freelist;
+  if(r)
+    kmem.freelist = r->next;
+  return (void*)r;
 }
