@@ -233,19 +233,19 @@ Definition free_spec' :=
 
 Definition kfree1_spec := 
  DECLARE _kfree1
-   WITH sh : share, n:nat, new_head:val, b:block, p:ptrofs, xx:Z, gv:globals
+   WITH sh : share, new_head:val, original_freelist_pointer:val, xx:Z, gv:globals
    PRE [ tptr tvoid]
-      PROP(writable_share sh) (* readable_share is this necessary *)
+      PROP(writable_share sh; is_pointer_or_null original_freelist_pointer) (* writable_share is necessary *)
       PARAMS (new_head) GLOBALS(gv)
-      SEP (data_at sh (t_run) nullval new_head;
-      data_at sh t_struct_kmem (Vint (Int.repr xx), Vptr b p) (gv _kmem)
+      SEP (data_at sh (t_run) nullval new_head; (* the input run struct should exists *)
+      data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem) (* the kmem freelist should exists, xx is a placeholder for the spinlock *)
       )
    POST [ tvoid ]
       PROP()
       RETURN () (* no return value *)
       SEP (
-         data_at sh (t_run) (Vptr b p) new_head;
-         data_at sh t_struct_kmem (Vint (Int.repr xx), new_head) (gv _kmem) (** should gv _kmem still point at the tail?*)
+         data_at sh (t_run) (original_freelist_pointer) new_head; (* the new head should point to the original freelist pointer *)
+         data_at sh t_struct_kmem (Vint (Int.repr xx), new_head) (gv _kmem) (** the top of the freelist should point to the new head *)
          ).     
        
 
@@ -279,17 +279,17 @@ Definition alloc_spec' := (* this doesn't assume that the list is empty, but tha
 (************************ alloc global *************************)
 Definition kalloc1_spec := (* this doesn't assume that the list is empty, but that q is either a pointer or a nullval *)
  DECLARE _kalloc1
-   WITH sh : share, il: list val, top:val, b:block, p:ptrofs, xx:Z, next:val, gv:globals         (*b:block, p:ptrofs,*)
+   WITH sh : share, original_freelist_pointer:val, xx:Z, next:val, gv:globals
    PRE [ ]
-      PROP(writable_share sh; is_pointer_or_null next)  
+      PROP(writable_share sh; is_pointer_or_null next) 
       PARAMS () GLOBALS(gv)
-      SEP ( data_at sh (t_run) next top;
-         data_at sh t_struct_kmem (Vint (Int.repr xx), top) (gv _kmem)) (* q can be nullval meaning that there is only one run *)
+      SEP ( data_at sh (t_run) next original_freelist_pointer;
+         data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem)) (* q can be nullval meaning that there is only one run *)
    POST [ tptr tvoid ]
       PROP()
-      RETURN (top) (* we return the head like in the pop function*)
+      RETURN (original_freelist_pointer) (* we return the head like in the pop function*)
       SEP (
-         data_at sh (t_run) next top;
+         data_at sh (t_run) next original_freelist_pointer;
          data_at sh t_struct_kmem (Vint (Int.repr xx), next) (gv _kmem)
          ).   
        
@@ -355,11 +355,11 @@ Qed.
 Lemma body_kalloc1: semax_body Vprog Gprog f_kalloc1 kalloc1_spec.
 Proof. start_function. forward. 
 forward_if (PROP ()
-           LOCAL (temp _r top; temp _t'1 (if eq_dec top nullval then nullval else next); gvars gv)
-           SEP (data_at sh t_run next top; data_at sh t_struct_kmem (Vint (Int.repr xx), next) (gv _kmem))).
-- forward. forward. entailer!. destruct (eq_dec top nullval); auto. subst. inversion H0.
+           LOCAL (temp _r original_freelist_pointer; temp _t'1 (if eq_dec original_freelist_pointer nullval then nullval else next); gvars gv)
+           SEP (data_at sh t_run next original_freelist_pointer; data_at sh t_struct_kmem (Vint (Int.repr xx), next) (gv _kmem))).
+- forward. forward. entailer!. destruct (eq_dec original_freelist_pointer nullval); auto. subst. inversion H0.
 - forward. entailer!. inversion H1. inversion H0. 
-- destruct (eq_dec top nullval).
+- destruct (eq_dec original_freelist_pointer nullval).
    + forward. 
    + forward. 
 Qed.
