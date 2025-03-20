@@ -312,7 +312,27 @@ Definition call_kfree1_spec :=
          data_at sh t_struct_kmem (Vint (Int.repr xx), new_head) (gv _kmem) (** the top of the freelist should point to the new head *)
          ).
 
-
+Definition call_kfree1_if_1_spec := 
+   DECLARE _call_kfree1_if_1
+      WITH sh : share, new_head:val, original_freelist_pointer:val, xx:Z, gv:globals
+      PRE [ tptr tvoid]
+         PROP(writable_share sh; is_pointer_or_null original_freelist_pointer) (* writable_share is necessary *)
+         PARAMS (new_head) GLOBALS(gv)
+         SEP (data_at sh (t_run) nullval new_head; (* the input run struct should exists *)
+         data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem) (* the kmem freelist should exists, xx is a placeholder for the spinlock *)
+         )
+      POST [ tvoid ]
+         PROP()
+         RETURN () (* no return value *)
+         SEP (
+            if (eq_dec new_head nullval) then
+            data_at sh (t_run) nullval new_head * (* the input run struct should exists *)
+            data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem) (* the kmem freelist should exists, xx is a placeholder for the spinlock *)
+            else 
+            data_at sh (t_run) (original_freelist_pointer) new_head *(* the new head should point to the original freelist pointer *)
+            data_at sh t_struct_kmem (Vint (Int.repr xx), new_head) (gv _kmem) (** the top of the freelist should point to the new head *)
+            ).
+         
 
 
 (************************************)
@@ -320,7 +340,7 @@ Definition Gprog : funspecs := [get_freelist1_input_spec;
 get_freelist1_input_spec'; get_freelist1_spec; get_i_spec; 
 get_xx_spec; get_freelist_spec;
 free_spec; free_spec'; alloc_spec; alloc_spec'; 
-kfree1_spec; kalloc1_spec; call_kfree1_spec].
+kfree1_spec; kalloc1_spec; call_kfree1_spec; call_kfree1_if_1_spec].
 
 
 Lemma body_get_freelist_input_spec:  semax_body Vprog Gprog f_get_freelist1_input get_freelist1_input_spec.
@@ -394,3 +414,15 @@ start_function.
 forward_call.
 entailer!.
 Qed.
+
+Lemma body_call_kfree1_if_1_spec: semax_body Vprog Gprog f_call_kfree1_if_1 call_kfree1_if_1_spec.
+Proof.
+start_function.
+forward_if.
+- forward_call.
+  entailer!.
+  destruct (eq_dec new_head nullval); entailer!.
+- forward. entailer!. destruct (eq_dec nullval nullval); entailer!.
+Qed.
+
+

@@ -78,6 +78,12 @@ void call_kfree1(void *pa) // LINE: kind of add ( push)
   kfree1(pa);
 }
 
+void call_kfree1_if_1(void *pa) // LINE: kind of add ( push)
+{
+  if (pa) // check if pa is NULL
+    kfree1(pa);
+}
+
 // working in progress
 
 void freerange_no_loop_no_add(void *pa_start, void *pa_end) {
