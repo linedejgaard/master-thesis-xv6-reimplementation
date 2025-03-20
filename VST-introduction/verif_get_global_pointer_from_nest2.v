@@ -307,6 +307,29 @@ Definition pointer_compare_1_spec :=
          RETURN (Vint (if eq_dec p q then Int.one else Int.zero))
          SEP (data_at sh tint (Vint Int.zero) p; data_at sh tint (Vint Int.zero) q).
 
+  
+Definition lt_pointers (pa_start pa_end : val) : bool :=
+   match pa_start, pa_end with
+   | Vptr b1 ofs1, Vptr b2 ofs2 =>
+         if eq_dec b1 b2 then
+         Z.leb (Ptrofs.unsigned ofs1) (Ptrofs.unsigned ofs2)
+         else
+         false
+   | _, _ => false
+   end.
+
+Definition pointer_compare_2_spec :=
+   DECLARE _pointer_compare_2
+      WITH p: val, q:val, sh: share
+      PRE  [ tptr tint, tptr tint]
+            PROP (sepalg.nonidentity sh)
+            PARAMS (p; q)
+            SEP(data_at sh tint (Vint Int.zero) p; data_at sh tint (Vint Int.zero) q)
+      POST [ tint ]
+            PROP()
+            RETURN (Vint (if (lt_pointers p q) then Int.one else Int.zero))
+            SEP (data_at sh tint (Vint Int.zero) p; data_at sh tint (Vint Int.zero) q).
+           
 
 
 (*Definition if_condition_bool (pa_start pa_end : val) (i:Z) : bool :=
@@ -404,7 +427,9 @@ Definition Gprog : funspecs := [get_freelist1_input_spec;
 get_freelist1_input_spec'; get_freelist1_spec; get_i_spec; 
 get_xx_spec; get_freelist_spec;
 free_spec; free_spec'; alloc_spec; alloc_spec'; 
-kfree1_spec; kalloc1_spec; call_kfree1_spec; call_kfree1_if_1_spec; pointer_compare_1_spec].
+kfree1_spec; kalloc1_spec; call_kfree1_spec; 
+call_kfree1_if_1_spec; pointer_compare_1_spec;
+pointer_compare_2_spec].
 
 
 Lemma body_get_freelist_input_spec:  semax_body Vprog Gprog f_get_freelist1_input get_freelist1_input_spec.
@@ -491,6 +516,15 @@ Qed.
 
 Lemma body_pointer_compare_1: semax_body Vprog Gprog f_pointer_compare_1 pointer_compare_1_spec.
 Proof. start_function. forward. Qed.
+
+Lemma body_pointer_compare_2: semax_body Vprog Gprog f_pointer_compare_2 pointer_compare_2_spec.
+Proof. start_function. forward. unfold denote_tc_test_order.
+destruct p; try contradiction. destruct q; try contradiction. 
+
+entailer!.
+
+
+(*** stop""*)
 
 
 Lemma body_pointer_compare:  semax_body Vprog Gprog f_pointer_compare pointer_compare_spec.
