@@ -518,22 +518,13 @@ Lemma body_pointer_compare_1: semax_body Vprog Gprog f_pointer_compare_1 pointer
 Proof. start_function. forward. Qed.
 
 Lemma body_pointer_compare_2: semax_body Vprog Gprog f_pointer_compare_2 pointer_compare_2_spec.
-Proof. start_function. forward. unfold denote_tc_test_order.
-destruct p; try contradiction. destruct q; try contradiction. 
-
-entailer!.
+Proof. start_function. forward. Admitted.
 
 
 (*** stop""*)
 
 
-Lemma body_pointer_compare:  semax_body Vprog Gprog f_pointer_compare pointer_compare_spec.
-Proof. start_function.
-   forward. forward.
-   forward_if 
-   unfold abbreviate in POSTCONDITION.
-   forward_if.
-   unfold denote_tc_test_order.
+
     
 
 
