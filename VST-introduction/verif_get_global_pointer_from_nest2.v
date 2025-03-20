@@ -293,7 +293,71 @@ Definition kalloc1_spec := (* this doesn't assume that the list is empty, but th
          data_at sh t_struct_kmem (Vint (Int.repr xx), next) (gv _kmem)
          ).   
        
-(************************ freerange - calls kfree1 *************************)
+
+(************************ pointer comparison *************************)
+Definition pointer_compare_1_spec :=
+ DECLARE _pointer_compare_1
+  WITH p: val, q:val, sh: share
+  PRE  [ tptr tint, tptr tint]
+        PROP (sepalg.nonidentity sh)
+        PARAMS (p; q)
+        SEP(data_at sh tint (Vint Int.zero) p; data_at sh tint (Vint Int.zero) q)
+  POST [ tint ]
+         PROP()
+         RETURN (Vint (if eq_dec p q then Int.one else Int.zero))
+         SEP (data_at sh tint (Vint Int.zero) p; data_at sh tint (Vint Int.zero) q).
+
+
+
+(*Definition if_condition_bool (pa_start pa_end : val) (i:Z) : bool :=
+  match pa_start, pa_end with
+  | Vptr b1 ofs1, Vptr b2 ofs2 =>
+      if eq_dec b1 b2 then
+        Z.leb (Ptrofs.unsigned (Ptrofs.add ofs1 (Ptrofs.repr i))) (Ptrofs.unsigned ofs2)
+      else
+        false
+  | _, _ => false
+  end.
+
+Lemma if_condition_bool_example :
+  forall (b : block) (ofs1 ofs2 : ptrofs) (i:Z),
+  Z.leb (Ptrofs.unsigned (Ptrofs.add ofs1 (Ptrofs.repr i))) (Ptrofs.unsigned ofs2) = true ->
+  if_condition_bool (Vptr b ofs1) (Vptr b ofs2) (i) = true.
+Proof.
+  intros b ofs1 ofs2 H.
+  unfold if_condition_bool.
+  destruct (eq_dec b b); auto.
+Qed.
+
+Lemma if_condition_bool_different_block :
+  forall (b1 b2 : block) (ofs1 ofs2 : ptrofs) (i:Z),
+  b1 <> b2 ->
+  if_condition_bool (Vptr b1 ofs1) (Vptr b2 ofs2) (i:Z) = false.
+Proof.
+intros b1 b2 ofs1 ofs2 i H.
+  unfold if_condition_bool.
+  destruct (eq_dec b1 b2); auto.
+  rewrite e in H; try contradiction.
+Qed.
+
+Print denote_tc_test_order.*)
+
+  
+(*Definition pointer_compare_spec := 
+   DECLARE _pointer_compare
+      WITH sh : share, pa_start: val, pa_end:val (*new_head:val, original_freelist_pointer:val, xx:Z, gv:globals*)
+      PRE [ tptr tvoid, tptr tvoid ]
+         PROP(writable_share sh; is_pointer_or_null pa_start; is_pointer_or_null pa_end) (* writable_share is necessary *)
+         PARAMS (pa_start; pa_end) GLOBALS()
+         SEP (
+         )
+      POST [ tint ]
+         PROP()
+         RETURN ( if (denote_tc_test_order pa_start pa_end) then Vint (Int.repr 1) else Vint (Int.repr 0)
+         (*if (if_condition_bool pa_start pa_end 0) then Vint (Int.repr 1) else Vint (Int.repr 0) *) ) 
+         SEP ( ).*)
+
+(************************ calls kfree1 *************************)
 
 Definition call_kfree1_spec := 
  DECLARE _call_kfree1
@@ -340,7 +404,7 @@ Definition Gprog : funspecs := [get_freelist1_input_spec;
 get_freelist1_input_spec'; get_freelist1_spec; get_i_spec; 
 get_xx_spec; get_freelist_spec;
 free_spec; free_spec'; alloc_spec; alloc_spec'; 
-kfree1_spec; kalloc1_spec; call_kfree1_spec; call_kfree1_if_1_spec].
+kfree1_spec; kalloc1_spec; call_kfree1_spec; call_kfree1_if_1_spec; pointer_compare_1_spec].
 
 
 Lemma body_get_freelist_input_spec:  semax_body Vprog Gprog f_get_freelist1_input get_freelist1_input_spec.
@@ -424,5 +488,18 @@ forward_if.
   destruct (eq_dec new_head nullval); entailer!.
 - forward. entailer!. destruct (eq_dec nullval nullval); entailer!.
 Qed.
+
+Lemma body_pointer_compare_1: semax_body Vprog Gprog f_pointer_compare_1 pointer_compare_1_spec.
+Proof. start_function. forward. Qed.
+
+
+Lemma body_pointer_compare:  semax_body Vprog Gprog f_pointer_compare pointer_compare_spec.
+Proof. start_function.
+   forward. forward.
+   forward_if 
+   unfold abbreviate in POSTCONDITION.
+   forward_if.
+   unfold denote_tc_test_order.
+    
 
 

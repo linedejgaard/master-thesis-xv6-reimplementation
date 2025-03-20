@@ -84,7 +84,29 @@ void call_kfree1_if_1(void *pa) // LINE: kind of add ( push)
     kfree1(pa);
 }
 
+
+
+
 // working in progress
+
+
+int pointer_compare_1 (int *p, int *q) {
+  return (p==q);
+}
+
+int pointer_compare_2 (int *p, int *q) {
+  return (p<=q);
+}
+
+int pointer_compare(void *pa_start, void *pa_end) { 
+  char *s = (char*)pa_start;
+  char *t = (char*)pa_end;
+  if (s <= t)
+    return 1;
+  return 0;
+}
+
+// not working on yet..
 
 void freerange_no_loop_no_add(void *pa_start, void *pa_end) {
   if (pa_start <= pa_end)
