@@ -72,7 +72,7 @@ Fixpoint freelistrep (sh: share) (n: nat) (p: val) : mpred :=
  | S n' => EX next: val, 
         !! malloc_compatible (sizeof t_run) p &&  (* p is compatible with a memory block of size sizeof theader. *)
         data_at sh t_run next p * (* at the location p, there is a t_run structure with the value next *)
-        freelistrep sh n' next
+        freelistrep sh n' next (* "*" ensures no loops... *)
  | O => !! (p = nullval) && emp
  end.
 
@@ -109,14 +109,14 @@ Qed.
 Lemma freelistrep_null: forall sh n x,
        x = nullval ->
        freelistrep sh n x = !! (n = O) && emp.
-   Proof.
+Proof.
    intros.
    destruct n; unfold freelistrep; fold freelistrep.
    autorewrite with norm. auto.
    apply pred_ext.
    Intros y. entailer. 
    destruct n; entailer!; try discriminate H0. 
-   Qed.
+Qed.
 
 
 Lemma freelistrep_nonnull: forall n sh x,
@@ -124,13 +124,13 @@ Lemma freelistrep_nonnull: forall n sh x,
    freelistrep sh n x =
    EX m : nat, EX next:val,
           !! (n = S m) && !! malloc_compatible (sizeof t_run) x && data_at sh t_run next x * freelistrep sh m next.
-   Proof.
-       intros; apply pred_ext.
-       - destruct n. 
-              + unfold freelistrep. entailer!.
-              + unfold freelistrep; fold freelistrep. Intros y.
-              Exists n y. entailer!.
-       - Intros m y. rewrite H0. unfold freelistrep at 2; fold freelistrep. Exists y. entailer!.
+Proof.
+   intros; apply pred_ext.
+   - destruct n. 
+         + unfold freelistrep. entailer!.
+         + unfold freelistrep; fold freelistrep. Intros y.
+         Exists n y. entailer!.
+   - Intros m y. rewrite H0. unfold freelistrep at 2; fold freelistrep. Exists y. entailer!.
 Qed.
 
 Definition get_freelist1_input_spec' :=
@@ -293,13 +293,34 @@ Definition kalloc1_spec := (* this doesn't assume that the list is empty, but th
          data_at sh t_struct_kmem (Vint (Int.repr xx), next) (gv _kmem)
          ).   
        
+(************************ freerange - calls kfree1 *************************)
+
+Definition call_kfree1_spec := 
+ DECLARE _call_kfree1
+   WITH sh : share, new_head:val, original_freelist_pointer:val, xx:Z, gv:globals
+   PRE [ tptr tvoid]
+      PROP(writable_share sh; is_pointer_or_null original_freelist_pointer) (* writable_share is necessary *)
+      PARAMS (new_head) GLOBALS(gv)
+      SEP (data_at sh (t_run) nullval new_head; (* the input run struct should exists *)
+      data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem) (* the kmem freelist should exists, xx is a placeholder for the spinlock *)
+      )
+   POST [ tvoid ]
+      PROP()
+      RETURN () (* no return value *)
+      SEP (
+         data_at sh (t_run) (original_freelist_pointer) new_head; (* the new head should point to the original freelist pointer *)
+         data_at sh t_struct_kmem (Vint (Int.repr xx), new_head) (gv _kmem) (** the top of the freelist should point to the new head *)
+         ).
+
+
+
 
 (************************************)
 Definition Gprog : funspecs := [get_freelist1_input_spec; 
 get_freelist1_input_spec'; get_freelist1_spec; get_i_spec; 
 get_xx_spec; get_freelist_spec;
 free_spec; free_spec'; alloc_spec; alloc_spec'; 
-kfree1_spec; kalloc1_spec].
+kfree1_spec; kalloc1_spec; call_kfree1_spec].
 
 
 Lemma body_get_freelist_input_spec:  semax_body Vprog Gprog f_get_freelist1_input get_freelist1_input_spec.
@@ -353,10 +374,13 @@ Qed.
 
 
 Lemma body_kalloc1: semax_body Vprog Gprog f_kalloc1 kalloc1_spec.
-Proof. start_function. forward. 
+Proof. start_function. forward. (*unfold abbreviate in POSTCONDITION.*)
 forward_if (PROP ()
-           LOCAL (temp _r original_freelist_pointer; temp _t'1 (if eq_dec original_freelist_pointer nullval then nullval else next); gvars gv)
-           SEP (data_at sh t_run next original_freelist_pointer; data_at sh t_struct_kmem (Vint (Int.repr xx), next) (gv _kmem))).
+            LOCAL (temp _r original_freelist_pointer; 
+                  temp _t'1 (if eq_dec original_freelist_pointer nullval 
+                              then nullval else next); gvars gv)
+            SEP (data_at sh t_run next original_freelist_pointer; 
+               data_at sh t_struct_kmem (Vint (Int.repr xx), next) (gv _kmem))).
 - forward. forward. entailer!. destruct (eq_dec original_freelist_pointer nullval); auto. subst. inversion H0.
 - forward. entailer!. inversion H1. inversion H0. 
 - destruct (eq_dec original_freelist_pointer nullval).
@@ -364,3 +388,9 @@ forward_if (PROP ()
    + forward. 
 Qed.
 
+Lemma body_call_kfree1: semax_body Vprog Gprog f_call_kfree1 call_kfree1_spec.
+Proof.
+start_function.
+forward_call.
+entailer!.
+Qed.

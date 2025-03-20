@@ -1,3 +1,10 @@
+// should be moved to another file
+typedef unsigned long uint64;
+#define PGSIZE 4096 // bytes per page
+#define PGROUNDUP(sz)  (((sz)+PGSIZE-1) & ~(PGSIZE-1))
+
+// should be moved to another file
+
 struct run {
   struct run *next;
 };
@@ -57,7 +64,6 @@ void kfree1(void *pa) // LINE: kind of add ( push)
   kmem.freelist = r;
 }
 
-
 void *kalloc1(void) 
 {
   struct run *r;
@@ -66,3 +72,34 @@ void *kalloc1(void)
     kmem.freelist = r->next;
   return (void*)r;
 }
+
+void call_kfree1(void *pa) // LINE: kind of add ( push)
+{
+  kfree1(pa);
+}
+
+// working in progress
+
+void freerange_no_loop_no_add(void *pa_start, void *pa_end) {
+  if (pa_start <= pa_end)
+    kfree1(pa_start); // Free the first page if it's within the range
+}
+
+
+void freerange_no_loop(void *pa_start, void *pa_end) {
+  char *p = (char*)pa_start;
+  if (p + PGSIZE <= (char*)pa_end)
+    kfree1(p); // Free the first page if it's within the range
+}
+
+
+void freerange(void *pa_start, void *pa_end)
+{
+  char *p;
+  p = (char*)PGROUNDUP((uint64)pa_start);
+  for(; p + PGSIZE <= (char*)pa_end; p += PGSIZE)
+    kfree1(p); // TODO: fix: this is kfree1
+}
+
+
+
