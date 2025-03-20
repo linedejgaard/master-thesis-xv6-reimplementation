@@ -297,16 +297,28 @@ Definition kalloc1_spec := (* this doesn't assume that the list is empty, but th
 (************************ pointer comparison *************************)
 Definition pointer_compare_1_spec :=
  DECLARE _pointer_compare_1
-  WITH p: val, q:val, sh: share
+  WITH p: val, q:val, sh: share, p_value:int, q_value:int
   PRE  [ tptr tint, tptr tint]
         PROP (sepalg.nonidentity sh)
         PARAMS (p; q)
-        SEP(data_at sh tint (Vint Int.zero) p; data_at sh tint (Vint Int.zero) q)
+        SEP(data_at sh tint (Vint p_value) p; data_at sh tint (Vint q_value) q)
   POST [ tint ]
          PROP()
          RETURN (Vint (if eq_dec p q then Int.one else Int.zero))
-         SEP (data_at sh tint (Vint Int.zero) p; data_at sh tint (Vint Int.zero) q).
+         SEP (data_at sh tint (Vint p_value) p; data_at sh tint (Vint q_value) q).
 
+Definition pointer_compare_0_spec :=
+   DECLARE _pointer_compare_0
+      WITH p: val, q:val, sh: share, p_value:int, q_value:int
+      PRE  [ tptr tvoid, tptr tvoid]
+            PROP (sepalg.nonidentity sh)
+            PARAMS (p; q)
+            SEP(data_at sh tint (Vint p_value) p; data_at sh tint (Vint q_value) q)
+      POST [ tint ]
+            PROP()
+            RETURN (Vint (if eq_dec p q then Int.one else Int.zero))
+            SEP (data_at sh tint (Vint p_value) p; data_at sh tint (Vint q_value) q).
+           
   
 Definition lt_pointers (pa_start pa_end : val) : bool :=
    match pa_start, pa_end with
@@ -320,15 +332,15 @@ Definition lt_pointers (pa_start pa_end : val) : bool :=
 
 Definition pointer_compare_2_spec :=
    DECLARE _pointer_compare_2
-      WITH p: val, q:val, sh: share
+      WITH p: val, q:val, p_value:int, q_value:int, sh: share
       PRE  [ tptr tint, tptr tint]
             PROP (sepalg.nonidentity sh)
             PARAMS (p; q)
-            SEP(data_at sh tint (Vint Int.zero) p; data_at sh tint (Vint Int.zero) q)
+            SEP(data_at sh tint (Vint p_value) p; data_at sh tint (Vint q_value) q)
       POST [ tint ]
             PROP()
             RETURN (Vint (if (lt_pointers p q) then Int.one else Int.zero))
-            SEP (data_at sh tint (Vint Int.zero) p; data_at sh tint (Vint Int.zero) q).
+            SEP (data_at sh tint (Vint p_value) p; data_at sh tint (Vint q_value) q).
            
 
 
@@ -420,6 +432,29 @@ Definition call_kfree1_if_1_spec :=
             data_at sh t_struct_kmem (Vint (Int.repr xx), new_head) (gv _kmem) (** the top of the freelist should point to the new head *)
             ).
          
+(************************ rounding *************************)
+
+Definition PGSIZE : Z := 4096. (** I think we should be able to retrieve this.. but it has to be greater than 0 *)
+
+(* PGROUNDUP function in Coq *)
+Definition PGROUNDUP (sz : Z) : Z :=
+  ((sz + PGSIZE - 1) / PGSIZE) * PGSIZE.
+
+Definition min_size : Z := 1.
+
+Definition align_pointer_spec := (* assume the list isn't empty *)
+ DECLARE _align_pointer
+   WITH sh : share, b:block, p:ptrofs        
+   PRE [ tptr tvoid]
+      PROP(sepalg.nonidentity sh)
+      PARAMS (Vptr b p) GLOBALS()
+      SEP (memory_block sh min_size (Vptr b p)) (* q can be nullval meaning that there is only one run *)
+   POST [ tvoid ]
+      PROP()
+      RETURN (Vptr b p) (* we return the head like in the pop function*)
+      SEP (memory_block sh min_size (Vptr b p)). (** I AM NOT SURE THE GARBAGE COLLECTION TAKES THE HEAD?*)
+
+
 
 
 (************************************)
@@ -428,8 +463,8 @@ get_freelist1_input_spec'; get_freelist1_spec; get_i_spec;
 get_xx_spec; get_freelist_spec;
 free_spec; free_spec'; alloc_spec; alloc_spec'; 
 kfree1_spec; kalloc1_spec; call_kfree1_spec; 
-call_kfree1_if_1_spec; pointer_compare_1_spec;
-pointer_compare_2_spec].
+call_kfree1_if_1_spec; pointer_compare_1_spec; pointer_compare_0_spec;
+pointer_compare_2_spec; align_pointer_spec].
 
 
 Lemma body_get_freelist_input_spec:  semax_body Vprog Gprog f_get_freelist1_input get_freelist1_input_spec.
@@ -514,12 +549,17 @@ forward_if.
 - forward. entailer!. destruct (eq_dec nullval nullval); entailer!.
 Qed.
 
+Lemma body_pointer_compare_0: semax_body Vprog Gprog f_pointer_compare_1 pointer_compare_1_spec.
+Proof. start_function. forward. Qed.
+
 Lemma body_pointer_compare_1: semax_body Vprog Gprog f_pointer_compare_1 pointer_compare_1_spec.
 Proof. start_function. forward. Qed.
 
 Lemma body_pointer_compare_2: semax_body Vprog Gprog f_pointer_compare_2 pointer_compare_2_spec.
 Proof. start_function. forward. Admitted.
 
+(*Lemma body_align_pointer: semax_body Vprog Gprog f_align_pointer align_pointer_spec.
+Proof. start_function. forward. Admitted.*)
 
 (*** stop""*)
 

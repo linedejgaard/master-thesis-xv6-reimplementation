@@ -84,15 +84,28 @@ void call_kfree1_if_1(void *pa) // LINE: kind of add ( push)
     kfree1(pa);
 }
 
+int pointer_compare_1 (int *p, int *q) {
+  return (p==q);
+}
+
+int pointer_compare_0 (char *p, char *q) {
+  return (p==q);
+}
+
+
+
+
+
 
 
 
 // working in progress
 
-
-int pointer_compare_1 (int *p, int *q) {
-  return (p==q);
+void align_pointer (void *pointer) {
+  char *p;
+  p = (char*)PGROUNDUP((uint64)p);
 }
+
 
 int pointer_compare_2 (int *p, int *q) {
   return (p<=q);
