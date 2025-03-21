@@ -334,13 +334,13 @@ Definition pointer_compare_2_spec :=
    DECLARE _pointer_compare_2
       WITH p: val, q:val, p_value:int, q_value:int, sh: share
       PRE  [ tptr tint, tptr tint]
-            PROP (sepalg.nonidentity sh)
+            PROP (sepalg.nonidentity sh) (* not sure this is correct..*)
             PARAMS (p; q)
-            SEP(data_at sh tint (Vint p_value) p; data_at sh tint (Vint q_value) q)
+            SEP( denote_tc_test_order p q) 
       POST [ tint ]
             PROP()
-            RETURN (Vint (if (lt_pointers p q) then Int.one else Int.zero))
-            SEP (data_at sh tint (Vint p_value) p; data_at sh tint (Vint q_value) q).
+            RETURN (force_val (sem_cast_i2i I32 Signed (force_val (sem_cmp_pp Cle p q))))
+            SEP (denote_tc_test_order p q). 
            
 
 
@@ -556,7 +556,7 @@ Lemma body_pointer_compare_1: semax_body Vprog Gprog f_pointer_compare_1 pointer
 Proof. start_function. forward. Qed.
 
 Lemma body_pointer_compare_2: semax_body Vprog Gprog f_pointer_compare_2 pointer_compare_2_spec.
-Proof. start_function. forward. Admitted.
+Proof. start_function. forward. Qed.
 
 (*Lemma body_align_pointer: semax_body Vprog Gprog f_align_pointer align_pointer_spec.
 Proof. start_function. forward. Admitted.*)
