@@ -310,7 +310,7 @@ Definition pointer_compare_0_spec :=
 Definition pointer_compare_1_spec :=
    DECLARE _pointer_compare_1
       WITH p: val, q:val, sh: share, p_value:int, q_value:int
-      PRE  [ tptr tvoid, tptr tvoid]
+      PRE  [ tptr tschar, tptr tschar]
             PROP (sepalg.nonidentity sh)
             PARAMS (p; q)
             SEP(data_at sh tint (Vint p_value) p; data_at sh tint (Vint q_value) q)
@@ -318,17 +318,6 @@ Definition pointer_compare_1_spec :=
             PROP()
             RETURN (Vint (if eq_dec p q then Int.one else Int.zero))
             SEP (data_at sh tint (Vint p_value) p; data_at sh tint (Vint q_value) q).
-           
-  
-Definition lt_pointers (pa_start pa_end : val) : bool :=
-   match pa_start, pa_end with
-   | Vptr b1 ofs1, Vptr b2 ofs2 =>
-         if eq_dec b1 b2 then
-         Z.leb (Ptrofs.unsigned ofs1) (Ptrofs.unsigned ofs2)
-         else
-         false
-   | _, _ => false
-   end.
 
 Definition pointer_compare_2_spec :=
    DECLARE _pointer_compare_2
@@ -342,55 +331,6 @@ Definition pointer_compare_2_spec :=
             RETURN (force_val (sem_cast_i2i I32 Signed (force_val (sem_cmp_pp Cle p q))))
             SEP (denote_tc_test_order p q). 
            
-
-
-(*Definition if_condition_bool (pa_start pa_end : val) (i:Z) : bool :=
-  match pa_start, pa_end with
-  | Vptr b1 ofs1, Vptr b2 ofs2 =>
-      if eq_dec b1 b2 then
-        Z.leb (Ptrofs.unsigned (Ptrofs.add ofs1 (Ptrofs.repr i))) (Ptrofs.unsigned ofs2)
-      else
-        false
-  | _, _ => false
-  end.
-
-Lemma if_condition_bool_example :
-  forall (b : block) (ofs1 ofs2 : ptrofs) (i:Z),
-  Z.leb (Ptrofs.unsigned (Ptrofs.add ofs1 (Ptrofs.repr i))) (Ptrofs.unsigned ofs2) = true ->
-  if_condition_bool (Vptr b ofs1) (Vptr b ofs2) (i) = true.
-Proof.
-  intros b ofs1 ofs2 H.
-  unfold if_condition_bool.
-  destruct (eq_dec b b); auto.
-Qed.
-
-Lemma if_condition_bool_different_block :
-  forall (b1 b2 : block) (ofs1 ofs2 : ptrofs) (i:Z),
-  b1 <> b2 ->
-  if_condition_bool (Vptr b1 ofs1) (Vptr b2 ofs2) (i:Z) = false.
-Proof.
-intros b1 b2 ofs1 ofs2 i H.
-  unfold if_condition_bool.
-  destruct (eq_dec b1 b2); auto.
-  rewrite e in H; try contradiction.
-Qed.
-
-Print denote_tc_test_order.*)
-
-  
-(*Definition pointer_compare_spec := 
-   DECLARE _pointer_compare
-      WITH sh : share, pa_start: val, pa_end:val (*new_head:val, original_freelist_pointer:val, xx:Z, gv:globals*)
-      PRE [ tptr tvoid, tptr tvoid ]
-         PROP(writable_share sh; is_pointer_or_null pa_start; is_pointer_or_null pa_end) (* writable_share is necessary *)
-         PARAMS (pa_start; pa_end) GLOBALS()
-         SEP (
-         )
-      POST [ tint ]
-         PROP()
-         RETURN ( if (denote_tc_test_order pa_start pa_end) then Vint (Int.repr 1) else Vint (Int.repr 0)
-         (*if (if_condition_bool pa_start pa_end 0) then Vint (Int.repr 1) else Vint (Int.repr 0) *) ) 
-         SEP ( ).*)
 
 (************************ calls kfree1 *************************)
 
@@ -549,7 +489,7 @@ forward_if.
 - forward. entailer!. destruct (eq_dec nullval nullval); entailer!.
 Qed.
 
-Lemma body_pointer_compare_0: semax_body Vprog Gprog f_pointer_compare_1 pointer_compare_1_spec.
+Lemma body_pointer_compare_0: semax_body Vprog Gprog f_pointer_compare_0 pointer_compare_0_spec.
 Proof. start_function. forward. Qed.
 
 Lemma body_pointer_compare_1: semax_body Vprog Gprog f_pointer_compare_1 pointer_compare_1_spec.

@@ -84,11 +84,11 @@ void call_kfree1_if_1(void *pa) // LINE: kind of add ( push)
     kfree1(pa);
 }
 
-int pointer_compare_1 (int *p, int *q) {
+int pointer_compare_0 (int *p, int *q) {
   return (p==q);
 }
 
-int pointer_compare_0 (char *p, char *q) {
+int pointer_compare_1 (char *p, char *q) {
   return (p==q);
 }
 
