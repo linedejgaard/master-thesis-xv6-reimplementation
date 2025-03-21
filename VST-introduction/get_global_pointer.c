@@ -92,9 +92,15 @@ int pointer_compare_0 (char *p, char *q) {
   return (p==q);
 }
 
-// not verified, but I think this compares the values
-int pointer_compare_values (char *p, char *q) {
-  return (*p == *q);
+int pointer_compare_2 (int *p, int *q) {
+  return (p<=q);
+}
+
+// working in progress
+
+void freerange_no_loop_no_add(void *pa_start, void *pa_end) {
+  if (pa_start <= pa_end)
+    kfree1(pa_start); // Free the first page if it's within the range
 }
 
 
@@ -103,7 +109,8 @@ int pointer_compare_values (char *p, char *q) {
 
 
 
-// working in progress
+
+
 
 void align_pointer (void *pointer) {
   char *p;
@@ -111,9 +118,7 @@ void align_pointer (void *pointer) {
 }
 
 
-int pointer_compare_2 (int *p, int *q) {
-  return (p<=q);
-}
+
 
 int pointer_compare(void *pa_start, void *pa_end) { 
   char *s = (char*)pa_start;
@@ -124,11 +129,6 @@ int pointer_compare(void *pa_start, void *pa_end) {
 }
 
 // not working on yet..
-
-void freerange_no_loop_no_add(void *pa_start, void *pa_end) {
-  if (pa_start <= pa_end)
-    kfree1(pa_start); // Free the first page if it's within the range
-}
 
 
 void freerange_no_loop(void *pa_start, void *pa_end) {
@@ -144,6 +144,12 @@ void freerange(void *pa_start, void *pa_end)
   p = (char*)PGROUNDUP((uint64)pa_start);
   for(; p + PGSIZE <= (char*)pa_end; p += PGSIZE)
     kfree1(p); // TODO: fix: this is kfree1
+}
+
+
+// not verified, but I think this compares the values
+int pointer_compare_values (char *p, char *q) {
+  return (*p == *q);
 }
 
 

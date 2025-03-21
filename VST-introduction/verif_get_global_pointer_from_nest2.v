@@ -295,8 +295,8 @@ Definition kalloc1_spec := (* this doesn't assume that the list is empty, but th
        
 
 (************************ pointer comparison *************************)
-Definition pointer_compare_1_spec :=
- DECLARE _pointer_compare_1
+Definition pointer_compare_0_spec :=
+ DECLARE _pointer_compare_0
   WITH p: val, q:val, sh: share, p_value:int, q_value:int
   PRE  [ tptr tint, tptr tint]
         PROP (sepalg.nonidentity sh)
@@ -307,8 +307,8 @@ Definition pointer_compare_1_spec :=
          RETURN (Vint (if eq_dec p q then Int.one else Int.zero))
          SEP (data_at sh tint (Vint p_value) p; data_at sh tint (Vint q_value) q).
 
-Definition pointer_compare_0_spec :=
-   DECLARE _pointer_compare_0
+Definition pointer_compare_1_spec :=
+   DECLARE _pointer_compare_1
       WITH p: val, q:val, sh: share, p_value:int, q_value:int
       PRE  [ tptr tvoid, tptr tvoid]
             PROP (sepalg.nonidentity sh)
@@ -463,7 +463,7 @@ get_freelist1_input_spec'; get_freelist1_spec; get_i_spec;
 get_xx_spec; get_freelist_spec;
 free_spec; free_spec'; alloc_spec; alloc_spec'; 
 kfree1_spec; kalloc1_spec; call_kfree1_spec; 
-call_kfree1_if_1_spec; pointer_compare_1_spec; pointer_compare_0_spec;
+call_kfree1_if_1_spec; pointer_compare_0_spec; pointer_compare_1_spec; 
 pointer_compare_2_spec; align_pointer_spec].
 
 
@@ -554,6 +554,8 @@ Proof. start_function. forward. Qed.
 
 Lemma body_pointer_compare_1: semax_body Vprog Gprog f_pointer_compare_1 pointer_compare_1_spec.
 Proof. start_function. forward. Qed.
+
+
 
 Lemma body_pointer_compare_2: semax_body Vprog Gprog f_pointer_compare_2 pointer_compare_2_spec.
 Proof. start_function. forward. Qed.
