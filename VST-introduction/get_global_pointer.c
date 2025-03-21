@@ -92,6 +92,10 @@ int pointer_compare_0 (char *p, char *q) {
   return (p==q);
 }
 
+// not verified, but I think this compares the values
+int pointer_compare_values (char *p, char *q) {
+  return (*p == *q);
+}
 
 
 
