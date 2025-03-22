@@ -246,7 +246,7 @@ Definition kfree1_spec :=
       SEP (
          data_at sh (t_run) (original_freelist_pointer) new_head; (* the new head should point to the original freelist pointer *)
          data_at sh t_struct_kmem (Vint (Int.repr xx), new_head) (gv _kmem) (** the top of the freelist should point to the new head *)
-         ).     
+         ).
 (* I THINK THIS IS WRONG, BECAUSE I DON'T THEY THEY ARE DISJOINT: *)
 Definition kfree1_1_spec := 
  DECLARE _kfree1
@@ -335,7 +335,7 @@ Definition pointer_compare_1_spec :=
             RETURN (Vint (if eq_dec p q then Int.one else Int.zero))
             SEP (data_at sh tint (Vint p_value) p; data_at sh tint (Vint q_value) q).
 
-Definition pointer_le_bool (pa_start pa_end : val) : bool :=
+(*Definition pointer_le_bool (pa_start pa_end : val) : bool :=
    let comparison_result := 
    force_val (sem_cast_i2i I32 Signed (force_val (sem_cmp_pp Cle pa_start pa_end))) in
    match comparison_result with
@@ -344,7 +344,10 @@ Definition pointer_le_bool (pa_start pa_end : val) : bool :=
       else if Z.eqb (Int.signed z) 0 then false
       else false (* or you could raise an error, or have another default if the result is unexpected *)
    | _ => false (* Or raise an error, or have another default if the result is unexpected *)
-   end.
+   end.*)
+
+Definition pointer_le_bool (p q : val) : bool :=
+   eq_dec (force_val (sem_cast_i2i I32 Signed (force_val (sem_cmp_pp Cle p q)))) (Vint (Int.repr 1)).
             
 Definition pointer_compare_2_spec :=
    DECLARE _pointer_compare_2
@@ -372,7 +375,7 @@ Definition pointer_compare_3_spec :=
             SEP( denote_tc_test_order p q) 
       POST [ tint ]
             PROP()
-            RETURN (if (eq_dec (force_val (sem_cast_i2i I32 Signed (force_val (sem_cmp_pp Cle p q)))) (Vint (Int.repr 1))) 
+            RETURN (if (pointer_le_bool p q) 
                      then Vint (Int.repr (42))
                      else Vint (Int.repr (13))
                      )
@@ -434,7 +437,8 @@ Definition freerange_no_loop_no_add_spec :=
          PROP()
          RETURN () (* no return value *)
          SEP (
-            if (pointer_le_bool new_head pa_end) then
+            if (eq_dec (force_val (sem_cast_i2i I32 Signed (force_val (sem_cmp_pp Cle new_head pa_end)))) (Vint (Int.repr 1))) 
+            then
             (data_at sh (t_run) nullval new_head * (* the input run struct should exists *)
             data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem) (* the kmem freelist should exists, xx is a placeholder for the spinlock *)
             ) else 
@@ -592,16 +596,17 @@ Qed.
 
 Lemma body_pointer_compare_3: semax_body Vprog Gprog f_pointer_compare_3 pointer_compare_3_spec.
 Proof. start_function. forward_if.
-- forward. 
+- forward.
+   unfold pointer_le_bool.    
    destruct (eq_dec (force_val (sem_cast_i2i I32 Signed (force_val (sem_cmp_pp Cle p q))))
    (Vint (Int.repr 1))); entailer!.
    destruct (sem_cmp_pp Cle p q) eqn:e; try discriminate.
    destruct v; try discriminate.
    simpl in *. apply typed_true_tint_Vint in H.
-
    destruct (eq_dec (i) ((Int.zero))); try contradiction.
    apply cmp_is_either_0_or_1 in e. destruct e; subst; try contradiction.
 - forward.
+   unfold pointer_le_bool. 
    destruct (eq_dec (force_val (sem_cast_i2i I32 Signed (force_val (sem_cmp_pp Cle p q))))
    (Vint (Int.repr 1))); entailer!.
    destruct (sem_cmp_pp Cle p q) eqn:eCmp; try discriminate.
@@ -611,7 +616,7 @@ Proof. start_function. forward_if.
 Qed.
 
 Lemma body_freerange_no_loop_no_add: semax_body Vprog Gprog f_freerange_no_loop_no_add freerange_no_loop_no_add_spec.
-Proof. start_function. forward_if. 
+Proof. start_function. forward_if. entailer!.
 Admitted.
 
 
