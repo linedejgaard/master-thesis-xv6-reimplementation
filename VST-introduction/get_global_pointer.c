@@ -95,6 +95,18 @@ int pointer_compare_2 (int *p, int *q) {
   return (p<=q);
 }
 
+int pointer_compare_3 (int *p, int *q) {
+  if (p<=q)
+    return 42;
+  return 13;
+}
+
+
+
+
+
+
+
 // working in progress
 
 void freerange_no_loop_no_add(void *pa_start, void *pa_end) {

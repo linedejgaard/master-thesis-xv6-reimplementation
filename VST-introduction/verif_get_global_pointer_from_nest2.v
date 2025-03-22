@@ -352,12 +352,32 @@ Definition pointer_compare_2_spec :=
       PRE  [ tptr tint, tptr tint]
             PROP (sepalg.nonidentity sh) (* not sure this is correct..*)
             PARAMS (p; q)
-            SEP( denote_tc_test_order p q) 
+            SEP(denote_tc_test_order p q) 
       POST [ tint ]
             PROP()
             RETURN (force_val (sem_cast_i2i I32 Signed (force_val (sem_cmp_pp Cle p q))))
             SEP (denote_tc_test_order p q). 
-           
+
+Check force_val.
+Check sem_cmp_pp.
+Print sem_cmp_pp.
+Print bool2val.
+
+Definition pointer_compare_3_spec :=
+   DECLARE _pointer_compare_3
+      WITH p: val, q:val, p_value:int, q_value:int, sh: share
+      PRE  [ tptr tint, tptr tint]
+            PROP (sepalg.nonidentity sh) (* not sure this is correct..*)
+            PARAMS (p; q)
+            SEP( denote_tc_test_order p q) 
+      POST [ tint ]
+            PROP()
+            RETURN (if (eq_dec (force_val (sem_cast_i2i I32 Signed (force_val (sem_cmp_pp Cle p q)))) (Vint (Int.repr 1))) 
+                     then Vint (Int.repr (42))
+                     else Vint (Int.repr (13))
+                     )
+            SEP (denote_tc_test_order p q). 
+                       
 
 (************************ calls kfree1 *************************)
 
@@ -456,6 +476,7 @@ kfree1_spec; kfree1_1_spec;
 kalloc1_spec; call_kfree1_spec; 
 call_kfree1_if_1_spec; pointer_compare_0_spec; pointer_compare_1_spec; 
 pointer_compare_2_spec; 
+pointer_compare_3_spec; 
 freerange_no_loop_no_add_spec; align_pointer_spec].
 
 
@@ -553,6 +574,41 @@ Proof. start_function. forward. Qed.
 Lemma body_pointer_compare_2: semax_body Vprog Gprog f_pointer_compare_2 pointer_compare_2_spec.
 Proof. start_function. forward. Qed.
 
+Lemma cmp_is_either_0_or_1 : forall p q i,
+   sem_cmp_pp Cle p q = Some (Vint i) ->
+   (i = Int.zero) \/ (i = Int.one).
+Proof.
+intros.
+destruct (eq_dec i Int.zero). left; auto.
+destruct (eq_dec i Int.one). right; auto.
+unfold sem_cmp_pp in H. inversion H.
+unfold bool2val in H1. unfold Z.b2z in H1. unfold option_map in H1.
+destruct (Val.cmplu_bool true2 Cle p q).
+- destruct b; inversion H1; exfalso.
+   + apply n0; auto.
+   + apply n; auto.
+- inversion H1.
+Qed.
+
+Lemma body_pointer_compare_3: semax_body Vprog Gprog f_pointer_compare_3 pointer_compare_3_spec.
+Proof. start_function. forward_if.
+- forward. 
+   destruct (eq_dec (force_val (sem_cast_i2i I32 Signed (force_val (sem_cmp_pp Cle p q))))
+   (Vint (Int.repr 1))); entailer!.
+   destruct (sem_cmp_pp Cle p q) eqn:e; try discriminate.
+   destruct v; try discriminate.
+   simpl in *. apply typed_true_tint_Vint in H.
+
+   destruct (eq_dec (i) ((Int.zero))); try contradiction.
+   apply cmp_is_either_0_or_1 in e. destruct e; subst; try contradiction.
+- forward.
+   destruct (eq_dec (force_val (sem_cast_i2i I32 Signed (force_val (sem_cmp_pp Cle p q))))
+   (Vint (Int.repr 1))); entailer!.
+   destruct (sem_cmp_pp Cle p q) eqn:eCmp; try discriminate.
+   destruct v; try discriminate.
+   simpl in *. apply typed_false_tint_Vint in H.
+   rewrite H in e. inversion e.
+Qed.
 
 Lemma body_freerange_no_loop_no_add: semax_body Vprog Gprog f_freerange_no_loop_no_add freerange_no_loop_no_add_spec.
 Proof. start_function. forward_if. 
