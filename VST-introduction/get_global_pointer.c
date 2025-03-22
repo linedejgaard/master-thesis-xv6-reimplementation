@@ -16,7 +16,6 @@ struct run *get_freelist1() {
     return freelist1;
 }
 
-// this is kind of working
 struct run *get_freelist1_input(struct run *fl) {
   return fl;
 }
