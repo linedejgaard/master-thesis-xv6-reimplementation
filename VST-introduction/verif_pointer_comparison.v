@@ -47,28 +47,27 @@ Definition pointer_comparison_2_spec :=
                         )
                 SEP (denote_tc_test_order ((Vptr b (Ptrofs.add p (Ptrofs.repr (PGSIZE))))) q). 
 
-(*Definition loop_1_spec : ident * funspec :=
+Definition loop_1_spec : ident * funspec :=
     DECLARE _loop_1
     WITH b_s:block, p_s:ptrofs, b_e:block, p_e:ptrofs
     PRE [ tptr tvoid,tptr tvoid ]
         PROP ()
-            PARAMS (Vptr b p; q)
-        LOCAL (temp _pa_start pa_start; temp _pa_end pa_end)
+        PARAMS (Vptr b_s p_s; Vptr b_e p_e)
         SEP ()
     POST [ tint ]
         EX n : Z,
-        PROP (0 <= n /\ PGSIZE * n <= Ptrofs.unsigned (Ptrofs.sub pa_end pa_start))
-        LOCAL (temp ret_temp (Vint (Int.repr n)))
-        SEP ().*)
+        PROP (0 <= n /\ PGSIZE * n <= Ptrofs.unsigned (Ptrofs.sub p_e p_s))
+        RETURN (Vint (Int.repr n))
+        SEP ().
 
 Definition Gprog : funspecs := [
 pointer_comparison_1_spec; 
-pointer_comparison_2_spec
+pointer_comparison_2_spec;
+loop_1_spec
 ].
 
 Lemma body_pointer_comparison_1: semax_body Vprog Gprog f_pointer_comparison_1 pointer_comparison_1_spec.
 Proof. start_function. forward. Qed.
-
 
 Lemma cmp_le_is_either_0_or_1 : forall p q i,
    sem_cmp_pp Cle p q = Some (Vint i) ->
