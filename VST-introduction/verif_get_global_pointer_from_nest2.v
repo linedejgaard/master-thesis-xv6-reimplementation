@@ -265,6 +265,8 @@ Definition kfree1_1_spec :=
          data_at sh t_struct_kmem (Vint (Int.repr xx), new_head) (gv _kmem) (** the top of the freelist should point to the new head *)
          ).   
 
+
+
 (************************ alloc non_global *************************)
 
 Definition alloc_spec := (* assume the list isn't empty *)
@@ -335,20 +337,55 @@ Definition pointer_compare_1_spec :=
             RETURN (Vint (if eq_dec p q then Int.one else Int.zero))
             SEP (data_at sh tint (Vint p_value) p; data_at sh tint (Vint q_value) q).
 
-(*Definition pointer_le_bool (pa_start pa_end : val) : bool :=
-   let comparison_result := 
-   force_val (sem_cast_i2i I32 Signed (force_val (sem_cmp_pp Cle pa_start pa_end))) in
-   match comparison_result with
-   | Vint z =>
-      if Z.eqb (Int.signed z) 1 then true
-      else if Z.eqb (Int.signed z) 0 then false
-      else false (* or you could raise an error, or have another default if the result is unexpected *)
-   | _ => false (* Or raise an error, or have another default if the result is unexpected *)
-   end.*)
+
+Definition get_opt_absolute_address (pa : val) : option Z :=
+   match pa with
+   | Vptr b p => Some (Ptrofs.unsigned p)
+   | _ => None
+   end.
+
+(*Print Option.default.
+Definition get_absolute_address (pa : val) (default_value:Z) : Z := 
+   match (get_opt_absolute_address pa) with
+   | Some v => v
+   | None => (default_value)
+   end.
+
+Lemma get_absolute_address_correct :
+   forall pa z default_value,
+     (get_opt_absolute_address pa = Some z -> get_absolute_address pa default_value = z) /\
+     (get_opt_absolute_address pa = None -> get_absolute_address pa default_value = default_value).
+ Proof.
+   intros pa z default_value.
+   unfold get_absolute_address.
+   split.
+   - (* Case: get_opt_absolute_address pa = Some z *)
+     intros H.
+     rewrite H; auto. 
+   - (* Case: get_opt_absolute_address pa = None *)
+     intros H.
+     rewrite H; auto. 
+ Qed.*)
+
+Definition pointer_comparison (p q : val) (cmp : comparison) : val :=
+   force_val (sem_cast_i2i I32 Signed (force_val (sem_cmp_pp cmp p q))).
+            
+
+Definition pointer_cmp_bool (p q : val) (cmp : comparison) : bool :=
+   eq_dec (pointer_comparison p q cmp) (Vint (Int.repr 1)).
+
+Definition pointer_le (p q : val) : val :=
+   pointer_comparison p q Cle.
 
 Definition pointer_le_bool (p q : val) : bool :=
-   eq_dec (force_val (sem_cast_i2i I32 Signed (force_val (sem_cmp_pp Cle p q)))) (Vint (Int.repr 1)).
-            
+   pointer_cmp_bool p q Cle.
+
+Definition pointer_lt (p q : val) : val :=
+   pointer_comparison p q Clt.
+
+Definition pointer_lt_bool (p q : val) : bool :=
+   pointer_cmp_bool p q Clt.
+
 Definition pointer_compare_2_spec :=
    DECLARE _pointer_compare_2
       WITH p: val, q:val, p_value:int, q_value:int, sh: share
@@ -358,13 +395,8 @@ Definition pointer_compare_2_spec :=
             SEP(denote_tc_test_order p q) 
       POST [ tint ]
             PROP()
-            RETURN (force_val (sem_cast_i2i I32 Signed (force_val (sem_cmp_pp Cle p q))))
+            RETURN (pointer_comparison p q Cle)
             SEP (denote_tc_test_order p q). 
-
-Check force_val.
-Check sem_cmp_pp.
-Print sem_cmp_pp.
-Print bool2val.
 
 Definition pointer_compare_3_spec :=
    DECLARE _pointer_compare_3
@@ -380,8 +412,120 @@ Definition pointer_compare_3_spec :=
                      else Vint (Int.repr (13))
                      )
             SEP (denote_tc_test_order p q). 
-                       
+  
+Definition pointer_compare_4_spec :=
+   DECLARE _pointer_compare_4
+      WITH p: val, q:val, p_value:int, q_value:int, sh: share
+      PRE  [ tptr tschar, tptr tschar]
+            PROP (sepalg.nonidentity sh) (* not sure this is correct..*)
+            PARAMS (p; q)
+            SEP( denote_tc_test_order p q) 
+      POST [ tint ]
+            PROP()
+            RETURN (if (pointer_le_bool p q) 
+                     then Vint (Int.repr (42))
+                     else Vint (Int.repr (13))
+                     )
+            SEP (denote_tc_test_order p q). 
 
+Definition pointer_compare_5_spec :=
+   DECLARE _pointer_compare_5
+      WITH p: val, q:val, p_value:int, q_value:int, sh: share
+      PRE  [ tptr tvoid, tptr tvoid]
+            PROP (sepalg.nonidentity sh) (* not sure this is correct..*)
+            PARAMS (p; q)
+            SEP( denote_tc_test_order p q) 
+      POST [ tint ]
+            PROP()
+            RETURN (if (pointer_le_bool p q) 
+                     then Vint (Int.repr (42))
+                     else Vint (Int.repr (13))
+                     )
+            SEP (denote_tc_test_order p q). 
+
+Definition pointer_compare_6_spec :=
+   DECLARE _pointer_compare_6
+      WITH p: val, q:val, p_value:int, q_value:int, sh: share
+      PRE  [ tptr tvoid, tptr tvoid]
+            PROP (sepalg.nonidentity sh) (* not sure this is correct..*)
+            PARAMS (p; q)
+            SEP( denote_tc_test_order p q) 
+      POST [ tint ]
+            PROP()
+            RETURN (if (pointer_lt_bool p q) 
+                     then Vint (Int.repr (42))
+                     else Vint (Int.repr (13))
+                     )
+            SEP (denote_tc_test_order p q). 
+
+
+(* working in progress*)
+
+Definition pointer_lt_eq_bool (p q : val) : bool :=
+   (pointer_lt_bool p q) || (eq_dec p q).
+
+Definition pointer_compare_7_spec :=
+   DECLARE _pointer_compare_7
+      WITH p: val, q:val, p_value:int, q_value:int, sh: share
+      PRE  [ tptr tvoid, tptr tvoid]
+            PROP (sepalg.nonidentity sh) (* not sure this is correct..*)
+            PARAMS (p; q)
+            SEP( 
+               denote_tc_test_eq p q &&
+               denote_tc_test_order p q
+               ) 
+      POST [ tint ]
+            PROP()
+            RETURN (if (pointer_lt_eq_bool p q) 
+                     then Vint (Int.repr (42))
+                     else Vint (Int.repr (13))
+                     )
+            SEP ( if (pointer_lt_bool p q)
+            then denote_tc_test_order p q
+            else
+            denote_tc_test_eq p q &&
+            denote_tc_test_order p q). 
+
+Definition pointer_compare_70_spec :=
+   DECLARE _pointer_compare_70
+      WITH p: val, q:val, p_value:int, q_value:int, sh: share
+      PRE  [ tptr tvoid, tptr tvoid]
+            PROP (sepalg.nonidentity sh) (* not sure this is correct..*)
+            PARAMS (p; q)
+            SEP( 
+               ) 
+      POST [ tint ]
+            PROP()
+            RETURN ( Vint (Int.repr (42))
+                    (* else Vint (Int.repr (13))*)
+                     )
+            SEP (). 
+
+Definition PGSIZE : Z := 4096. (** I think we should be able to retrieve this.. but it has to be greater than 0 *)
+
+(*Definition pointer_mod_zero (p q : val) := 
+   (eq_dec ((get_absolute_address p 0) mod PGSIZE)%Z 0).
+
+Definition pointer_mod_lt (p q : val) : bool :=
+   (pointer_mod_zero p q) || (pointer_lt_bool p q).
+
+Definition pointer_compare_8_spec :=
+   DECLARE _pointer_compare_8
+      WITH p: val, q:val, p_value:int, q_value:int, sh: share
+      PRE  [ tptr tvoid, tptr tvoid]
+            PROP (sepalg.nonidentity sh) (* not sure this is correct..*)
+            PARAMS (p; q)
+            SEP(denote_tc_test_order p q) 
+      POST [ tint ]
+            PROP()
+            RETURN (if (pointer_mod_zero p q) 
+                     then Vint (Int.repr (42))
+                     else Vint (Int.repr (13))
+                     )
+            SEP (denote_tc_test_order p q).*)
+
+Definition KERNBASE : Z := Z.of_nat (16 * 16 * 16 * 16 * 16 * 16 * 16 * 8).
+Definition PHYSTOP : Z := KERNBASE + Z.of_nat (128 * 1024 * 1024).
 (************************ calls kfree1 *************************)
 
 Definition call_kfree1_spec := 
@@ -422,33 +566,77 @@ Definition call_kfree1_if_1_spec :=
             data_at sh t_struct_kmem (Vint (Int.repr xx), new_head) (gv _kmem) (** the top of the freelist should point to the new head *)
             ).
 
-Definition freerange_no_loop_no_add_spec := 
+Definition freerange_no_loop_no_add_spec' :=
    DECLARE _freerange_no_loop_no_add
-      WITH sh : share, new_head:val, pa_end:val, original_freelist_pointer:val, xx:Z, gv:globals
-      PRE [ tptr tvoid, tptr tvoid]
-         PROP(writable_share sh; is_pointer_or_null original_freelist_pointer) 
-         PARAMS (new_head; pa_end) GLOBALS(gv)
+      WITH sh : share, new_head : val, pa_end : val, 
+           original_freelist_pointer : val, xx : Z, gv : globals, yy:Z, zz:Z (*TODO: delete yy, and zz*)
+      PRE [ tptr tvoid, tptr tvoid ]
+         PROP (
+            writable_share sh;
+            is_pointer_or_null original_freelist_pointer
+         ) 
+         PARAMS (new_head; pa_end) GLOBALS (gv)
          SEP (
-            denote_tc_test_order new_head pa_end *
-            data_at sh (t_run) nullval new_head *
-            data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem)
+            denote_tc_test_order new_head pa_end &&
+            (data_at sh (t_run) nullval new_head *
+            data_at sh t_struct_kmem 
+               (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem))
          )
       POST [ tvoid ]
-         PROP()
+         PROP ()
          RETURN () (* no return value *)
          SEP (
-            if (eq_dec (force_val (sem_cast_i2i I32 Signed (force_val (sem_cmp_pp Cle new_head pa_end)))) (Vint (Int.repr 1))) 
-            then
-            (data_at sh (t_run) nullval new_head * (* the input run struct should exists *)
-            data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem) (* the kmem freelist should exists, xx is a placeholder for the spinlock *)
-            ) else 
-            (data_at sh (t_run) (original_freelist_pointer) new_head *(* the new head should point to the original freelist pointer *)
-            data_at sh t_struct_kmem (Vint (Int.repr xx), new_head) (gv _kmem) (** the top of the freelist should point to the new head *)
-         )).
+            (*denote_tc_test_order new_head pa_end &&*)
+            if pointer_le_bool new_head pa_end then
+               data_at sh (t_run) original_freelist_pointer new_head &&
+               (* the new head should point to the original freelist pointer *)
+               data_at sh t_struct_kmem 
+                  (Vint (Int.repr xx), new_head) (gv _kmem) 
+            else
+               data_at sh (t_run) nullval new_head * (* the input run struct should exist *)
+                  data_at sh t_struct_kmem 
+                     (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem) 
+               
+               (* the top of the freelist should point to the new head *)
+         ).
+
+Definition freerange_no_loop_no_add_spec :=
+   DECLARE _freerange_no_loop_no_add
+      WITH sh : share, new_head : val, pa_end : val, 
+            original_freelist_pointer : val, xx : Z, gv : globals, yy:Z, zz:Z (*TODO: delete yy, and zz*)
+      PRE [ tptr tvoid, tptr tvoid ]
+         PROP (
+            writable_share sh;
+            is_pointer_or_null original_freelist_pointer
+         ) 
+         PARAMS (new_head; pa_end) GLOBALS (gv)
+         SEP (
+            denote_tc_test_order new_head pa_end *
+            (data_at sh (t_run) nullval new_head *
+            data_at sh t_struct_kmem 
+               (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem))
+         )
+      POST [ tvoid ]
+         PROP ()
+         RETURN () (* no return value *)
+         SEP (
+            (*denote_tc_test_order new_head pa_end &&*)
+            denote_tc_test_order new_head pa_end *
+            if pointer_le_bool new_head pa_end then
+               data_at sh (t_run) original_freelist_pointer new_head *
+               (* the new head should point to the original freelist pointer *)
+               data_at sh t_struct_kmem 
+                  (Vint (Int.repr xx), new_head) (gv _kmem) 
+            else
+               data_at sh (t_run) nullval new_head * (* the input run struct should exist *)
+                  data_at sh t_struct_kmem 
+                     (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem) 
+               
+               (* the top of the freelist should point to the new head *)
+         ).
 
 (************************ rounding *************************)
 
-Definition PGSIZE : Z := 4096. (** I think we should be able to retrieve this.. but it has to be greater than 0 *)
 
 (* PGROUNDUP function in Coq *)
 Definition PGROUNDUP (sz : Z) : Z :=
@@ -476,11 +664,17 @@ Definition Gprog : funspecs := [get_freelist1_input_spec;
 get_freelist1_input_spec'; get_freelist1_spec; get_i_spec; 
 get_xx_spec; get_freelist_spec;
 free_spec; free_spec'; alloc_spec; alloc_spec'; 
-kfree1_spec; kfree1_1_spec;
+kfree1_spec; kfree1_1_spec; 
 kalloc1_spec; call_kfree1_spec; 
 call_kfree1_if_1_spec; pointer_compare_0_spec; pointer_compare_1_spec; 
 pointer_compare_2_spec; 
-pointer_compare_3_spec; 
+pointer_compare_3_spec;
+pointer_compare_4_spec;
+pointer_compare_5_spec;
+pointer_compare_6_spec;
+pointer_compare_7_spec;
+pointer_compare_70_spec;
+freerange_no_loop_no_add_spec';
 freerange_no_loop_no_add_spec; align_pointer_spec].
 
 
@@ -513,6 +707,9 @@ Proof. start_function. repeat forward. entailer!. Qed.
 
 Lemma body_kfree1_1: semax_body Vprog Gprog f_kfree1 kfree1_1_spec.
 Proof. start_function. Intros. repeat forward. entailer!. Qed.
+
+(*Lemma body_kfree1_2: semax_body Vprog Gprog f_kfree1 kfree1_2_spec.
+Proof. start_function. Intros. forward. forward. forward. forward. entailer!. repeat forward. entailer!. Qed.*)
 
 Lemma body_alloc: semax_body Vprog Gprog f_alloc alloc_spec.
 Proof.
@@ -578,7 +775,7 @@ Proof. start_function. forward. Qed.
 Lemma body_pointer_compare_2: semax_body Vprog Gprog f_pointer_compare_2 pointer_compare_2_spec.
 Proof. start_function. forward. Qed.
 
-Lemma cmp_is_either_0_or_1 : forall p q i,
+Lemma cmp_le_is_either_0_or_1 : forall p q i,
    sem_cmp_pp Cle p q = Some (Vint i) ->
    (i = Int.zero) \/ (i = Int.one).
 Proof.
@@ -597,16 +794,16 @@ Qed.
 Lemma body_pointer_compare_3: semax_body Vprog Gprog f_pointer_compare_3 pointer_compare_3_spec.
 Proof. start_function. forward_if.
 - forward.
-   unfold pointer_le_bool.    
+   unfold pointer_le_bool; unfold pointer_cmp_bool.    
    destruct (eq_dec (force_val (sem_cast_i2i I32 Signed (force_val (sem_cmp_pp Cle p q))))
    (Vint (Int.repr 1))); entailer!.
    destruct (sem_cmp_pp Cle p q) eqn:e; try discriminate.
    destruct v; try discriminate.
    simpl in *. apply typed_true_tint_Vint in H.
    destruct (eq_dec (i) ((Int.zero))); try contradiction.
-   apply cmp_is_either_0_or_1 in e. destruct e; subst; try contradiction.
+   apply cmp_le_is_either_0_or_1 in e. destruct e; subst; try contradiction.
 - forward.
-   unfold pointer_le_bool. 
+   unfold pointer_le_bool; unfold pointer_cmp_bool.
    destruct (eq_dec (force_val (sem_cast_i2i I32 Signed (force_val (sem_cmp_pp Cle p q))))
    (Vint (Int.repr 1))); entailer!.
    destruct (sem_cmp_pp Cle p q) eqn:eCmp; try discriminate.
@@ -615,8 +812,289 @@ Proof. start_function. forward_if.
    rewrite H in e. inversion e.
 Qed.
 
+Lemma body_pointer_compare_4: semax_body Vprog Gprog f_pointer_compare_4 pointer_compare_4_spec.
+Proof. start_function. forward_if.
+- forward.
+   unfold pointer_le_bool; unfold pointer_cmp_bool.      
+   destruct (eq_dec (force_val (sem_cast_i2i I32 Signed (force_val (sem_cmp_pp Cle p q))))
+   (Vint (Int.repr 1))); entailer!.
+   destruct (sem_cmp_pp Cle p q) eqn:e; try discriminate.
+   destruct v; try discriminate.
+   simpl in *. apply typed_true_tint_Vint in H.
+   destruct (eq_dec (i) ((Int.zero))); try contradiction.
+   apply cmp_le_is_either_0_or_1 in e. destruct e; subst; try contradiction.
+- forward.
+   unfold pointer_le_bool; unfold pointer_cmp_bool.    
+   destruct (eq_dec (force_val (sem_cast_i2i I32 Signed (force_val (sem_cmp_pp Cle p q))))
+   (Vint (Int.repr 1))); entailer!.
+   destruct (sem_cmp_pp Cle p q) eqn:eCmp; try discriminate.
+   destruct v; try discriminate.
+   simpl in *. apply typed_false_tint_Vint in H.
+   rewrite H in e. inversion e.
+Qed.
+
+Lemma body_pointer_compare_5: semax_body Vprog Gprog f_pointer_compare_5 pointer_compare_5_spec.
+Proof. start_function. forward_if.
+- forward.
+   unfold pointer_le_bool; unfold pointer_cmp_bool.       
+   destruct (eq_dec (force_val (sem_cast_i2i I32 Signed (force_val (sem_cmp_pp Cle p q))))
+   (Vint (Int.repr 1))); entailer!.
+   destruct (sem_cmp_pp Cle p q) eqn:e; try discriminate.
+   destruct v; try discriminate.
+   simpl in *. apply typed_true_tint_Vint in H.
+   destruct (eq_dec (i) ((Int.zero))); try contradiction.
+   apply cmp_le_is_either_0_or_1 in e. destruct e; subst; try contradiction.
+- forward.
+   unfold pointer_le_bool; unfold pointer_cmp_bool.    
+   destruct (eq_dec (force_val (sem_cast_i2i I32 Signed (force_val (sem_cmp_pp Cle p q))))
+   (Vint (Int.repr 1))); entailer!.
+   destruct (sem_cmp_pp Cle p q) eqn:eCmp; try discriminate.
+   destruct v; try discriminate.
+   simpl in *. apply typed_false_tint_Vint in H.
+   rewrite H in e. inversion e.
+Qed.
+
+(* this might als obe possible to make only one funciton for this.. *)
+Lemma cmp_lt_is_either_0_or_1 : forall p q i,
+   sem_cmp_pp Clt p q = Some (Vint i) ->
+   (i = Int.zero) \/ (i = Int.one).
+Proof.
+intros.
+destruct (eq_dec i Int.zero). left; auto.
+destruct (eq_dec i Int.one). right; auto.
+unfold sem_cmp_pp in H. inversion H.
+unfold bool2val in H1. unfold Z.b2z in H1. unfold option_map in H1.
+destruct (Val.cmplu_bool true2 Clt p q).
+- destruct b; inversion H1; exfalso.
+   + apply n0; auto.
+   + apply n; auto.
+- inversion H1.
+Qed.
+
+Lemma body_pointer_compare_6: semax_body Vprog Gprog f_pointer_compare_6 pointer_compare_6_spec.
+Proof. start_function. forward_if. (*unfold POSTCONDITION; unfold abbreviate. unfold MORE_COMMANDS; unfold abbreviate.*)
+- forward.
+   unfold pointer_lt_bool; unfold pointer_cmp_bool.     
+   destruct (eq_dec (force_val (sem_cast_i2i I32 Signed (force_val (sem_cmp_pp Clt p q))))
+   (Vint (Int.repr 1))); entailer!.
+   destruct (sem_cmp_pp Clt p q) eqn:e; try discriminate.
+   destruct v; try discriminate.
+   simpl in *. apply typed_true_tint_Vint in H.
+   destruct (eq_dec (i) ((Int.zero))); try contradiction.
+   apply cmp_lt_is_either_0_or_1 in e. destruct e; subst; try contradiction.
+- forward.
+   unfold pointer_lt_bool; unfold pointer_cmp_bool.    
+   destruct (eq_dec (force_val (sem_cast_i2i I32 Signed (force_val (sem_cmp_pp Clt p q))))
+   (Vint (Int.repr 1))); entailer!.
+   destruct (sem_cmp_pp Clt p q) eqn:eCmp; try discriminate.
+   destruct v; try discriminate.
+   simpl in *. apply typed_false_tint_Vint in H.
+   rewrite H in e. inversion e.
+Qed.
+
+
+(* working in progress..*)
+
+(*Lemma denote_tc_test_order_impl_eq_maybe_not_provable_question_mark:
+  forall p q,
+    denote_tc_test_order p q |-- denote_tc_test_eq p q.
+Proof.
+  intros p q.
+  destruct p; destruct q; simpl; try apply FF_left.
+  - entailer!. entailer!!.
+  - unfold test_order_ptrs. destruct (sameblock (Vptr b i) (Vptr b0 i0)) eqn:e; try apply FF_left.
+  inversion e. unfold peq in H0. 
+  Search denote_tc_test_eq.
+  apply denote_tc_test_eq_split.
+  Search weak_valid_pointer.
+  Admitted.*)
+(*Lemma body_pointer_compare_70: semax_body Vprog Gprog f_pointer_compare_70 pointer_compare_70_spec.
+Proof. start_function. 
+forward_if (
+   PROP ( )  
+   LOCAL (temp _pa p; temp _end q)  
+   SEP () 
+ ).
+ 
+Admitted.*)
+
+Lemma body_pointer_compare_7: semax_body Vprog Gprog f_pointer_compare_7 pointer_compare_7_spec.
+Proof. start_function. 
+forward_if
+  (PROP () 
+   LOCAL (temp _pa p; temp _end q; 
+          temp _t'1 (if pointer_lt_bool p q 
+                     then Vtrue 
+                     else (if (eq_dec p q) 
+                           then Vtrue 
+                           else Vfalse))) (*(if pointer_lt_bool p q then Vtrue else (if (eq_dec p q) then Vtrue else Vfalse))*)
+   SEP (
+            denote_tc_test_order p q &&
+            denote_tc_test_eq p q)).
+   - apply andp_left2. entailer.
+   - forward. destruct (pointer_lt_bool p q) eqn:e.
+      + entailer!. rewrite andp_comm. entailer.
+      + destruct (eq_dec p q) eqn:e1.
+         * entailer. rewrite andp_comm. entailer!.
+         * entailer!; try contradiction. 
+         destruct (sem_cmp_pp Clt p q) eqn:e2; try discriminate.
+         destruct v; try discriminate.
+         apply typed_true_tint_Vint in H.
+         unfold pointer_lt_bool in e. unfold pointer_cmp_bool in e.
+         unfold pointer_comparison in e.
+         destruct (eq_dec (force_val (sem_cast_i2i I32 Signed (force_val (sem_cmp_pp Clt p q))))
+         (Vint (Int.repr 1))); try discriminate.
+         exfalso; apply n0.
+         rewrite e2. 
+         apply cmp_lt_is_either_0_or_1 in e2.
+         destruct e2; try contradiction. subst. auto.
+         rewrite andp_comm. entailer!.
+   - forward. 
+      + entailer!. apply andp_left1. entailer!.
+      + entailer. destruct (pointer_lt_bool p q) eqn:e1.
+         * simpl in *. entailer!.
+            unfold is_int in H0.
+            destruct (force_val (sem_cast_i2bool (force_val (sem_cmp_pp Ceq p q)))) eqn:e2; try discriminate; try contradiction.
+            destruct (sem_cmp_pp Clt p q) eqn:e3.
+            destruct v; try discriminate.
+            apply typed_false_tint_Vint in H.
+            unfold pointer_lt_bool in e1. unfold pointer_cmp_bool in e1.
+            unfold pointer_comparison in e1. 
+            rewrite e3 in e1. subst. inversion e1.
+            try discriminate.
+            rewrite andp_comm. entailer!.
+         * destruct (eq_dec p q) eqn:e2.
+            -- entailer!.
+               ++ destruct (sem_cmp_pp Ceq q q) eqn:e3.
+                  ** unfold sem_cmp_pp in e3. simpl in e3.
+                  destruct (Val.cmplu_bool true2 Ceq q q) eqn:e4; simpl.
+                  ---destruct v; try discriminate; try contradiction.
+                  unfold  Val.cmplu_bool in e4. simpl in e4. destruct q; try contradiction; try discriminate.
+                  +++ unfold Int64.eq in e4. destruct (zeq (Int64.unsigned i0) (Int64.unsigned i0)); try discriminate; try contradiction.
+                      inversion e4. rewrite <- H2 in e3. inversion e3. simpl; auto.
+                  +++ destruct (eq_block b0 b0) eqn:e5; try discriminate; try contradiction.
+                     destruct (Ptrofs.eq i0 i0) eqn:e6; try contradiction; try discriminate.
+                     *** inversion e4. rewrite <- H2 in e3. simpl in e3.
+                         inversion e3. simpl; auto.
+                     *** unfold Ptrofs.eq in e6.
+                        destruct (zeq (Ptrofs.unsigned i0) (Ptrofs.unsigned i0)); try contradiction; try discriminate.
+                  --- destruct v; try discriminate; try contradiction.
+                  ** unfold sem_cmp_pp in e3; simpl in e3.
+                     destruct (Val.cmplu_bool true2 Ceq q q) eqn:e4; try discriminate; try contradiction.
+                     unfold Val.cmplu_bool in e4. simpl in e4. destruct q; try contradiction; try discriminate.
+                     destruct (eq_block b b); try contradiction; try discriminate.
+               ++ rewrite andp_comm. entailer!.
+            -- entailer!.
+               ++ destruct (sem_cmp_pp Ceq p q) eqn:e3; try discriminate; try contradiction.
+                  ** unfold sem_cmp_pp in e3. simpl in e3. 
+Admitted.
+
+(* don't think this is provable..*)
+(*Lemma sepcon_implies_andp:
+  forall (P Q: mpred),
+    (P * Q) |-- (P && Q).
+Proof.
+   intros.
+   (*apply derives_trans with (P * Q && P * Q).
+   apply andp_right.
+   
+   -  apply andp_right.
+   - apply andp_right  with (X := P * Q) (P := P * Q) (Q := P * Q). . apply andp_right. with (X := P * Q) (P := P * Q) (Q := P * Q).
+    Check andp_right.
+   - Search  apply andp_left2. apply andp_right; apply derives_refl.
+   - apply andp_left2.
+   rewrite <- (sepcon_emp P) at 1. (* Introduce emp *)
+   rewrite <- (sepcon_emp Q) at 1. (* Introduce emp *)
+   apply sepcon_derives; apply sepcon_emp.
+Qed.*)
+Admitted.*)
+
+Lemma body_freerange_no_loop_no_add': semax_body Vprog Gprog f_freerange_no_loop_no_add freerange_no_loop_no_add_spec'.
+Proof. start_function. 
+forward_if.
+   -apply andp_left1. entailer!.
+   -forward_call (sh, new_head, original_freelist_pointer, xx, gv).
+      +apply andp_left2. entailer!.
+      +entailer. destruct (pointer_le_bool new_head pa_end) eqn:e; try discriminate; try contradiction. 
+         * admit.
+         * unfold pointer_le_bool in e.
+           unfold pointer_cmp_bool in e. 
+           unfold pointer_comparison in e.
+           destruct (sem_cmp_pp Cle new_head pa_end) eqn:e1. 
+           --destruct v; try discriminate; try contradiction.
+             apply typed_true_tint_Vint in H0.
+             exfalso; apply H0.
+             apply cmp_le_is_either_0_or_1 in e1. destruct e1; auto.
+             rewrite H5 in e.
+             simpl in e. inversion e.
+           --entailer!.
+   - forward. entailer. destruct (pointer_le_bool new_head pa_end) eqn:e1.
+      + destruct (sem_cmp_pp Cle new_head pa_end ) eqn:e2; try contradiction; try discriminate.
+        destruct v; try discriminate; try contradiction.
+        apply typed_false_tint_Vint in H0.
+        rewrite H0 in e2. unfold pointer_le_bool in e1. unfold pointer_cmp_bool in e1.
+        unfold pointer_comparison in e1.
+        rewrite e2 in e1. inversion e1.
+      + apply andp_left2. entailer!.
+Admitted.
+
 Lemma body_freerange_no_loop_no_add: semax_body Vprog Gprog f_freerange_no_loop_no_add freerange_no_loop_no_add_spec.
-Proof. start_function. forward_if. entailer!.
+Proof. start_function.
+forward_if.
+
+
+(*forward_if
+  (PROP ()
+   LOCAL (gvars gv; temp _pa_start new_head; temp _pa_end pa_end)
+   SEP (data_at sh t_run nullval new_head *
+        data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem))).
+        *)
+
+(*unfold abbreviate in POSTCONDITION.
+forward_if.
+Show Proof.
+sep_apply sepcon_comm. sep_apply sepcon_comm at 2. (P:= denote_tc_test_order new_head pa_end).
+Search (_ * _).
+sep_apply sepcon_derives (TT).
+Check sepcon_derives.
+apply sepcon_derives; [apply derives_refl | _ ].
+
+Check cancel.
+-apply andp_left1. entailer!.
+   -forward_call (sh, new_head, original_freelist_pointer, xx, gv).
+      +apply andp_left2. entailer!.*)
+      (*+entailer. destruct (pointer_le_bool new_head pa_end) eqn:e; try discriminate; try contradiction. 
+         * admit.
+         * unfold pointer_le_bool in e.
+           unfold pointer_cmp_bool in e. 
+           unfold pointer_comparison in e.
+           destruct (sem_cmp_pp Cle new_head pa_end) eqn:e1. 
+           --destruct v; try discriminate; try contradiction.
+             apply typed_true_tint_Vint in H0.
+             exfalso; apply H0.
+             apply cmp_le_is_either_0_or_1 in e1. destruct e1; auto.
+             rewrite H5 in e.
+             simpl in e. inversion e.
+           --entailer!.
+   - forward. entailer. destruct (pointer_le_bool new_head pa_end) eqn:e1.
+      + destruct (sem_cmp_pp Cle new_head pa_end ) eqn:e2; try contradiction; try discriminate.
+        destruct v; try discriminate; try contradiction.
+        apply typed_false_tint_Vint in H0.
+        rewrite H0 in e2. unfold pointer_le_bool in e1. unfold pointer_cmp_bool in e1.
+        unfold pointer_comparison in e1.
+        rewrite e2 in e1. inversion e1.
+      + apply andp_left2. entailer!.
+
+
+
+
+(data_at sh t_run nullval new_head *
+data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem)).
+       forward_if (
+         PROP () LOCAL () SEP ()
+       ).
+
+unfold abbreviate in POSTCONDITION. forward_if.*)
 Admitted.
 
 

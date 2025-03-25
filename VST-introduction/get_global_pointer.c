@@ -1,6 +1,8 @@
 // should be moved to another file
 typedef unsigned long uint64;
 #define PGSIZE 4096 // bytes per page
+#define KERNBASE 0x80000000L
+#define PHYSTOP (KERNBASE + 128*1024*1024)
 #define PGROUNDUP(sz)  (((sz)+PGSIZE-1) & ~(PGSIZE-1))
 
 // should be moved to another file
@@ -101,18 +103,69 @@ int pointer_compare_3 (int *p, int *q) {
   return 13;
 }
 
+int pointer_compare_4 (char *p, char *q) {
+  if (p<=q)
+    return 42;
+  return 13;
+}
 
+int pointer_compare_5 (void *p, void *q) {
+  if (p<=q)
+    return 42;
+  return 13;
+}
 
-
+int pointer_compare_6 (void *pa, void *end) {
+  if((char*)pa < end)
+    return 42;
+  return 13;
+}
 
 
 
 // working in progress
 
+int pointer_compare_70 (void *pa, void *end) {
+  if(pa)
+    if (end)
+      return 42;
+  return 13;
+}
+
 void freerange_no_loop_no_add(void *pa_start, void *pa_end) {
   if (pa_start <= pa_end)
     kfree1(pa_start); // Free the first page if it's within the range
 }
+
+
+
+int pointer_compare_7 (void *pa, void *end) {
+  if((char*)pa < end || (pa == end))
+    return 42;
+  return 13;
+}
+
+int pointer_compare_8 (void *pa, void *end) {
+  if(((uint64)pa % PGSIZE) != 0)
+    return 42;
+  return 13;
+}
+
+
+int pointer_compare_9 (void *pa, void *end) {
+  if(((uint64)pa % PGSIZE) != 0 || (char*)pa < end)
+    return 42;
+  return 13;
+}
+
+
+int pointer_compare_10 (void *pa, void *end) {
+  if(((uint64)pa % PGSIZE) != 0 || (char*)pa < end || (uint64)pa >= PHYSTOP)
+    return 42;
+  return 13;
+}
+
+
 
 
 
