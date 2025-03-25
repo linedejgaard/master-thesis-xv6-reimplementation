@@ -10,7 +10,6 @@ Definition t_run := Tstruct _run noattr.
 
 Definition t_struct_kmem := Tstruct _struct_kmem noattr.
 
-
 Definition kfree1_spec := 
  DECLARE _kfree1
    WITH sh : share, new_head:val, original_freelist_pointer:val, xx:Z, gv:globals
@@ -127,10 +126,114 @@ Definition freerange_no_loop_no_add_spec :=
                      (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem) 
          ).
 
+(************************ freelist rep  *************************)
+Fixpoint freelistrep (sh: share) (n: nat) (p: val) : mpred :=
+ match n with
+ | S n' => EX next: val, 
+        !! malloc_compatible (sizeof t_run) p &&  (* p is compatible with a memory block of size sizeof theader. *)
+        data_at sh t_run next p * (* at the location p, there is a t_run structure with the value next *)
+        freelistrep sh n' next (* "*" ensures no loops... *)
+ | O => !! (p = nullval) && emp
+ end.
+
+
+Arguments freelistrep sh n p : simpl never.
+
+Lemma freelistrep_local_prop: forall sh n p, 
+   freelistrep sh n p |--  !! (is_pointer_or_null p /\ (n=0<->p=nullval) /\ (n>0<->isptr p))%nat.
+Proof.
+  intros.
+  induction n as [| n' IH].
+  - unfold freelistrep. entailer!. split; auto.
+    + split; auto.
+    + split; try lia. intros. simpl in *. inversion H.
+  - unfold freelistrep. destruct p; Intro y; entailer!. split.
+    + split; intros; inversion H2.
+    + split; intros; auto. try lia. 
+   Qed.
+#[export] Hint Resolve freelistrep_local_prop : saturate_local.
+
+
+Lemma freelistrep_valid_pointer:
+  forall sh n p, 
+  readable_share sh ->
+   freelistrep Ews n p |-- valid_pointer p.
+Proof.
+  intros. destruct n.
+  - unfold freelistrep. entailer!.
+  - unfold freelistrep. Intro y; entailer.
+Qed. 
+#[export] Hint Resolve freelistrep_valid_pointer : valid_pointer.
+
+
+Lemma freelistrep_null: forall sh n x,
+       x = nullval ->
+       freelistrep sh n x = !! (n = O) && emp.
+Proof.
+   intros.
+   destruct n; unfold freelistrep; fold freelistrep.
+   autorewrite with norm. auto.
+   apply pred_ext.
+   Intros y. entailer. 
+   destruct n; entailer!; try discriminate H0. 
+Qed.
+
+
+Lemma freelistrep_nonnull: forall n sh x,
+   x <> nullval ->
+   freelistrep sh n x =
+   EX m : nat, EX next:val,
+          !! (n = S m) && !! malloc_compatible (sizeof t_run) x && data_at sh t_run next x * freelistrep sh m next.
+Proof.
+   intros; apply pred_ext.
+   - destruct n. 
+         + unfold freelistrep. entailer!.
+         + unfold freelistrep; fold freelistrep. Intros y.
+         Exists n y. entailer!.
+   - Intros m y. rewrite H0. unfold freelistrep at 2; fold freelistrep. Exists y. entailer!.
+Qed.
+
+Definition kfree1_freelist_spec := 
+ DECLARE _kfree1
+   WITH sh : share, new_head:val, original_freelist_pointer:val, xx:Z, gv:globals, n : nat
+   PRE [ tptr tvoid]
+      PROP(writable_share sh; is_pointer_or_null original_freelist_pointer) 
+      PARAMS (new_head) GLOBALS(gv)
+      SEP (data_at sh (t_run) nullval new_head; 
+      freelistrep sh n original_freelist_pointer;
+      data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem) 
+      )
+   POST [ tvoid ]
+      PROP()
+      RETURN () 
+      SEP (
+         freelistrep sh n original_freelist_pointer; (* TODO: maybe it makes sense to have head here?*)
+         data_at sh (t_run) (original_freelist_pointer) new_head;
+         data_at sh t_struct_kmem (Vint (Int.repr xx), new_head) (gv _kmem)
+         ).
+
+(*Definition kfree1_freelist_spec :=
+DECLARE _kfree1
+       WITH sh: share, n : nat, p: val
+       PRE  [ tptr t_run ]
+       PROP ()
+       PARAMS (p)
+       SEP (freelistrep sh n p)
+       POST [ (tptr t_run) ]
+       PROP () RETURN (p)
+       SEP (freelistrep sh n p).*)
+
+
+(************************ Gprog  *************************)
 Definition Gprog : funspecs := [
 kfree1_spec; kfree1_1_spec ; 
 call_kfree1_spec; 
-call_kfree1_if_1_spec; freerange_no_loop_no_add_spec].
+call_kfree1_if_1_spec; freerange_no_loop_no_add_spec;
+kfree1_freelist_spec
+].
+
+
+(************************ Proofs  *************************)
 
 Lemma body_kfree1: semax_body Vprog Gprog f_kfree1 kfree1_spec.
 Proof. start_function. repeat forward. entailer!. Qed.
@@ -195,4 +298,8 @@ forward_if.
         unfold pointer_comparison in e1.
         rewrite e2 in e1. inversion e1.
       + apply andp_left2. entailer!.
-Qed.      
+Qed.
+
+
+Lemma body_kfree1_freelist: semax_body Vprog Gprog f_kfree1 kfree1_freelist_spec.
+Proof. start_function. repeat forward. entailer!.  Qed.
