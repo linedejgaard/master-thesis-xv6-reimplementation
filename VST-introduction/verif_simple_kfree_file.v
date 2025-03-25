@@ -116,9 +116,9 @@ Definition freerange_no_loop_no_add_spec :=
          PROP ()
          RETURN ()
          SEP (
-            (*denote_tc_test_order new_head pa_end &&*)
+            (*denote_tc_test_order new_head pa_end **)
             if pointer_le_bool new_head pa_end then
-               data_at sh (t_run) original_freelist_pointer new_head &&
+               data_at sh (t_run) original_freelist_pointer new_head *
                data_at sh t_struct_kmem 
                   (Vint (Int.repr xx), new_head) (gv _kmem) 
             else
@@ -169,13 +169,13 @@ destruct (Val.cmplu_bool true2 Cle p q).
 Qed.
 
 Lemma body_freerange_no_loop_no_add: semax_body Vprog Gprog f_freerange_no_loop_no_add freerange_no_loop_no_add_spec.
-Proof. start_function. 
-forward_if.
+Proof. start_function.
+forward_if. 
    -apply andp_left1. entailer!.
    -forward_call (sh, new_head, original_freelist_pointer, xx, gv).
       +apply andp_left2. entailer!.
       +entailer. destruct (pointer_le_bool new_head pa_end) eqn:e; try discriminate; try contradiction. 
-         * admit.
+         * entailer!. 
          * unfold pointer_le_bool in e.
            unfold pointer_cmp_bool in e. 
            unfold pointer_comparison in e.
@@ -195,4 +195,4 @@ forward_if.
         unfold pointer_comparison in e1.
         rewrite e2 in e1. inversion e1.
       + apply andp_left2. entailer!.
-Admitted.
+Qed.      
