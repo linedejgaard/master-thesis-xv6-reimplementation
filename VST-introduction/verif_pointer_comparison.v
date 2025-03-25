@@ -73,68 +73,49 @@ destruct (Val.cmplu_bool true2 Cle p q).
 Qed.
 
 Lemma body_pointer_comparison_2: semax_body Vprog Gprog f_pointer_comparison_2 pointer_comparison_2_spec.
-Proof. start_function. forward_if.
+Proof. start_function. 
+assert (sem_cmp_pp Cle
+(Vptr b (Ptrofs.add p (Ptrofs.mul (Ptrofs.repr 1) (Ptrofs.of_ints (Int.repr 4096))))) q =
+sem_cmp_pp Cle (Vptr b (Ptrofs.add p (Ptrofs.of_ints (Int.repr 4096)))) q) by auto. 
+assert (sem_cmp_pp Cle (Vptr b (Ptrofs.add p (Ptrofs.repr PGSIZE))) q =
+sem_cmp_pp Cle (Vptr b (Ptrofs.add p
+    (Ptrofs.mul (Ptrofs.repr 1) (Ptrofs.of_ints (Int.repr 4096))))) q
+) by auto. 
+forward_if.
 - forward.
     entailer!. 
     destruct (pointer_le_bool (Vptr b (Ptrofs.add p (Ptrofs.repr PGSIZE))) q) eqn:e; auto.
-    assert (sem_cmp_pp Cle
-    (Vptr b
-       (Ptrofs.add p
-          (Ptrofs.mul (Ptrofs.repr 1) (Ptrofs.of_ints (Int.repr 4096)))))
-    q =
-    sem_cmp_pp Cle
-        (Vptr b
-           (Ptrofs.add p
-              (Ptrofs.of_ints (Int.repr 4096))))
-        q) by auto. 
-        rewrite H0 in H.
-        destruct (sem_cmp_pp Cle
-        (Vptr b (Ptrofs.add p (Ptrofs.of_ints (Int.repr 4096)))) q) eqn:e2; try discriminate; try contradiction.
-        destruct v; try discriminate; try contradiction.
-        apply typed_true_tint_Vint in H.
-        assert (i = Int.zero \/ i = Int.one). {
-            apply cmp_le_is_either_0_or_1 with (p:= Vptr b (Ptrofs.add p (Ptrofs.of_ints (Int.repr 4096)))) (q:=q); auto.
-        }
-        destruct H1; try contradiction.
-        unfold pointer_le_bool in e. unfold pointer_cmp_bool in e.
-        unfold pointer_comparison in e.
-
-        assert (sem_cmp_pp Cle (Vptr b (Ptrofs.add p (Ptrofs.repr PGSIZE))) q =
-        sem_cmp_pp Cle (Vptr b (Ptrofs.add p
-                    (Ptrofs.mul (Ptrofs.repr 1) (Ptrofs.of_ints (Int.repr 4096))))) q
-        ) by auto. 
-        rewrite H2 in e. rewrite H0 in e. rewrite H1 in e.
-        try discriminate. 
-    - forward. entailer!.
-
+    rewrite H in H1.
+    destruct (sem_cmp_pp Cle
+    (Vptr b (Ptrofs.add p (Ptrofs.of_ints (Int.repr 4096)))) q) eqn:e2; try discriminate; try contradiction.
+    destruct v; try discriminate; try contradiction.
+    apply typed_true_tint_Vint in H1.
+    assert (i = Int.zero \/ i = Int.one). {
+        apply cmp_le_is_either_0_or_1 with (p:= Vptr b (Ptrofs.add p (Ptrofs.of_ints (Int.repr 4096)))) (q:=q); auto.
+    }
+    destruct H2; try contradiction.
+    unfold pointer_le_bool in e. unfold pointer_cmp_bool in e.
+    unfold pointer_comparison in e.
+    rewrite H0 in e. rewrite H in e. rewrite H2 in e.
+    try discriminate.
+- forward. entailer!.
     destruct (pointer_le_bool (Vptr b (Ptrofs.add p (Ptrofs.repr PGSIZE))) q) eqn:e; auto.
-    assert (sem_cmp_pp Cle
-    (Vptr b
-    (Ptrofs.add p
-        (Ptrofs.mul (Ptrofs.repr 1) (Ptrofs.of_ints (Int.repr 4096)))))
-    q =
-    sem_cmp_pp Cle
-        (Vptr b
-        (Ptrofs.add p
-            (Ptrofs.of_ints (Int.repr 4096))))
-        q) by auto. 
-        rewrite H0 in H.
-        destruct (sem_cmp_pp Cle
-        (Vptr b (Ptrofs.add p (Ptrofs.of_ints (Int.repr 4096)))) q) eqn:e2; try discriminate; try contradiction.
-        destruct v; try discriminate; try contradiction.
-        apply typed_false_tint_Vint in H.
-        assert (i = Int.zero \/ i = Int.one). {
-            apply cmp_le_is_either_0_or_1 with (p:= Vptr b (Ptrofs.add p (Ptrofs.of_ints (Int.repr 4096)))) (q:=q); auto.
-        }
-        destruct H1; try contradiction.
-        +unfold pointer_le_bool in e. unfold pointer_cmp_bool in e.
-        unfold pointer_comparison in e.
-        assert (sem_cmp_pp Cle (Vptr b (Ptrofs.add p (Ptrofs.repr PGSIZE))) q =
-        sem_cmp_pp Cle (Vptr b (Ptrofs.add p
-            (Ptrofs.mul (Ptrofs.repr 1) (Ptrofs.of_ints (Int.repr 4096))))) q
-        ) by auto. 
-        rewrite H2 in e. rewrite H0 in e. rewrite H1 in e.
-        try discriminate. 
-    
-        + rewrite H in H1. inversion H1.
+    rewrite H in H1.
+    destruct (sem_cmp_pp Cle
+    (Vptr b (Ptrofs.add p (Ptrofs.of_ints (Int.repr 4096)))) q) eqn:e2; try discriminate; try contradiction.
+    destruct v; try discriminate; try contradiction.
+    apply typed_false_tint_Vint in H1.
+    assert (i = Int.zero \/ i = Int.one). {
+        apply cmp_le_is_either_0_or_1 with (p:= Vptr b (Ptrofs.add p (Ptrofs.of_ints (Int.repr 4096)))) (q:=q); auto.
+    }
+    destruct H2; try contradiction.
+    +unfold pointer_le_bool in e. unfold pointer_cmp_bool in e.
+    unfold pointer_comparison in e.
+    assert (sem_cmp_pp Cle (Vptr b (Ptrofs.add p (Ptrofs.repr PGSIZE))) q =
+    sem_cmp_pp Cle (Vptr b (Ptrofs.add p
+        (Ptrofs.mul (Ptrofs.repr 1) (Ptrofs.of_ints (Int.repr 4096))))) q
+    ) by auto. 
+    rewrite H3 in e. rewrite H in e. rewrite H2 in e.
+    try discriminate. 
+    + rewrite H1 in H2. inversion H2.
 Qed.
