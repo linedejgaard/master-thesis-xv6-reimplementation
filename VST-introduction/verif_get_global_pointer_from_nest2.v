@@ -344,28 +344,6 @@ Definition get_opt_absolute_address (pa : val) : option Z :=
    | _ => None
    end.
 
-(*Print Option.default.
-Definition get_absolute_address (pa : val) (default_value:Z) : Z := 
-   match (get_opt_absolute_address pa) with
-   | Some v => v
-   | None => (default_value)
-   end.
-
-Lemma get_absolute_address_correct :
-   forall pa z default_value,
-     (get_opt_absolute_address pa = Some z -> get_absolute_address pa default_value = z) /\
-     (get_opt_absolute_address pa = None -> get_absolute_address pa default_value = default_value).
- Proof.
-   intros pa z default_value.
-   unfold get_absolute_address.
-   split.
-   - (* Case: get_opt_absolute_address pa = Some z *)
-     intros H.
-     rewrite H; auto. 
-   - (* Case: get_opt_absolute_address pa = None *)
-     intros H.
-     rewrite H; auto. 
- Qed.*)
 
 Definition pointer_comparison (p q : val) (cmp : comparison) : val :=
    force_val (sem_cast_i2i I32 Signed (force_val (sem_cmp_pp cmp p q))).
@@ -486,44 +464,8 @@ Definition pointer_compare_7_spec :=
             denote_tc_test_eq p q &&
             denote_tc_test_order p q). 
 
-Definition pointer_compare_70_spec :=
-   DECLARE _pointer_compare_70
-      WITH p: val, q:val, p_value:int, q_value:int, sh: share
-      PRE  [ tptr tvoid, tptr tvoid]
-            PROP (sepalg.nonidentity sh) (* not sure this is correct..*)
-            PARAMS (p; q)
-            SEP( 
-               ) 
-      POST [ tint ]
-            PROP()
-            RETURN ( Vint (Int.repr (42))
-                    (* else Vint (Int.repr (13))*)
-                     )
-            SEP (). 
 
-Definition PGSIZE : Z := 4096. (** I think we should be able to retrieve this.. but it has to be greater than 0 *)
-
-(*Definition pointer_mod_zero (p q : val) := 
-   (eq_dec ((get_absolute_address p 0) mod PGSIZE)%Z 0).
-
-Definition pointer_mod_lt (p q : val) : bool :=
-   (pointer_mod_zero p q) || (pointer_lt_bool p q).
-
-Definition pointer_compare_8_spec :=
-   DECLARE _pointer_compare_8
-      WITH p: val, q:val, p_value:int, q_value:int, sh: share
-      PRE  [ tptr tvoid, tptr tvoid]
-            PROP (sepalg.nonidentity sh) (* not sure this is correct..*)
-            PARAMS (p; q)
-            SEP(denote_tc_test_order p q) 
-      POST [ tint ]
-            PROP()
-            RETURN (if (pointer_mod_zero p q) 
-                     then Vint (Int.repr (42))
-                     else Vint (Int.repr (13))
-                     )
-            SEP (denote_tc_test_order p q).*)
-
+Definition PGSIZE : Z := 4096. 
 Definition KERNBASE : Z := Z.of_nat (16 * 16 * 16 * 16 * 16 * 16 * 16 * 8).
 Definition PHYSTOP : Z := KERNBASE + Z.of_nat (128 * 1024 * 1024).
 (************************ calls kfree1 *************************)
@@ -566,6 +508,8 @@ Definition call_kfree1_if_1_spec :=
             data_at sh t_struct_kmem (Vint (Int.repr xx), new_head) (gv _kmem) (** the top of the freelist should point to the new head *)
             ).
 
+
+(* working in progress *)
 Definition freerange_no_loop_no_add_spec' :=
    DECLARE _freerange_no_loop_no_add
       WITH sh : share, new_head : val, pa_end : val, 
@@ -673,7 +617,6 @@ pointer_compare_4_spec;
 pointer_compare_5_spec;
 pointer_compare_6_spec;
 pointer_compare_7_spec;
-pointer_compare_70_spec;
 freerange_no_loop_no_add_spec';
 freerange_no_loop_no_add_spec; align_pointer_spec].
 
@@ -892,32 +835,6 @@ Proof. start_function. forward_if. (*unfold POSTCONDITION; unfold abbreviate. un
    rewrite H in e. inversion e.
 Qed.
 
-
-(* working in progress..*)
-
-(*Lemma denote_tc_test_order_impl_eq_maybe_not_provable_question_mark:
-  forall p q,
-    denote_tc_test_order p q |-- denote_tc_test_eq p q.
-Proof.
-  intros p q.
-  destruct p; destruct q; simpl; try apply FF_left.
-  - entailer!. entailer!!.
-  - unfold test_order_ptrs. destruct (sameblock (Vptr b i) (Vptr b0 i0)) eqn:e; try apply FF_left.
-  inversion e. unfold peq in H0. 
-  Search denote_tc_test_eq.
-  apply denote_tc_test_eq_split.
-  Search weak_valid_pointer.
-  Admitted.*)
-(*Lemma body_pointer_compare_70: semax_body Vprog Gprog f_pointer_compare_70 pointer_compare_70_spec.
-Proof. start_function. 
-forward_if (
-   PROP ( )  
-   LOCAL (temp _pa p; temp _end q)  
-   SEP () 
- ).
- 
-Admitted.*)
-
 Lemma body_pointer_compare_7: semax_body Vprog Gprog f_pointer_compare_7 pointer_compare_7_spec.
 Proof. start_function. 
 forward_if
@@ -1041,65 +958,7 @@ Admitted.
 Lemma body_freerange_no_loop_no_add: semax_body Vprog Gprog f_freerange_no_loop_no_add freerange_no_loop_no_add_spec.
 Proof. start_function.
 forward_if.
-
-
-(*forward_if
-  (PROP ()
-   LOCAL (gvars gv; temp _pa_start new_head; temp _pa_end pa_end)
-   SEP (data_at sh t_run nullval new_head *
-        data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem))).
-        *)
-
-(*unfold abbreviate in POSTCONDITION.
-forward_if.
-Show Proof.
-sep_apply sepcon_comm. sep_apply sepcon_comm at 2. (P:= denote_tc_test_order new_head pa_end).
-Search (_ * _).
-sep_apply sepcon_derives (TT).
-Check sepcon_derives.
-apply sepcon_derives; [apply derives_refl | _ ].
-
-Check cancel.
--apply andp_left1. entailer!.
-   -forward_call (sh, new_head, original_freelist_pointer, xx, gv).
-      +apply andp_left2. entailer!.*)
-      (*+entailer. destruct (pointer_le_bool new_head pa_end) eqn:e; try discriminate; try contradiction. 
-         * admit.
-         * unfold pointer_le_bool in e.
-           unfold pointer_cmp_bool in e. 
-           unfold pointer_comparison in e.
-           destruct (sem_cmp_pp Cle new_head pa_end) eqn:e1. 
-           --destruct v; try discriminate; try contradiction.
-             apply typed_true_tint_Vint in H0.
-             exfalso; apply H0.
-             apply cmp_le_is_either_0_or_1 in e1. destruct e1; auto.
-             rewrite H5 in e.
-             simpl in e. inversion e.
-           --entailer!.
-   - forward. entailer. destruct (pointer_le_bool new_head pa_end) eqn:e1.
-      + destruct (sem_cmp_pp Cle new_head pa_end ) eqn:e2; try contradiction; try discriminate.
-        destruct v; try discriminate; try contradiction.
-        apply typed_false_tint_Vint in H0.
-        rewrite H0 in e2. unfold pointer_le_bool in e1. unfold pointer_cmp_bool in e1.
-        unfold pointer_comparison in e1.
-        rewrite e2 in e1. inversion e1.
-      + apply andp_left2. entailer!.
-
-
-
-
-(data_at sh t_run nullval new_head *
-data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem)).
-       forward_if (
-         PROP () LOCAL () SEP ()
-       ).
-
-unfold abbreviate in POSTCONDITION. forward_if.*)
 Admitted.
-
-
-(*Lemma body_align_pointer: semax_body Vprog Gprog f_align_pointer align_pointer_spec.
-Proof. start_function. forward. Admitted.*)
 
 (*** stop""*)
 
