@@ -14,9 +14,9 @@ Definition pointer_comparison (p q : val) (cmp : comparison) : val :=
 Definition PGSIZE : Z := 4096. 
 Definition pointer_comparison_1_spec :=
    DECLARE _pointer_comparison_1
-      WITH b:block, p:ptrofs, q:val, sh: share
+      WITH b:block, p:ptrofs, q:val
       PRE  [ tptr tvoid, tptr tvoid]
-            PROP (sepalg.nonidentity sh) (* not sure this is correct..*)
+            PROP ()
             PARAMS (Vptr b p; q)
             SEP(denote_tc_test_order ((Vptr b (Ptrofs.add p (Ptrofs.repr (PGSIZE))))) q) 
       POST [ tint ]
@@ -34,9 +34,9 @@ Definition pointer_le_bool (p q : val) : bool :=
 
 Definition pointer_comparison_2_spec :=
     DECLARE _pointer_comparison_2
-        WITH b:block, p:ptrofs, q:val, sh: share
+        WITH b:block, p:ptrofs, q:val
         PRE  [ tptr tvoid, tptr tvoid]
-                PROP (sepalg.nonidentity sh) (* not sure this is correct..*)
+                PROP () 
                 PARAMS (Vptr b p; q)
                 SEP(denote_tc_test_order ((Vptr b (Ptrofs.add p (Ptrofs.repr (PGSIZE))))) q) 
         POST [ tint ]
@@ -46,6 +46,20 @@ Definition pointer_comparison_2_spec :=
                         else Vint (Int.repr (13))
                         )
                 SEP (denote_tc_test_order ((Vptr b (Ptrofs.add p (Ptrofs.repr (PGSIZE))))) q). 
+
+(*Definition loop_1_spec : ident * funspec :=
+    DECLARE _loop_1
+    WITH b_s:block, p_s:ptrofs, b_e:block, p_e:ptrofs
+    PRE [ tptr tvoid,tptr tvoid ]
+        PROP ()
+            PARAMS (Vptr b p; q)
+        LOCAL (temp _pa_start pa_start; temp _pa_end pa_end)
+        SEP ()
+    POST [ tint ]
+        EX n : Z,
+        PROP (0 <= n /\ PGSIZE * n <= Ptrofs.unsigned (Ptrofs.sub pa_end pa_start))
+        LOCAL (temp ret_temp (Vint (Int.repr n)))
+        SEP ().*)
 
 Definition Gprog : funspecs := [
 pointer_comparison_1_spec; 
@@ -73,6 +87,55 @@ destruct (Val.cmplu_bool true2 Cle p q).
 Qed.
 
 Lemma body_pointer_comparison_2: semax_body Vprog Gprog f_pointer_comparison_2 pointer_comparison_2_spec.
+Proof. start_function. 
+assert (sem_cmp_pp Cle
+(Vptr b (Ptrofs.add p (Ptrofs.mul (Ptrofs.repr 1) (Ptrofs.of_ints (Int.repr 4096))))) q =
+sem_cmp_pp Cle (Vptr b (Ptrofs.add p (Ptrofs.of_ints (Int.repr 4096)))) q) by auto. 
+assert (sem_cmp_pp Cle (Vptr b (Ptrofs.add p (Ptrofs.repr PGSIZE))) q =
+sem_cmp_pp Cle (Vptr b (Ptrofs.add p
+    (Ptrofs.mul (Ptrofs.repr 1) (Ptrofs.of_ints (Int.repr 4096))))) q
+) by auto. 
+forward_if.
+- forward.
+    entailer!. 
+    destruct (pointer_le_bool (Vptr b (Ptrofs.add p (Ptrofs.repr PGSIZE))) q) eqn:e; auto.
+    rewrite H in H1.
+    destruct (sem_cmp_pp Cle
+    (Vptr b (Ptrofs.add p (Ptrofs.of_ints (Int.repr 4096)))) q) eqn:e2; try discriminate; try contradiction.
+    destruct v; try discriminate; try contradiction.
+    apply typed_true_tint_Vint in H1.
+    assert (i = Int.zero \/ i = Int.one). {
+        apply cmp_le_is_either_0_or_1 with (p:= Vptr b (Ptrofs.add p (Ptrofs.of_ints (Int.repr 4096)))) (q:=q); auto.
+    }
+    destruct H2; try contradiction.
+    unfold pointer_le_bool in e. unfold pointer_cmp_bool in e.
+    unfold pointer_comparison in e.
+    rewrite H0 in e. rewrite H in e. rewrite H2 in e.
+    try discriminate.
+- forward. entailer!.
+    destruct (pointer_le_bool (Vptr b (Ptrofs.add p (Ptrofs.repr PGSIZE))) q) eqn:e; auto.
+    rewrite H in H1.
+    destruct (sem_cmp_pp Cle
+    (Vptr b (Ptrofs.add p (Ptrofs.of_ints (Int.repr 4096)))) q) eqn:e2; try discriminate; try contradiction.
+    destruct v; try discriminate; try contradiction.
+    apply typed_false_tint_Vint in H1.
+    assert (i = Int.zero \/ i = Int.one). {
+        apply cmp_le_is_either_0_or_1 with (p:= Vptr b (Ptrofs.add p (Ptrofs.of_ints (Int.repr 4096)))) (q:=q); auto.
+    }
+    destruct H2; try contradiction.
+    +unfold pointer_le_bool in e. unfold pointer_cmp_bool in e.
+    unfold pointer_comparison in e.
+    assert (sem_cmp_pp Cle (Vptr b (Ptrofs.add p (Ptrofs.repr PGSIZE))) q =
+    sem_cmp_pp Cle (Vptr b (Ptrofs.add p
+        (Ptrofs.mul (Ptrofs.repr 1) (Ptrofs.of_ints (Int.repr 4096))))) q
+    ) by auto. 
+    rewrite H3 in e. rewrite H in e. rewrite H2 in e.
+    try discriminate. 
+    + rewrite H1 in H2. inversion H2.
+Qed.
+
+
+Lemma body_pointer_comparison_3: semax_body Vprog Gprog f_pointer_comparison_3 pointer_comparison_2_spec.
 Proof. start_function. 
 assert (sem_cmp_pp Cle
 (Vptr b (Ptrofs.add p (Ptrofs.mul (Ptrofs.repr 1) (Ptrofs.of_ints (Int.repr 4096))))) q =
