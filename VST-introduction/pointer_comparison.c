@@ -9,3 +9,38 @@ int pointer_comparison_2 (void *p, void *q) {
         return 42;
     return 13;
 }
+
+int pointer_comparison_3 (void *p, void *q) {
+    if (((char*)p + PGSIZE)<=(char*)q) 
+        return 42;
+    return 13;
+}
+
+int while_1(int n) {
+    int s = 0;
+    while (s < n) {
+        s++;
+    }
+    return s;
+}
+
+
+// working in progress
+
+
+int loop_1(void *pa_start, void *pa_end) {
+    int n = 0;
+    for (; (char*)pa_start + PGSIZE <= (char*)pa_end; pa_start = (char*)pa_start + PGSIZE) {
+        n = n + 1;
+    }
+    return n;
+}
+
+int loop_2(void *pa_start, void *pa_end) {
+    int n = 0;
+    while ((char*)pa_start + PGSIZE <= (char*)pa_end) {
+        pa_start = (char*)pa_start + PGSIZE;
+        n = n + 1;
+    }
+    return n;
+}

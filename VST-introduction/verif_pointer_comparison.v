@@ -47,27 +47,32 @@ Definition pointer_comparison_2_spec :=
                         )
                 SEP (denote_tc_test_order ((Vptr b (Ptrofs.add p (Ptrofs.repr (PGSIZE))))) q). 
 
-Definition loop_1_spec : ident * funspec :=
-    DECLARE _loop_1
-    WITH b_s:block, p_s:ptrofs, b_e:block, p_e:ptrofs
-    PRE [ tptr tvoid,tptr tvoid ]
-        PROP ()
-        PARAMS (Vptr b_s p_s; Vptr b_e p_e)
+
+(******************** loop ******************)
+
+
+
+Definition while_1_spec : ident * funspec :=
+    DECLARE _while_1
+    WITH n:Z
+    PRE [ tint ]
+        PROP ( 0 <= n <= Int.max_signed )
+        PARAMS (Vint (Int.repr n))
         SEP ()
     POST [ tint ]
-        EX n : Z,
-        PROP (0 <= n /\ PGSIZE * n <= Ptrofs.unsigned (Ptrofs.sub p_e p_s))
-        RETURN (Vint (Int.repr n))
+    EX s,
+        PROP (n = s)
+        RETURN (Vint (Int.repr s))
         SEP ().
+
+(*********************************************)
 
 Definition Gprog : funspecs := [
 pointer_comparison_1_spec; 
 pointer_comparison_2_spec;
-loop_1_spec
+while_1_spec
 ].
 
-Lemma body_pointer_comparison_1: semax_body Vprog Gprog f_pointer_comparison_1 pointer_comparison_1_spec.
-Proof. start_function. forward. Qed.
 
 Lemma cmp_le_is_either_0_or_1 : forall p q i,
    sem_cmp_pp Cle p q = Some (Vint i) ->
@@ -84,6 +89,11 @@ destruct (Val.cmplu_bool true2 Cle p q).
    + apply n; auto.
 - inversion H1.
 Qed.
+
+
+Lemma body_pointer_comparison_1: semax_body Vprog Gprog f_pointer_comparison_1 pointer_comparison_1_spec.
+Proof. start_function. forward. Qed.
+
 
 Lemma body_pointer_comparison_2: semax_body Vprog Gprog f_pointer_comparison_2 pointer_comparison_2_spec.
 Proof. start_function. 
@@ -181,3 +191,17 @@ forward_if.
     try discriminate. 
     + rewrite H1 in H2. inversion H2.
 Qed.
+
+
+Lemma body_while_1: semax_body Vprog Gprog f_while_1 while_1_spec.
+Proof. start_function. forward.
+forward_while
+ (EX i: Z,
+   PROP  (0 <= i <= n)
+   LOCAL (temp _s (Vint (Int.repr i)); temp _n (Vint (Int.repr n)))
+   SEP   ()).
+   - Exists 0; entailer.
+   - entailer.
+   - forward; entailer!. EExists. inversion HRE. entailer!. rep_lia.
+   - forward. assert (i = n) by lia. Exists i. entailer!. (* *)
+Qed. 
