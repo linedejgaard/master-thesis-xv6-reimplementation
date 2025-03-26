@@ -51,7 +51,6 @@ Definition pointer_comparison_2_spec :=
 (******************** loop ******************)
 
 
-
 Definition while_1_spec : ident * funspec :=
     DECLARE _while_1
     WITH n:Z
@@ -65,12 +64,24 @@ Definition while_1_spec : ident * funspec :=
         RETURN (Vint (Int.repr s))
         SEP ().
 
+Definition for_1_spec : ident * funspec :=
+    DECLARE _for_1
+    WITH n:Z
+    PRE [ tint ]
+        PROP ( 0 <= n <= Int.max_signed )
+        PARAMS (Vint (Int.repr n))
+        SEP ()
+    POST [ tint ]
+    EX sum,
+        PROP (n = sum)
+        RETURN (Vint (Int.repr sum))
+        SEP ().
 (*********************************************)
 
 Definition Gprog : funspecs := [
 pointer_comparison_1_spec; 
 pointer_comparison_2_spec;
-while_1_spec
+while_1_spec; for_1_spec
 ].
 
 
@@ -205,3 +216,23 @@ forward_while
    - forward; entailer!. EExists. inversion HRE. entailer!. rep_lia.
    - forward. assert (i = n) by lia. Exists i. entailer!. (* *)
 Qed. 
+
+
+Lemma body_for_1: semax_body Vprog Gprog f_for_1 for_1_spec.
+Proof. start_function. forward. 
+forward_loop
+(EX i: Z,
+  PROP (0 <= i <= n)
+  LOCAL (temp _s (Vint (Int.repr i)); temp _n (Vint (Int.repr n)))
+  SEP ())
+break:
+(EX s_final: Z,
+  PROP (s_final = n)
+  LOCAL (temp _s (Vint (Int.repr s_final)); temp _n (Vint (Int.repr n)))
+  SEP ()).
+  - Exists 0; entailer.
+  - Intros i. forward_if. 
+    + forward. Exists (i+1). entailer.
+    + forward. assert (i = n) by lia. Exists i. entailer.
+  - Intros s_final. forward. EExists. entailer!.
+Qed.

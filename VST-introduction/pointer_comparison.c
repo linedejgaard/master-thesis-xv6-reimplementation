@@ -24,10 +24,16 @@ int while_1(int n) {
     return s;
 }
 
+int for_1(int n) {
+    int s;
+    for (s = 0; s < n; s++) {
+        // No body needed, since the increment happens in the for loop
+    }
+    return s;
+}
+
 
 // working in progress
-
-
 int loop_1(void *pa_start, void *pa_end) {
     int n = 0;
     for (; (char*)pa_start + PGSIZE <= (char*)pa_end; pa_start = (char*)pa_start + PGSIZE) {
@@ -36,11 +42,3 @@ int loop_1(void *pa_start, void *pa_end) {
     return n;
 }
 
-int loop_2(void *pa_start, void *pa_end) {
-    int n = 0;
-    while ((char*)pa_start + PGSIZE <= (char*)pa_end) {
-        pa_start = (char*)pa_start + PGSIZE;
-        n = n + 1;
-    }
-    return n;
-}
