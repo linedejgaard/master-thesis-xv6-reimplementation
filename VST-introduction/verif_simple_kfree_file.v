@@ -212,16 +212,25 @@ Definition kfree1_freelist_spec :=
          data_at sh t_struct_kmem (Vint (Int.repr xx), new_head) (gv _kmem)
          ).
 
-(*Definition kfree1_freelist_spec :=
-DECLARE _kfree1
-       WITH sh: share, n : nat, p: val
-       PRE  [ tptr t_run ]
-       PROP ()
-       PARAMS (p)
-       SEP (freelistrep sh n p)
-       POST [ (tptr t_run) ]
-       PROP () RETURN (p)
-       SEP (freelistrep sh n p).*)
+Definition kfree1_freelist_spec' := 
+   DECLARE _kfree1
+      WITH sh : share, new_head:val, original_freelist_pointer:val, xx:Z, gv:globals, n : nat
+      PRE [ tptr tvoid]
+         PROP(writable_share sh; is_pointer_or_null original_freelist_pointer) 
+         PARAMS (new_head) GLOBALS(gv)
+         SEP (
+            freelistrep sh n original_freelist_pointer *
+            (!! malloc_compatible (sizeof t_run) new_head &&
+            data_at sh (t_run) nullval new_head *
+            data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem) )
+         )
+      POST [ tvoid ]
+         PROP()
+         RETURN () 
+         SEP (
+            freelistrep sh (S n) new_head *
+            data_at sh t_struct_kmem (Vint (Int.repr xx), new_head) (gv _kmem)
+            ).
 
 
 (************************ Gprog  *************************)
@@ -229,7 +238,7 @@ Definition Gprog : funspecs := [
 kfree1_spec; kfree1_1_spec ; 
 call_kfree1_spec; 
 call_kfree1_if_1_spec; freerange_no_loop_no_add_spec;
-kfree1_freelist_spec
+kfree1_freelist_spec; kfree1_freelist_spec'
 ].
 
 
@@ -303,3 +312,14 @@ Qed.
 
 Lemma body_kfree1_freelist: semax_body Vprog Gprog f_kfree1 kfree1_freelist_spec.
 Proof. start_function. repeat forward. entailer!.  Qed.
+
+Lemma body_kfree1_freelist': semax_body Vprog Gprog f_kfree1 kfree1_freelist_spec'.
+Proof. start_function. Intros. repeat forward. entailer. 
+       induction n. 
+       - assert (original_freelist_pointer = nullval). {
+            rewrite <- H1; auto.
+         }
+         rewrite H7. unfold freelistrep. Exists nullval. entailer.
+      - unfold freelistrep. Intros next_orig. Exists original_freelist_pointer. entailer.
+         Exists next_orig. entailer. fold freelistrep. entailer!.
+Qed.
