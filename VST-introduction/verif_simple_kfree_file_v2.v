@@ -141,6 +141,40 @@ Definition freerange_no_loop_no_add_spec :=
                data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem) )
          ).
 
+(************** pointer comparison add + call **************'*)
+Definition PGSIZE : Z := 4096. 
+
+Definition freerange_no_loop_no_add_1_spec :=
+   DECLARE _freerange_no_loop_no_add_1
+      WITH sh : share, pa_end : val, b:block, p:ptrofs,
+            original_freelist_pointer : val, xx : Z, gv : globals, n:nat
+      PRE [ tptr tvoid, tptr tvoid ]
+         PROP (
+            writable_share sh;
+            is_pointer_or_null original_freelist_pointer
+         ) 
+         PARAMS (Vptr b p; pa_end) GLOBALS (gv)
+         SEP (
+            denote_tc_test_order ((Vptr b (Ptrofs.add p (Ptrofs.repr (PGSIZE))))) pa_end &&
+            (freelistrep sh n original_freelist_pointer *
+            (!! malloc_compatible (sizeof t_run) (Vptr b p) &&
+            data_at sh (t_run) nullval (Vptr b p) *
+            data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem) ))
+         )
+      POST [ tvoid ]
+         PROP ()
+         RETURN ()
+         SEP (
+            (*denote_tc_test_order new_head pa_end **)
+            if pointer_le_bool (Vptr b (Ptrofs.add p (Ptrofs.repr (PGSIZE)))) pa_end then
+               (freelistrep sh (S n) (Vptr b p) *
+               data_at sh t_struct_kmem (Vint (Int.repr xx), (Vptr b p)) (gv _kmem))
+            else
+               (freelistrep sh n original_freelist_pointer *
+               (!! malloc_compatible (sizeof t_run) (Vptr b p) &&
+               data_at sh (t_run) nullval (Vptr b p) *
+               data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem)))
+         ).
 
 
 (************************ Gprog  *************************)
@@ -205,6 +239,50 @@ forward_if.
         apply typed_false_tint_Vint in H0.
         rewrite H0 in e2. unfold pointer_le_bool in e1. unfold pointer_cmp_bool in e1.
         unfold pointer_comparison in e1.
+        rewrite e2 in e1. inversion e1.
+      + apply andp_left2. entailer!.
+Qed.
+
+Lemma body_freerange_no_loop_no_add_1: semax_body Vprog Gprog f_freerange_no_loop_no_add_1 freerange_no_loop_no_add_1_spec.
+Proof. start_function.
+assert (sem_cmp_pp Cle
+(Vptr b (Ptrofs.add p (Ptrofs.mul (Ptrofs.repr 1) (Ptrofs.of_ints (Int.repr PGSIZE))))) pa_end =
+sem_cmp_pp Cle (Vptr b (Ptrofs.add p (Ptrofs.of_ints (Int.repr PGSIZE)))) pa_end) by auto. 
+assert (sem_cmp_pp Cle (Vptr b (Ptrofs.add p (Ptrofs.repr PGSIZE))) pa_end =
+sem_cmp_pp Cle (Vptr b (Ptrofs.add p
+    (Ptrofs.mul (Ptrofs.repr 1) (Ptrofs.of_ints (Int.repr PGSIZE))))) pa_end
+) by auto. 
+forward_if. 
+   - apply andp_left1. destruct pa_end; try discriminate; try contradiction.
+     entailer!. unfold denote_tc_test_order, PGSIZE. entailer!.
+   -forward_call (sh, (Vptr b p), original_freelist_pointer, xx, gv, n).
+      +apply andp_left2. entailer!.
+      +entailer. destruct (pointer_le_bool (Vptr b (Ptrofs.add p (Ptrofs.repr PGSIZE))) pa_end) eqn:e; try discriminate; try contradiction. 
+         *  entailer!. 
+         * unfold pointer_le_bool in e.
+           unfold pointer_cmp_bool in e. 
+           unfold pointer_comparison in e.
+           entailer. unfold PGSIZE in H1; rewrite <- H1 in H2. 
+           destruct (sem_cmp_pp Cle (Vptr b (Ptrofs.add p (Ptrofs.repr PGSIZE))) pa_end) eqn:e1; unfold PGSIZE in e1; rewrite e1 in H2. 
+           --destruct v; try discriminate; try contradiction.
+             apply typed_true_tint_Vint in H2.
+             exfalso; apply H2.
+             apply cmp_le_is_either_0_or_1 in e1. destruct e1; auto.
+             rewrite H7 in e.
+             simpl in e. inversion e.
+           --entailer!.
+   - forward. entailer. destruct (pointer_le_bool (Vptr b (Ptrofs.add p (Ptrofs.repr PGSIZE))) pa_end) eqn:e1.
+      + destruct (sem_cmp_pp Cle
+         (Vptr b
+            (Ptrofs.add p
+               (Ptrofs.mul (Ptrofs.repr 1)
+                  (Ptrofs.of_ints (Int.repr 4096))))) pa_end)eqn:e2; try contradiction; try discriminate.
+         destruct v; try discriminate; try contradiction.
+         apply typed_false_tint_Vint in H2.
+
+         rewrite H2 in e2. unfold pointer_le_bool in e1. unfold pointer_cmp_bool in e1.
+        unfold pointer_comparison in e1.
+        rewrite H1 in e1. unfold PGSIZE in e1. 
         rewrite e2 in e1. inversion e1.
       + apply andp_left2. entailer!.
 Qed.

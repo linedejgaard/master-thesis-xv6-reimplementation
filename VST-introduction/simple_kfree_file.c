@@ -35,3 +35,13 @@ void freerange_no_loop_no_add(void *pa_start, void *pa_end) {
     kfree1(pa_start);
 }
 
+// not reached this yet..
+#define PGSIZE 4096 // bytes per page
+
+void freerange_no_loop_no_add_1(void *pa_start, void *pa_end) {
+  if (((char*)pa_start + PGSIZE)<=(char*)pa_end) 
+    kfree1(pa_start);
+}
+
+
+
