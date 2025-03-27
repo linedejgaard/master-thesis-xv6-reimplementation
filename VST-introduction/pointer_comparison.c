@@ -40,9 +40,9 @@ int while_1_1(int n) {
     return s;
 }
 
-int while_1_2(int n) { // working in progress..
+int while_1_2(int n) { 
     int s = 0;
-    while (s + PGSIZE <= n) { // plus
+    while (s + PGSIZE <= n) { 
         s = s + PGSIZE;
     }
     return s;
@@ -56,10 +56,33 @@ int for_1_1(int n) {
     return s;
 }
 
-// working in progress
+int while_1_3(int n) { 
+    int s = 0;
+    int c = 0;
+    while (s + PGSIZE <= n) { 
+        s = s + PGSIZE;
+        c++;
+    }
+    return c;
+}
 
 
+int for_1_2(int n) {
+    int s;
+    for (s = 0; s + PGSIZE <= n; s += PGSIZE) {
+        // No body needed, since the increment happens in the for loop
+    }
+    return s;
+}
 
+int for_1_3(int n) {
+    int s;
+    int c = 0;
+    for (s = 0; s + PGSIZE <= n; s += PGSIZE) {
+        c++;
+    }
+    return c;
+}
 
 // wokring in progress
 
