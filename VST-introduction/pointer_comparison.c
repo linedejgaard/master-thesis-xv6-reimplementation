@@ -84,7 +84,25 @@ int for_1_3(int n) {
     return c;
 }
 
+int while_1_4(int n, int s) { 
+    int c = 0;
+    while (s + PGSIZE <= n) { 
+        s = s + PGSIZE;
+        c++;
+    }
+    return c;
+}
+
+
+
 // wokring in progress
+int for_1_4(int n, int s) { 
+    int c = 0;
+    for (; s + PGSIZE <= n; s += PGSIZE) {
+        c++;
+    }
+    return c;
+}
 
 
 

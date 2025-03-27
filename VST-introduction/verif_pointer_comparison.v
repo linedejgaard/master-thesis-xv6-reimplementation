@@ -48,8 +48,7 @@ Definition pointer_comparison_2_spec :=
                 SEP (denote_tc_test_order ((Vptr b (Ptrofs.add p (Ptrofs.repr (PGSIZE))))) q). 
 
 
-(******************** loop ******************)
-
+(******************** while loop ******************)
 
 Definition while_1_spec : ident * funspec :=
     DECLARE _while_1
@@ -104,39 +103,28 @@ Definition while_1_3_spec : ident * funspec :=
         RETURN (Vint (Int.repr (c)))
         SEP ().
 
-(*Definition while_1_3_spec : ident * funspec :=
-    DECLARE _while_1_3
-    WITH n:Z, s_s:Z
-    PRE [ tint ]
-        PROP ( 
-            0 <= s_s /\ 
-            Z.add s_s PGSIZE <= Int.max_signed /\ 
-            0 <= n /\ 
-            (Z.add n PGSIZE) <= Int.max_signed 
+Definition while_1_4_spec : ident * funspec :=
+    DECLARE _while_1_4
+    WITH n:Z, s_init:Z
+    PRE [ tint, tint ]
+        PROP (
+             0 <= s_init <= n /\
+             Z.add n PGSIZE <= Int.max_signed /\ 
+            Z.add s_init PGSIZE <= Int.max_signed 
             ) (* the highest number is s + PGSIZE when it fails. The highest s + PGSIZE when it succeeds is n, so the highest after this is n + PGSIZE*)
-        PARAMS (Vint (Int.repr s_s); Vint (Int.repr n))
+        PARAMS (Vint (Int.repr n); Vint (Int.repr s_init))
         SEP ()
     POST [ tint ]
-    EX c:Z, EX s:Z,
-        PROP (s = Z.add s_s (Z.mul c PGSIZE) /\ 0 <= c /\ s <= n /\ n < Z.add s PGSIZE)
-        RETURN (Vint (Int.repr (s)))
-        SEP ().*)
-        
+    EX c:Z, EX s_final:Z,
+        PROP (
+            s_final = Z.add s_init (Z.mul c PGSIZE) /\ 
+            0 <= c /\ s_final <= n /\ 
+            n < Z.add s_final PGSIZE
+            )
+        RETURN (Vint (Int.repr (c)))
+        SEP ().
 
-(*Definition while_2_spec : ident * funspec :=
-    DECLARE _while_2
-    WITH b_s:block, p_s:ptrofs, b_e:block, p_e:ptrofs
-    PRE [ tptr tvoid, tptr tvoid ]
-        PROP ( ( (Ptrofs.unsigned p_s)<= (Ptrofs.unsigned p_e)) /\ 
-                0 <= Ptrofs.unsigned (Ptrofs.sub p_e p_s) <= Int.max_signed 
-                )
-        PARAMS (Vptr b_s p_s; Vptr b_e p_e)
-        SEP (denote_tc_test_order ((Vptr b_s (Ptrofs.add p_s (Ptrofs.repr (PGSIZE))))) (Vptr b_e p_e))
-    POST [ tptr tvoid ]
-    EX p_s_final,
-        PROP (Ptrofs.unsigned (Ptrofs.add p_s_final (Ptrofs.repr (PGSIZE))) > Ptrofs.unsigned p_e)
-        RETURN (Vptr b_s p_s_final)
-        SEP ().*)
+(******************** for loop ******************)
 
 Definition for_1_spec : ident * funspec :=
     DECLARE _for_1
@@ -150,7 +138,6 @@ Definition for_1_spec : ident * funspec :=
         PROP (n = sum)
         RETURN (Vint (Int.repr sum))
         SEP ().
-
 
 Definition for_1_1_spec : ident * funspec :=
     DECLARE _for_1_1
@@ -191,27 +178,34 @@ Definition for_1_3_spec : ident * funspec :=
         RETURN (Vint (Int.repr (c)))
         SEP ().
 
-(*Definition for_2_spec : ident * funspec :=
-    DECLARE _for_2
-    WITH  b_s:block, p_s:ptrofs, b_e:block, p_e:ptrofs
-    PRE [ tptr tvoid, tptr tvoid ]
-        PROP ( 0 <= Ptrofs.unsigned (Ptrofs.sub p_e p_s) <= Int.max_signed )
-        PARAMS (Vptr b_s p_s; Vptr b_e p_e)
-        SEP (denote_tc_test_order ((Vptr b_s (Ptrofs.add p_s (Ptrofs.repr (PGSIZE))))) (Vptr b_e p_e))
+Definition for_1_4_spec : ident * funspec :=
+    DECLARE _for_1_4
+    WITH n:Z, s_init:Z
+    PRE [ tint, tint ]
+        PROP (
+                0 <= s_init <= n /\
+                Z.add n PGSIZE <= Int.max_signed /\ 
+            Z.add s_init PGSIZE <= Int.max_signed 
+            ) (* the highest number is s + PGSIZE when it fails. The highest s + PGSIZE when it succeeds is n, so the highest after this is n + PGSIZE*)
+        PARAMS (Vint (Int.repr n); Vint (Int.repr s_init))
+        SEP ()
     POST [ tint ]
-    EX sum,
-        PROP (0 <= sum <= Int.max_signed /\ 
-            (PGSIZE * sum) <= Ptrofs.unsigned (Ptrofs.sub p_e p_s) 
-        )
-        RETURN (Vint (Int.repr sum))
-        SEP ().*)
+    EX c:Z, EX s_final:Z,
+        PROP (
+            s_final = Z.add s_init (Z.mul c PGSIZE) /\ 
+            0 <= c /\ s_final <= n /\ 
+            n < Z.add s_final PGSIZE
+            )
+        RETURN (Vint (Int.repr (c)))
+        SEP ().
+
 (*********************************************)
 
 Definition Gprog : funspecs := [
 pointer_comparison_1_spec; 
 pointer_comparison_2_spec;
-while_1_spec; while_1_1_spec; while_1_2_spec; while_1_3_spec; 
-for_1_spec; for_1_1_spec; for_1_2_spec; for_1_3_spec (*; for_2_spec;*)
+while_1_spec; while_1_1_spec; while_1_2_spec; while_1_3_spec; while_1_4_spec; 
+for_1_spec; for_1_1_spec; for_1_2_spec; for_1_3_spec;for_1_4_spec (*; for_2_spec;*)
 (*while_2_spec*)
 ].
 
@@ -666,20 +660,104 @@ forward_loop
         Exists c_final (c_final * PGSIZE). entailer!.
 Qed.
 
+Lemma body_while_1_4: semax_body Vprog Gprog f_while_1_4 while_1_4_spec.
+Proof. start_function. repeat forward.
+forward_while
+ (EX c_tmp: Z, EX s_tmp,
+   PROP  (
+   s_tmp = Z.add s_init (Z.mul c_tmp PGSIZE) /\
+   0 <= c_tmp /\
+   c_tmp <= Int.max_signed /\
+   s_tmp <= n
+   )
+   LOCAL (
+    temp _c (Vint (Int.repr c_tmp)); temp _s (Vint (Int.repr s_tmp)); temp _n (Vint (Int.repr n)
+    ))
+   SEP ()).
 
+   - EExists; EExists; entailer.
+   - entailer!. inversion H0. rewrite H1.
+        assert (Int.signed (Int.repr (s_init + c_tmp * PGSIZE)) = s_init + c_tmp * PGSIZE). {
+            apply Int.signed_repr; split; try rep_lia.
+            -apply Z.le_trans with (m:=  0); try rep_lia.
+            induction c_tmp; try discriminate; try contradiction; try rep_lia.
+            unfold PGSIZE; try rep_lia.
+            -destruct H0. rewrite <- H0.
+             apply Z.le_trans with (m:=  n); try rep_lia.
+             apply Z.le_trans with (m:=  n + PGSIZE); try rep_lia; unfold PGSIZE; try rep_lia.
+        }
+        rewrite H3.
+        assert ( Int.signed (Int.repr PGSIZE) = PGSIZE) by (apply Int.signed_repr; unfold PGSIZE; try rep_lia).
+        unfold PGSIZE in H4. rewrite H4.
+        split; auto; try rep_lia. inversion H.
+        rewrite <- H1.
+        apply Z.le_trans with (m:=  n + PGSIZE); try rep_lia.
+        apply Zplus_le_compat_r; try rep_lia.
+   -forward.  
+    +entailer!.
+        inversion H0. rewrite H1.
+        assert (Int.signed (Int.repr (s_init + c_tmp * PGSIZE)) = s_init + c_tmp * PGSIZE). {
+            apply Int.signed_repr; split; try rep_lia.
+            -apply Z.le_trans with (m:=  0); try rep_lia.
+            induction c_tmp; try discriminate; try contradiction; try rep_lia.
+            unfold PGSIZE; try rep_lia.
+            -destruct H0. rewrite <- H0.
+             apply Z.le_trans with (m:=  n); try rep_lia.
+             apply Z.le_trans with (m:=  n + PGSIZE); try rep_lia; unfold PGSIZE; try rep_lia.
+        }
+        rewrite H3.
+        assert ( Int.signed (Int.repr PGSIZE) = PGSIZE) by (apply Int.signed_repr; unfold PGSIZE; try rep_lia). 
+        unfold PGSIZE in H4. rewrite H4.
+        split; auto; try rep_lia. inversion H.
+        rewrite <- H1.
+        apply Z.le_trans with (m:=  n + PGSIZE); try rep_lia.
+        apply Zplus_le_compat_r; try rep_lia.
+    + forward.
+        * entailer!.
+        split; try discriminate; try contradiction; try rep_lia.
+        assert (s_tmp + PGSIZE = s_init + (c_tmp + 1)*PGSIZE) by rep_lia.
+        apply Z.le_trans with (m:= (c_tmp + 1) * PGSIZE); try rep_lia; unfold PGSIZE; try rep_lia; auto.
+        * Exists (c_tmp + 1, s_tmp + PGSIZE). entailer!.
+        split; try rep_lia. split; try rep_lia. 
+        rewrite Zge_is_le_bool in HRE. 
+        split; try rep_lia.
+            -- induction c_tmp; try rep_lia; try contradiction; try discriminate.
+            apply Z.le_trans with (m:= s_init + Z.pos p * PGSIZE); try rep_lia.
+            ++ unfold PGSIZE; try rep_lia.
+            ++ destruct H0; rewrite <- H0. apply Z.le_trans with (m:= n); try rep_lia. apply Z.le_trans with (m:= n + PGSIZE); try rep_lia; unfold PGSIZE; try rep_lia.
+            -- assert ((Int.signed (Int.repr (s_tmp + PGSIZE)) ) = s_tmp + PGSIZE).
+            { apply Int.signed_repr. split; try rep_lia. 
+            apply Z.le_trans with (m:= 0); try rep_lia.
+            destruct H0; rewrite H0.  
+            assert (s_init + c_tmp * PGSIZE + PGSIZE = s_init + (c_tmp + 1) * PGSIZE) by rep_lia. 
+            rewrite H2.
+            apply Z.add_nonneg_nonneg; try rep_lia.
+            destruct c_tmp; try contradiction; try discriminate; unfold PGSIZE; auto. inversion H1; try discriminate; try contradiction.
+            }
+            assert (Int.signed (Int.repr n) = n) by ( apply Int.signed_repr; split; try rep_lia; apply Z.le_trans with (m:=  n + PGSIZE); try rep_lia; unfold PGSIZE; try rep_lia; auto ).
+            unfold PGSIZE at 1 in H1 ; rewrite H1 in HRE. rewrite H2 in HRE. try rep_lia.
+    - forward. Exists c_tmp. Exists s_tmp. entailer!.
+        split; try rep_lia.
+        assert (Int.signed (Int.repr n) = n) by ( apply Int.signed_repr; split; try rep_lia; apply Z.le_trans with (m:=  n + PGSIZE); try rep_lia; unfold PGSIZE; try rep_lia; auto ).
 
-
-
-
-
-
-
+        assert ((Int.signed (Int.repr (s_tmp + PGSIZE)) ) = s_tmp + PGSIZE). {
+        apply Int.signed_repr; split; try rep_lia.
+        apply Z.le_trans with (m:= 0); try rep_lia.
+        apply Z.add_nonneg_nonneg; unfold PGSIZE; try rep_lia. destruct H0; rewrite H0.
+        apply Z.add_nonneg_nonneg; try rep_lia.
+        destruct c_tmp; try discriminate; try contradiction; try rep_lia.
+        }
+        unfold PGSIZE at 1 in H2; rewrite H2 in HRE. rewrite H1 in HRE. auto.
+Qed.
 
 
 
 
 
 (*** working in progress *)
+
+
+
 
 
 Lemma body_for_2: semax_body Vprog Gprog f_for_2 for_2_spec.
