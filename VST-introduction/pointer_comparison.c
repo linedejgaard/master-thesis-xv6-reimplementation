@@ -66,6 +66,14 @@ int while_1_3(int n) {
     return c;
 }
 
+int while_1_4(int n, int s) { 
+    int c = 0;
+    while (s + PGSIZE <= n) { 
+        s = s + PGSIZE;
+        c++;
+    }
+    return c;
+}
 
 int for_1_2(int n) {
     int s;
@@ -84,18 +92,6 @@ int for_1_3(int n) {
     return c;
 }
 
-int while_1_4(int n, int s) { 
-    int c = 0;
-    while (s + PGSIZE <= n) { 
-        s = s + PGSIZE;
-        c++;
-    }
-    return c;
-}
-
-
-
-// wokring in progress
 int for_1_4(int n, int s) { 
     int c = 0;
     for (; s + PGSIZE <= n; s += PGSIZE) {
@@ -104,6 +100,8 @@ int for_1_4(int n, int s) {
     return c;
 }
 
+
+// wokring in progress
 
 
 void * while_2(void *pa_start, void *pa_end) {
