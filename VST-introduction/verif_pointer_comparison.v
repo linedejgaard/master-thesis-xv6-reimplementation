@@ -107,6 +107,20 @@ Definition for_1_spec : ident * funspec :=
         SEP ().
 
 
+Definition for_1_1_spec : ident * funspec :=
+    DECLARE _for_1_1
+    WITH n:Z
+    PRE [ tint ]
+        PROP ( 0 <= n /\ Z.add n 1 <= Int.max_signed )
+        PARAMS (Vint (Int.repr n))
+        SEP ()
+    POST [ tint ]
+    EX s:Z,
+        PROP (s = (Z.add n 1))
+        RETURN (Vint (Int.repr s))
+        SEP ().
+
+
 Definition for_2_spec : ident * funspec :=
     DECLARE _for_2
     WITH  b_s:block, p_s:ptrofs, b_e:block, p_e:ptrofs
@@ -127,7 +141,8 @@ Definition Gprog : funspecs := [
 pointer_comparison_1_spec; 
 pointer_comparison_2_spec;
 while_1_spec; while_1_1_spec;
-while_2_spec; for_1_spec
+for_1_spec; for_1_1_spec;
+while_2_spec
 ].
 
 
@@ -294,6 +309,25 @@ break:
     + forward. assert (i = n) by lia. Exists i. entailer.
   - Intros s_final. forward. EExists. entailer!.
 Qed.
+
+Lemma body_for_1_1: semax_body Vprog Gprog f_for_1_1 for_1_1_spec.
+Proof. start_function. forward. (*unfold abbreviate in POSTCONDITION.*)
+    forward_loop
+    (EX i: Z,
+    PROP (0 <= i <= n + 1)
+    LOCAL (temp _s (Vint (Int.repr i)); temp _n (Vint (Int.repr n)))
+    SEP ())
+    break:
+    (EX s_final: Z,
+    PROP (s_final = Z.add n 1)
+    LOCAL (temp _s (Vint (Int.repr s_final)); temp _n (Vint (Int.repr n)))
+    SEP ()).
+   - Exists 0; entailer.
+   - Intros i. forward_if. 
+   + forward. Exists (i+1). entailer.
+   + forward. assert (i = n + 1) by lia. Exists i. entailer.
+   -  Intros s_final. forward. EExists. entailer!. 
+Qed. 
 
 
 
