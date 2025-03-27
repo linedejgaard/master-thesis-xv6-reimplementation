@@ -304,53 +304,66 @@ forward_while
    - forward. assert (i = n + 1) by lia. Exists i. entailer!. (* *)
 Qed. 
 
+
+Lemma signed_repr_pgsize:
+  forall c_tmp s_tmp n,
+  0 <= c_tmp /\ s_tmp <= n ->
+  0 <= n /\ n + PGSIZE <= Int.max_signed -> (* H *)
+  s_tmp = c_tmp * PGSIZE -> (* H1 *)
+  Int.signed (Int.repr (c_tmp * PGSIZE)) = c_tmp * PGSIZE.
+Proof.
+    intros.
+    apply Int.signed_repr; auto.
+    split; try rep_lia; auto.
+    -induction c_tmp; try contradiction; try discriminate; try rep_lia.
+    -inversion H. inversion H0. rewrite <- H1.
+    apply Z.le_trans with (m:= n); try rep_lia.
+    apply Z.le_trans with (m:= n + PGSIZE); try rep_lia.
+    unfold PGSIZE; try rep_lia.
+Qed.
+
+Lemma signed_repr_pgsize_add:
+  forall c_tmp s_tmp n,
+    s_tmp = c_tmp * PGSIZE /\ 0 <= c_tmp /\ s_tmp <= n ->
+    0 <= n /\ n + PGSIZE <= Int.max_signed ->
+    Int.signed (Int.repr (s_tmp + PGSIZE)) = s_tmp + PGSIZE.
+Proof.
+intros.
+apply Int.signed_repr; split ; destruct H; destruct H1; try rep_lia.
+induction c_tmp; try contradiction; try discriminate.
+- assert (s_tmp = 0); try rep_lia.
+  rewrite H3; unfold PGSIZE; try rep_lia; auto.
+- rewrite H. unfold PGSIZE; try rep_lia.
+Qed.
+
 Lemma body_while_1_2: semax_body Vprog Gprog f_while_1_2 while_1_2_spec.
-Proof. start_function. forward. (*unfold abbreviate in POSTCONDITION.*)
+Proof. start_function. forward.
 forward_while
  (EX c_tmp: Z, EX s_tmp,
-   PROP  ((*0 <= (Z.mul i PGSIZE) + PGSIZE <= n + PGSIZE + 1 /\ s_tmp = Z.mul i PGSIZE /\ 0 <= Z.mul i PGSIZE <= Int.max_signed)*)
+   PROP  (
    s_tmp = Z.mul c_tmp PGSIZE /\
    0 <= c_tmp /\
    s_tmp <= n
    )
    LOCAL (temp _s (Vint (Int.repr s_tmp)); temp _n (Vint (Int.repr n)))
    SEP ()).
+
    -Exists 0; EExists; entailer.
    - entailer!. inversion H0. rewrite H1.
-        assert (Int.signed (Int.repr (c_tmp * PGSIZE)) = c_tmp * PGSIZE). {
-            apply Int.signed_repr; auto.
-            split; try rep_lia; auto.
-            -induction c_tmp; try contradiction; try discriminate; try rep_lia.
-            -inversion H2. inversion H. rewrite <- H1. 
-            apply Z.le_trans with (m:=  n); try rep_lia.
-            apply Z.le_trans with (m:=  n + PGSIZE); try rep_lia.
-            unfold PGSIZE; try rep_lia.
-        }
+        assert (Int.signed (Int.repr (c_tmp * PGSIZE)) = c_tmp * PGSIZE) by (apply signed_repr_pgsize with (s_tmp := s_tmp) (n := n); try auto). 
         rewrite H3.
-        assert ( Int.signed (Int.repr PGSIZE) = PGSIZE). {
-            apply Int.signed_repr; unfold PGSIZE; try rep_lia.
-        }
+        assert ( Int.signed (Int.repr PGSIZE) = PGSIZE) by (apply Int.signed_repr; unfold PGSIZE; try rep_lia).
         unfold PGSIZE in H4. rewrite H4.
         split; auto; try rep_lia. inversion H.
         rewrite <- H1.
         apply Z.le_trans with (m:=  n + PGSIZE); try rep_lia.
         apply Zplus_le_compat_r; try rep_lia.
-   -(* unfold abbreviate in POSTCONDITION. *)forward.  
+   -forward.  
     +entailer!.
         inversion H0. rewrite H1.
-        assert (Int.signed (Int.repr (c_tmp * PGSIZE)) = c_tmp * PGSIZE). {
-            apply Int.signed_repr; auto.
-            split; try rep_lia; auto.
-            -induction c_tmp; try contradiction; try discriminate; try rep_lia.
-            -inversion H2. inversion H. rewrite <- H1. 
-            apply Z.le_trans with (m:=  n); try rep_lia.
-            apply Z.le_trans with (m:=  n + PGSIZE); try rep_lia.
-            unfold PGSIZE; try rep_lia.
-        }
+        assert (Int.signed (Int.repr (c_tmp * PGSIZE)) = c_tmp * PGSIZE) by (apply signed_repr_pgsize with (s_tmp := s_tmp) (n := n); try auto). 
         rewrite H3.
-        assert ( Int.signed (Int.repr PGSIZE) = PGSIZE). {
-            apply Int.signed_repr; unfold PGSIZE; try rep_lia.
-        }
+        assert ( Int.signed (Int.repr PGSIZE) = PGSIZE) by (apply Int.signed_repr; unfold PGSIZE; try rep_lia). 
         unfold PGSIZE in H4. rewrite H4.
         split; auto; try rep_lia. inversion H.
         rewrite <- H1.
@@ -359,36 +372,15 @@ forward_while
     + Exists (c_tmp + 1, s_tmp + PGSIZE). entailer!.
         split; try rep_lia. split; try rep_lia. 
         rewrite Zge_is_le_bool in HRE. 
-        assert ((Int.signed (Int.repr (s_tmp + PGSIZE)) ) = s_tmp + PGSIZE). {
-            apply Int.signed_repr; split ; destruct H0; destruct H1; try rep_lia.
-            induction c_tmp; try contradiction; try discriminate.
-            - assert (s_tmp = 0); try rep_lia.
-              rewrite H3; unfold PGSIZE; try rep_lia; auto.
-            - rewrite H0. unfold PGSIZE; try rep_lia.
-        } 
+        assert ((Int.signed (Int.repr (s_tmp + PGSIZE)) ) = s_tmp + PGSIZE) by (apply signed_repr_pgsize_add with (c_tmp := c_tmp) (n := n); auto).
         unfold PGSIZE in H1 at 1.
         rewrite H1 in HRE.
-        assert (Int.signed (Int.repr n) = n). {
-            apply Int.signed_repr; split; try rep_lia.
-            apply Z.le_trans with (m:=  n + PGSIZE); try rep_lia.
-            unfold PGSIZE; try rep_lia; auto.
-        }
+        assert (Int.signed (Int.repr n) = n) by ( apply Int.signed_repr; split; try rep_lia; apply Z.le_trans with (m:=  n + PGSIZE); try rep_lia; unfold PGSIZE; try rep_lia; auto ).
         rewrite H2 in HRE. 
         try rep_lia.
     - forward. Exists c_tmp. Exists s_tmp. entailer!.
-        assert (Int.signed (Int.repr n) = n). {
-            apply Int.signed_repr; split; try rep_lia.
-            apply Z.le_trans with (m:=  n + PGSIZE); try rep_lia.
-            unfold PGSIZE; try rep_lia; auto.
-        }
-        assert ((Int.signed (Int.repr (s_tmp + PGSIZE)) ) = s_tmp + PGSIZE). {
-            apply Int.signed_repr; split ; destruct H0; destruct H1; try rep_lia.
-            induction c_tmp; try contradiction; try discriminate.
-            - assert (s_tmp = 0); try rep_lia.
-              rewrite H1; unfold PGSIZE; try rep_lia; auto.
-            - rewrite H0. unfold PGSIZE; try rep_lia.
-            - destruct H2. try discriminate; try contradiction.
-        }
+        assert (Int.signed (Int.repr n) = n) by ( apply Int.signed_repr; split; try rep_lia; apply Z.le_trans with (m:=  n + PGSIZE); try rep_lia; unfold PGSIZE; try rep_lia; auto ).
+        assert ((Int.signed (Int.repr (s_tmp + PGSIZE)) ) = s_tmp + PGSIZE) by (apply signed_repr_pgsize_add with (c_tmp := c_tmp) (n := n); auto).
         rewrite H1 in HRE. unfold PGSIZE in H2 at 1; rewrite H2 in HRE.
         constructor; try rep_lia; auto.
 Qed.
