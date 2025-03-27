@@ -64,6 +64,35 @@ Definition while_1_spec : ident * funspec :=
         RETURN (Vint (Int.repr s))
         SEP ().
 
+Definition while_1_1_spec : ident * funspec :=
+    DECLARE _while_1
+    WITH n:Z
+    PRE [ tint ]
+        PROP ( 0 <= n /\ Z.add n 1 <= Int.max_signed )
+        PARAMS (Vint (Int.repr n))
+        SEP ()
+    POST [ tint ]
+    EX s:Z,
+        PROP (s = (Z.add n 1))
+        RETURN (Vint (Int.repr s))
+        SEP ().
+
+
+Definition while_2_spec : ident * funspec :=
+    DECLARE _while_2
+    WITH b_s:block, p_s:ptrofs, b_e:block, p_e:ptrofs
+    PRE [ tptr tvoid, tptr tvoid ]
+        PROP ( ( (Ptrofs.unsigned p_s)<= (Ptrofs.unsigned p_e)) /\ 
+                0 <= Ptrofs.unsigned (Ptrofs.sub p_e p_s) <= Int.max_signed 
+                )
+        PARAMS (Vptr b_s p_s; Vptr b_e p_e)
+        SEP (denote_tc_test_order ((Vptr b_s (Ptrofs.add p_s (Ptrofs.repr (PGSIZE))))) (Vptr b_e p_e))
+    POST [ tptr tvoid ]
+    EX p_s_final,
+        PROP (Ptrofs.unsigned (Ptrofs.add p_s_final (Ptrofs.repr (PGSIZE))) > Ptrofs.unsigned p_e)
+        RETURN (Vptr b_s p_s_final)
+        SEP ().
+
 Definition for_1_spec : ident * funspec :=
     DECLARE _for_1
     WITH n:Z
@@ -76,12 +105,29 @@ Definition for_1_spec : ident * funspec :=
         PROP (n = sum)
         RETURN (Vint (Int.repr sum))
         SEP ().
+
+
+Definition for_2_spec : ident * funspec :=
+    DECLARE _for_2
+    WITH  b_s:block, p_s:ptrofs, b_e:block, p_e:ptrofs
+    PRE [ tptr tvoid, tptr tvoid ]
+        PROP ( 0 <= Ptrofs.unsigned (Ptrofs.sub p_e p_s) <= Int.max_signed )
+        PARAMS (Vptr b_s p_s; Vptr b_e p_e)
+        SEP (denote_tc_test_order ((Vptr b_s (Ptrofs.add p_s (Ptrofs.repr (PGSIZE))))) (Vptr b_e p_e))
+    POST [ tint ]
+    EX sum,
+        PROP (0 <= sum <= Int.max_signed /\ 
+            (PGSIZE * sum) <= Ptrofs.unsigned (Ptrofs.sub p_e p_s) 
+        )
+        RETURN (Vint (Int.repr sum))
+        SEP ().
 (*********************************************)
 
 Definition Gprog : funspecs := [
 pointer_comparison_1_spec; 
 pointer_comparison_2_spec;
-while_1_spec; for_1_spec
+while_1_spec; while_1_1_spec;
+while_2_spec; for_1_spec
 ].
 
 
@@ -101,10 +147,8 @@ destruct (Val.cmplu_bool true2 Cle p q).
 - inversion H1.
 Qed.
 
-
 Lemma body_pointer_comparison_1: semax_body Vprog Gprog f_pointer_comparison_1 pointer_comparison_1_spec.
 Proof. start_function. forward. Qed.
-
 
 Lemma body_pointer_comparison_2: semax_body Vprog Gprog f_pointer_comparison_2 pointer_comparison_2_spec.
 Proof. start_function. 
@@ -218,8 +262,105 @@ forward_while
 Qed. 
 
 
+Lemma body_while_1_1: semax_body Vprog Gprog f_while_1_1 while_1_1_spec.
+Proof. start_function. forward.
+forward_while
+ (EX i: Z,
+   PROP  (0 <= i <= n + 1)
+   LOCAL (temp _s (Vint (Int.repr i)); temp _n (Vint (Int.repr n)))
+   SEP ()).
+   - Exists 0; entailer.
+   - entailer.
+   - forward; entailer. try rep_lia. Exists (i + 1). entailer!. 
+   - forward. assert (i = n + 1) by lia. Exists i. entailer!. (* *)
+Qed. 
+
+
 Lemma body_for_1: semax_body Vprog Gprog f_for_1 for_1_spec.
 Proof. start_function. forward. 
+forward_loop
+(EX i: Z,
+  PROP (0 <= i <= n)
+  LOCAL (temp _s (Vint (Int.repr i)); temp _n (Vint (Int.repr n)))
+  SEP ())
+break:
+(EX s_final: Z,
+  PROP (s_final = n)
+  LOCAL (temp _s (Vint (Int.repr s_final)); temp _n (Vint (Int.repr n)))
+  SEP ()).
+  - Exists 0; entailer.
+  - Intros i. forward_if. 
+    + forward. Exists (i+1). entailer.
+    + forward. assert (i = n) by lia. Exists i. entailer.
+  - Intros s_final. forward. EExists. entailer!.
+Qed.
+
+
+
+
+
+(*** working in progress *)
+
+
+Lemma body_for_2: semax_body Vprog Gprog f_for_2 for_2_spec.
+Proof. start_function. forward. 
+
+    forward_loop
+    (* loop inv. *)
+    (EX s_start: Z,  EX p_s_temp,
+    PROP (0 <= s_start <= Ptrofs.unsigned (Ptrofs.sub p_e p_s))
+    LOCAL (temp _s (Vint (Int.repr s_start)); 
+           temp _pa_start (Vptr b_s p_s_temp);
+           temp _pa_end (Vptr b_e p_e))
+    SEP (denote_tc_test_order ((Vptr b_s (Ptrofs.add p_s_temp (Ptrofs.repr (PGSIZE))))) (Vptr b_e p_e)))
+
+    break:
+
+    (* loop post *)
+    (EX s_final: Z, EX p_s_final,
+    PROP (0 <= s_final <= Int.max_signed /\ 
+        PGSIZE * s_final <= Ptrofs.unsigned (Ptrofs.sub p_e p_s))
+    LOCAL (temp _s (Vint (Int.repr s_final)); 
+        temp _pa_start (Vptr b_s p_s_final);
+            temp _pa_end (Vptr b_e p_e))
+    SEP (denote_tc_test_order ((Vptr b_s (Ptrofs.add p_s_final (Ptrofs.repr (PGSIZE))))) (Vptr b_e p_e))).
+
+  - Exists 0; EExists. entailer!.
+  - Intros i. Intros p_s_temp. forward_if. 
+    + forward. entailer!. admit. forward. EExists. EExists. entailer!. admit. entailer!. admit.
+    + forward. EExists. EExists. entailer. admit. (* helpt to insert denote.. in the post condition after break*)
+  - Intros s_final. Intros p_s_final. forward. EExists. entailer. admit.
+Admitted.
+
+NÅET HERTIL1!!!!
+Jeg er i gang med forloop og at tælle sider. s er så mange gange vi får kaldt kfree..
+men jeg er i tvivl om, hvordan for_loop skal være og om min pre-condition er korrekt.
+
+  
+
+Lemma body_while_2: semax_body Vprog Gprog f_while_2 while_2_spec.
+Proof. start_function. 
+forward_while
+ (EX p_s_tmp: ptrofs,
+   PROP  (
+
+        0 <= Ptrofs.unsigned (Ptrofs.sub p_e p_s_tmp) <= Int.max_signed
+            )
+   LOCAL (temp _pa_start (Vptr b_s p_s_tmp);  temp _pa_end (Vptr b_e p_e))
+   SEP   (denote_tc_test_order ((Vptr b_s (Ptrofs.add p_s_tmp (Ptrofs.repr (PGSIZE))))) (Vptr b_e p_e))).
+   - EExists. entailer!.
+   - entailer.
+   - forward; entailer!. Exists ((Ptrofs.add p_s_tmp (Ptrofs.repr PGSIZE))). inversion HRE. entailer!. entailer!; try rep_lia. inversion HRE. try rep_lia.
+
+
+
+  
+  forward. entailer. Exists (i+1). Exists ((Ptrofs.add p_s_temp (Ptrofs.repr PGSIZE))).
+    entailer!. split; try rep_lia. destruct H0; try rep_lia
+  + forward. assert (i = n) by lia. Exists i. entailer.
+- Intros s_final. forward. EExists. entailer!.
+
+
 forward_loop
 (EX i: Z,
   PROP (0 <= i <= n)

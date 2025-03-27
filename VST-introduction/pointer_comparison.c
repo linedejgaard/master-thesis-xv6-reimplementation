@@ -32,13 +32,42 @@ int for_1(int n) {
     return s;
 }
 
+int while_1_1(int n) {
+    int s = 0;
+    while (s <= n) { // plus
+        s++;
+    }
+    return s;
+}
+
+// wokring in progress
+
+
+
+void * while_2(void *pa_start, void *pa_end) {
+    while ((char*)pa_start + PGSIZE <= (char*)pa_end) {
+        pa_start = (char*)pa_start + PGSIZE;
+    }
+    return pa_start;
+}
+
+int while_3(void *pa_start, void *pa_end) {
+    int s = 0;
+    while ((char*)pa_start + PGSIZE <= (char*)pa_end) {
+        s++;
+        pa_start = (char*)pa_start + PGSIZE;
+    }
+    return s;
+}
+
+
 
 // working in progress
-int loop_1(void *pa_start, void *pa_end) {
-    int n = 0;
+int for_2(void *pa_start, void *pa_end) {
+    int s = 0;
     for (; (char*)pa_start + PGSIZE <= (char*)pa_end; pa_start = (char*)pa_start + PGSIZE) {
-        n = n + 1;
+        s++;
     }
-    return n;
+    return s;
 }
 
