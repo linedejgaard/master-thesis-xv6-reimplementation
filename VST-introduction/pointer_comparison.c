@@ -40,6 +40,14 @@ int while_1_1(int n) {
     return s;
 }
 
+int while_1_2(int n) { // working in progress..
+    int s = 0;
+    while (s + PGSIZE <= n) { // plus
+        s = s + PGSIZE;
+    }
+    return s;
+}
+
 int for_1_1(int n) {
     int s;
     for (s = 0; s <= n; s++) {
@@ -51,15 +59,7 @@ int for_1_1(int n) {
 // working in progress
 
 
-//
 
-int while_1_2(int n) {
-    int s = 0;
-    while (s + PGSIZE <= n) { // plus
-        s = s + PGSIZE;
-    }
-    return s;
-}
 
 // wokring in progress
 
