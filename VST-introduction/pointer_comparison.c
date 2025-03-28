@@ -103,6 +103,17 @@ int for_1_4(int n, int s) {
 
 // wokring in progress
 
+int while_1_5(void *pa_start, void *pa_end) { 
+    int c = 0;
+    while ((char*)pa_start + PGSIZE <= (char*)pa_end) { 
+        pa_start = (char*)pa_start + PGSIZE;
+        c++;
+    }
+    return c;
+}
+
+
+
 
 void * while_2(void *pa_start, void *pa_end) {
     while ((char*)pa_start + PGSIZE <= (char*)pa_end) {
