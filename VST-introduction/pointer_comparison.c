@@ -112,6 +112,17 @@ int while_1_5(void *pa_start, void *pa_end) {
     return c;
 }
 
+int while_1_6(void *pa_start, void *pa_end)
+{
+  char *p = (char*)pa_start;
+  int n = 0;
+  while (p + PGSIZE <= (char*)pa_end) {
+    n++;
+    p += PGSIZE;
+  }
+  return n;
+}
+
 
 
 
