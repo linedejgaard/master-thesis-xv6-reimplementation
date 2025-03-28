@@ -140,7 +140,8 @@ Definition while_1_5_spec : ident * funspec :=
     EX c:Z, EX p_s_final:ptrofs,
         PROP (
             Ptrofs.unsigned p_s_final = Z.add (Ptrofs.unsigned p_s_init) (Z.mul c PGSIZE) /\ 
-            0 <= c /\ (Ptrofs.unsigned p_s_final) <= (Ptrofs.unsigned p_n_init) /\ 
+            0 <= c /\ 
+            (Ptrofs.unsigned p_s_final) <= (Ptrofs.unsigned p_n_init) /\ 
             (Ptrofs.unsigned p_n_init) < Z.add (Ptrofs.unsigned p_s_final) PGSIZE
             )
         RETURN (Vint (Int.repr (c)))
@@ -894,11 +895,30 @@ forward_loop
 Qed.
 
 
-
-
-
-
 (*** working in progress *)
+
+Lemma denote_tc_test_order_step :
+forall pa pb b_a_init b_b_init,
+  Ptrofs.unsigned pa + PGSIZE + PGSIZE <= Ptrofs.unsigned pb ->
+    denote_tc_test_order (Vptr b_a_init (Ptrofs.add pa (Ptrofs.repr PGSIZE)))
+    (Vptr b_b_init pb)
+    |-- denote_tc_test_order (Vptr b_a_init (Ptrofs.add pa (Ptrofs.repr (PGSIZE + PGSIZE))))
+      (Vptr b_b_init pb).
+Proof.
+  intros.
+  unfold denote_tc_test_order.
+  unfold test_order_ptrs.
+  destruct (sameblock (Vptr b_a_init (Ptrofs.add pa (Ptrofs.repr PGSIZE))) (Vptr b_b_init pb)) eqn:e; try discriminate; try contradiction; entailer.
+  destruct (sameblock (Vptr b_a_init (Ptrofs.add pa (Ptrofs.repr (PGSIZE + PGSIZE))))
+  (Vptr b_b_init pb)) eqn:e1; try discriminate; try contradiction.
+  2: {
+  unfold sameblock in e1; destruct (peq b_a_init b_b_init); unfold sameblock in e; destruct (peq b_a_init b_b_init); try discriminate; try contradiction.
+  }
+  apply andp_right.
+  - admit.
+  - apply andp_left2; auto.
+Admitted.
+
 
 Lemma ptrofs_add_simpl :
   forall a,
@@ -933,8 +953,8 @@ forward_while
     )
    SEP (denote_tc_test_order ((Vptr b_s_init (Ptrofs.add p_s_tmp (Ptrofs.repr (PGSIZE))))) (Vptr b_n_init p_n_init))).
 
-   - EExists; EExists; entailer.
-   - entailer!. unfold PGSIZE. unfold denote_tc_test_order. entailer!. 
+   - EExists; EExists; entailer. 
+   - entailer!. unfold PGSIZE. entailer.
    -repeat forward.
     +entailer!. destruct H0. destruct H1. destruct H2.
      split; try rep_lia.
@@ -966,13 +986,37 @@ forward_while
                 }
                 destruct H1; try contradiction; try discriminate.
                 ** subst; try contradiction; try discriminate.
-                ** rewrite H1 in e. Search sem_cmp_pp.
+                ** rewrite H1 in e. 
                     unfold sem_cmp_pp in e; simpl in e. destruct (eq_block b_s_init b_n_init); try discriminate; try contradiction.
                     subst. destruct ((negb (Ptrofs.ltu p_n_init (Ptrofs.add p_s_tmp (Ptrofs.repr 4096))))) eqn:e1; try discriminate; try contradiction.
                     unfold negb in e1. destruct (Ptrofs.ltu p_n_init (Ptrofs.add p_s_tmp (Ptrofs.repr 4096))) eqn:e2; try discriminate; try contradiction.
                     unfold Ptrofs.ltu in e2. destruct (zlt (Ptrofs.unsigned p_n_init) (Ptrofs.unsigned (Ptrofs.add p_s_tmp (Ptrofs.repr 4096)))) eqn: e3; try contradiction; try discriminate.
                     unfold PGSIZE. try rep_lia.
-        * entailer!. admit. (* fix denote_tc_test_order..*)
+        * (* admit starts here.. *) 
+        (*apply denote_tc_test_order_step.
+        destruct (sem_cmp_pp Cle (offset_val 4096 (Vptr b_s_init p_s_tmp)) (Vptr b_n_init p_n_init)) eqn:e; try discriminate; try contradiction.
+        destruct v; try contradiction; try discriminate.
+        assert (i = Int.zero \/ i = Int.one). {
+            apply cmp_le_is_either_0_or_1 with (p:= (offset_val PGSIZE (Vptr b_s_init p_s_tmp))) (q:=(Vptr b_n_init p_n_init) ); auto.
+        }
+        destruct H1; rewrite H1 in HRE; try contradiction; try discriminate.
+        rewrite H1 in e. unfold sem_cmp_pp in e; simpl in e.
+        destruct (eq_block b_s_init b_n_init); try discriminate; try contradiction.
+        unfold negb in e. destruct (Ptrofs.ltu p_n_init (Ptrofs.add p_s_tmp (Ptrofs.repr 4096))) eqn:e2; try discriminate; try contradiction.
+        unfold Ptrofs.ltu in e2. destruct (zlt (Ptrofs.unsigned p_n_init) (Ptrofs.unsigned (Ptrofs.add p_s_tmp (Ptrofs.repr 4096)))) eqn: e3; try contradiction; try discriminate.
+        assert ( Ptrofs.unsigned (Ptrofs.add p_s_tmp (Ptrofs.repr PGSIZE)) = )
+        rewrite Ptrofs.unsigned_repr; try rep_lia.
+                    unfold PGSIZE. try rep_lia.
+
+
+        apply denote_tc_test_order_step.
+        apply 
+        rewrite Ptrofs.add_unsigned.
+        rewrite Ptrofs.unsigned_repr.
+        assert (Ptrofs.unsigned p_s_tmp + 2 * PGSIZE <= Ptrofs.unsigned p_n_init). { admit. }
+        entailer.
+        by lia.*)
+        admit. (* fix denote_tc_test_order..*)
     - forward. Exists c_tmp. Exists p_s_tmp. entailer!. 
         split; try rep_lia. 
         destruct (sem_cmp_pp Cle (offset_val 4096 (Vptr b_s_init p_s_tmp)) (* find a solution for magic number 4096 *)
