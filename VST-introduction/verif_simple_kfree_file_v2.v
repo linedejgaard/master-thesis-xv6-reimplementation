@@ -217,8 +217,9 @@ Definition Gprog : funspecs := [
    while_1_5_spec (*; freerange_while_loop_spec*)
 ].
 
+(************************ Helper functions and tactics  *************************)
 
-(************************ Proofs  *************************)
+Ltac auto_contradict := try discriminate; try contradiction.
 
 Lemma cmp_le_is_either_0_or_1 : forall p q i,
    sem_cmp_pp Cle p q = Some (Vint i) ->
@@ -236,6 +237,7 @@ destruct (Val.cmplu_bool true2 Cle p q).
 - inversion H1.
 Qed.
 
+(************************ Proofs  *************************)
 
 Lemma body_kfree1_freelist': semax_body Vprog Gprog f_kfree1 kfree1_freelist_spec.
 Proof. start_function. Intros. repeat forward. entailer. 
@@ -254,13 +256,13 @@ forward_if.
    -apply andp_left1. entailer!.
    -forward_call (sh, new_head, original_freelist_pointer, xx, gv, n).
       +apply andp_left2. entailer!.
-      +entailer. destruct (pointer_le_bool new_head pa_end) eqn:e; try discriminate; try contradiction. 
+      +entailer. destruct (pointer_le_bool new_head pa_end) eqn:e; auto_contradict. 
          * entailer!. 
          * unfold pointer_le_bool in e.
            unfold pointer_cmp_bool in e. 
            unfold pointer_comparison in e.
            destruct (sem_cmp_pp Cle new_head pa_end) eqn:e1. 
-           --destruct v; try discriminate; try contradiction.
+           --destruct v; auto_contradict.
              apply typed_true_tint_Vint in H0.
              exfalso; apply H0.
              apply cmp_le_is_either_0_or_1 in e1. destruct e1; auto.
@@ -268,8 +270,8 @@ forward_if.
              simpl in e. inversion e.
            --entailer!.
    - forward. entailer. destruct (pointer_le_bool new_head pa_end) eqn:e1.
-      + destruct (sem_cmp_pp Cle new_head pa_end ) eqn:e2; try contradiction; try discriminate.
-        destruct v; try discriminate; try contradiction.
+      + destruct (sem_cmp_pp Cle new_head pa_end ) eqn:e2; auto_contradict.
+        destruct v; auto_contradict.
         apply typed_false_tint_Vint in H0.
         rewrite H0 in e2. unfold pointer_le_bool in e1. unfold pointer_cmp_bool in e1.
         unfold pointer_comparison in e1.
@@ -287,18 +289,18 @@ sem_cmp_pp Cle (Vptr b (Ptrofs.add p
     (Ptrofs.mul (Ptrofs.repr 1) (Ptrofs.of_ints (Int.repr PGSIZE))))) pa_end
 ) by auto. 
 forward_if. 
-   - apply andp_left1. destruct pa_end; try discriminate; try contradiction.
+   - apply andp_left1. destruct pa_end; auto_contradict.
      entailer!. unfold denote_tc_test_order, PGSIZE. entailer!.
    -forward_call (sh, (Vptr b p), original_freelist_pointer, xx, gv, n).
       +apply andp_left2. entailer!.
-      +entailer. destruct (pointer_le_bool (Vptr b (Ptrofs.add p (Ptrofs.repr PGSIZE))) pa_end) eqn:e; try discriminate; try contradiction. 
+      +entailer. destruct (pointer_le_bool (Vptr b (Ptrofs.add p (Ptrofs.repr PGSIZE))) pa_end) eqn:e; auto_contradict. 
          *  entailer!. 
          * unfold pointer_le_bool in e.
            unfold pointer_cmp_bool in e. 
            unfold pointer_comparison in e.
            entailer. unfold PGSIZE in H1; rewrite <- H1 in H2. 
            destruct (sem_cmp_pp Cle (Vptr b (Ptrofs.add p (Ptrofs.repr PGSIZE))) pa_end) eqn:e1; unfold PGSIZE in e1; rewrite e1 in H2. 
-           --destruct v; try discriminate; try contradiction.
+           --destruct v; auto_contradict.
              apply typed_true_tint_Vint in H2.
              exfalso; apply H2.
              apply cmp_le_is_either_0_or_1 in e1. destruct e1; auto.
@@ -310,8 +312,8 @@ forward_if.
          (Vptr b
             (Ptrofs.add p
                (Ptrofs.mul (Ptrofs.repr 1)
-                  (Ptrofs.of_ints (Int.repr 4096))))) pa_end)eqn:e2; try contradiction; try discriminate.
-         destruct v; try discriminate; try contradiction.
+                  (Ptrofs.of_ints (Int.repr 4096))))) pa_end)eqn:e2; auto_contradict.
+         destruct v; auto_contradict.
          apply typed_false_tint_Vint in H2.
 
          rewrite H2 in e2. unfold pointer_le_bool in e1. unfold pointer_cmp_bool in e1.
@@ -362,7 +364,7 @@ forward_while
       apply Z.le_trans with (m := Ptrofs.unsigned p_s_init + c_tmp * PGSIZE + PGSIZE); try rep_lia.
       assert (Ptrofs.unsigned p_s_init + c_tmp * PGSIZE + PGSIZE = Ptrofs.unsigned p_s_init + (c_tmp + 1) * PGSIZE) by rep_lia.
       rewrite H.
-      destruct c_tmp; try contradiction; try discriminate; unfold PGSIZE; auto; try rep_lia.
+      destruct c_tmp; auto_contradict; unfold PGSIZE; auto; try rep_lia.
     + Exists (c_tmp + 1, Ptrofs.add p_s_tmp (Ptrofs.repr PGSIZE)). entailer!.
         * split.
          -- destruct H as [H2 [H3 H4]].
@@ -377,31 +379,31 @@ forward_while
                 ++ apply Z.le_trans with (m := Ptrofs.unsigned p_s_init + c_tmp * PGSIZE + PGSIZE); try rep_lia.
                     assert (Ptrofs.unsigned p_s_init + c_tmp * PGSIZE + PGSIZE = Ptrofs.unsigned p_s_init + (c_tmp + 1) * PGSIZE) by rep_lia.
                     rewrite H2.
-                    destruct c_tmp; try contradiction; try discriminate; unfold PGSIZE; auto; try rep_lia.
+                    destruct c_tmp; auto_contradict; unfold PGSIZE; auto; try rep_lia.
                 ++ 
                 destruct (sem_cmp_pp Cle (offset_val 4096 (Vptr b_s_init p_s_tmp)) (* find a solution for magic number 4096 *)
-                (Vptr b_n_init p_n_init)) eqn:e; try contradiction; try discriminate.
-                destruct v; try discriminate; try contradiction.
+                (Vptr b_n_init p_n_init)) eqn:e; auto_contradict.
+                destruct v; auto_contradict.
                 assert (i = Int.zero \/ i = Int.one). { apply cmp_le_is_either_0_or_1 with (p:= (offset_val PGSIZE (Vptr b_s_init p_s_tmp))) (q:=(Vptr b_n_init p_n_init) ); auto. }
-                destruct H2; try contradiction; try discriminate.
-                ** subst; try contradiction; try discriminate.
+                destruct H2; auto_contradict.
+                ** subst; auto_contradict.
                 ** rewrite H2 in e. 
-                    unfold sem_cmp_pp in e; simpl in e. destruct (eq_block b_s_init b_n_init); try discriminate; try contradiction.
-                    subst. destruct ((negb (Ptrofs.ltu p_n_init (Ptrofs.add p_s_tmp (Ptrofs.repr 4096))))) eqn:e1; try discriminate; try contradiction.
-                    unfold negb in e1. destruct (Ptrofs.ltu p_n_init (Ptrofs.add p_s_tmp (Ptrofs.repr 4096))) eqn:e2; try discriminate; try contradiction.
-                    unfold Ptrofs.ltu in e2. destruct (zlt (Ptrofs.unsigned p_n_init) (Ptrofs.unsigned (Ptrofs.add p_s_tmp (Ptrofs.repr 4096)))) eqn: e3; try contradiction; try discriminate.
+                    unfold sem_cmp_pp in e; simpl in e. destruct (eq_block b_s_init b_n_init); auto_contradict.
+                    subst. destruct ((negb (Ptrofs.ltu p_n_init (Ptrofs.add p_s_tmp (Ptrofs.repr 4096))))) eqn:e1; auto_contradict.
+                    unfold negb in e1. destruct (Ptrofs.ltu p_n_init (Ptrofs.add p_s_tmp (Ptrofs.repr 4096))) eqn:e2; auto_contradict.
+                    unfold Ptrofs.ltu in e2. destruct (zlt (Ptrofs.unsigned p_n_init) (Ptrofs.unsigned (Ptrofs.add p_s_tmp (Ptrofs.repr 4096)))) eqn: e3; auto_contradict.
                     unfold PGSIZE. try rep_lia.
         * entailer!. specialize (H0 p_s_tmp). 
         apply H0. split; try rep_lia.
-        destruct (sem_cmp_pp Cle (offset_val 4096 (Vptr b_s_init p_s_tmp)) (Vptr b_n_init p_n_init)) eqn:e1; try contradiction; try discriminate.
-        destruct v eqn:e2; try discriminate; try contradiction.
+        destruct (sem_cmp_pp Cle (offset_val 4096 (Vptr b_s_init p_s_tmp)) (Vptr b_n_init p_n_init)) eqn:e1; auto_contradict.
+        destruct v eqn:e2; auto_contradict.
         assert (i = Int.zero \/ i = Int.one). { apply cmp_le_is_either_0_or_1 with (p:= (offset_val PGSIZE (Vptr b_s_init p_s_tmp))) (q:=(Vptr b_n_init p_n_init) ); auto. }
-        destruct H2. rewrite H2 in HRE; try discriminate; try contradiction.
+        destruct H2. rewrite H2 in HRE; auto_contradict.
         rewrite H2 in e1. unfold sem_cmp_pp in e1. simpl in e1.
-        destruct (eq_block b_s_init b_n_init); try discriminate; try contradiction.
-        destruct ((Some (negb (Ptrofs.ltu p_n_init (Ptrofs.add p_s_tmp (Ptrofs.repr 4096)))))) eqn:e3; try discriminate; try contradiction.
-        destruct b; try discriminate; try contradiction.
-        unfold negb in e3; unfold Ptrofs.ltu in e3. destruct (zlt (Ptrofs.unsigned p_n_init) (Ptrofs.unsigned (Ptrofs.add p_s_tmp (Ptrofs.repr 4096)))) eqn:e4; try discriminate; try contradiction.
+        destruct (eq_block b_s_init b_n_init); auto_contradict.
+        destruct ((Some (negb (Ptrofs.ltu p_n_init (Ptrofs.add p_s_tmp (Ptrofs.repr 4096)))))) eqn:e3; auto_contradict.
+        destruct b; auto_contradict.
+        unfold negb in e3; unfold Ptrofs.ltu in e3. destruct (zlt (Ptrofs.unsigned p_n_init) (Ptrofs.unsigned (Ptrofs.add p_s_tmp (Ptrofs.repr 4096)))) eqn:e4; auto_contradict.
         assert (Ptrofs.unsigned (Ptrofs.add p_s_tmp (Ptrofs.repr PGSIZE)) = Ptrofs.unsigned p_s_tmp + PGSIZE). { apply ptrofs_add_simpl; split; try rep_lia. apply Z.add_nonneg_nonneg; unfold PGSIZE; try rep_lia. }
         destruct H1 as [H11 [H12 [H13 H14]]].
         rewrite H11.
@@ -413,16 +415,16 @@ forward_while
     - forward. Exists c_tmp. Exists p_s_tmp. entailer!.
         split; try rep_lia. 
         destruct (sem_cmp_pp Cle (offset_val 4096 (Vptr b_s_init p_s_tmp)) (* find a solution for magic number 4096 *)
-        (Vptr b_n_init p_n_init)) eqn:e; try contradiction; try discriminate.
-        destruct v; try discriminate; try contradiction.
+        (Vptr b_n_init p_n_init)) eqn:e; auto_contradict.
+        destruct v; auto_contradict.
         assert (i = Int.zero \/ i = Int.one). { apply cmp_le_is_either_0_or_1 with (p:= (offset_val PGSIZE (Vptr b_s_init p_s_tmp))) (q:=(Vptr b_n_init p_n_init) ); auto. }
         destruct H2.
-        2: { subst. try contradiction; try discriminate. }
+        2: { subst. auto_contradict. }
         subst.
-        unfold sem_cmp_pp in e. simpl in e. destruct (eq_block b_s_init b_n_init); try discriminate; try contradiction.
-        destruct ((Some (negb (Ptrofs.ltu p_n_init (Ptrofs.add p_s_tmp (Ptrofs.repr 4096)))))) eqn:e1; try discriminate; try contradiction.
-        destruct b; try discriminate; try contradiction.
-        unfold negb in e1; unfold Ptrofs.ltu in e1. destruct (zlt (Ptrofs.unsigned p_n_init) (Ptrofs.unsigned (Ptrofs.add p_s_tmp (Ptrofs.repr 4096)))) eqn:e2; try discriminate; try contradiction.
+        unfold sem_cmp_pp in e. simpl in e. destruct (eq_block b_s_init b_n_init); auto_contradict.
+        destruct ((Some (negb (Ptrofs.ltu p_n_init (Ptrofs.add p_s_tmp (Ptrofs.repr 4096)))))) eqn:e1; auto_contradict.
+        destruct b; auto_contradict.
+        unfold negb in e1; unfold Ptrofs.ltu in e1. destruct (zlt (Ptrofs.unsigned p_n_init) (Ptrofs.unsigned (Ptrofs.add p_s_tmp (Ptrofs.repr 4096)))) eqn:e2; auto_contradict.
         assert (Ptrofs.unsigned (Ptrofs.add p_s_tmp (Ptrofs.repr PGSIZE)) = Ptrofs.unsigned p_s_tmp + PGSIZE). {
             apply ptrofs_add_simpl; split; try rep_lia. apply Z.add_nonneg_nonneg; unfold PGSIZE; try rep_lia.
         }
