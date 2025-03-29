@@ -254,16 +254,7 @@ Proof.
     + rewrite H2; auto; try rep_lia.
 Qed.
 
-Ltac rep_lia_PGSIZE := unfold PGSIZE; rep_lia.
-
-(*Lemma ptrofs_add_simpl_PGSIZE :
-  forall a,
-    0 <= Ptrofs.unsigned a + PGSIZE < Ptrofs.modulus ->
-    Ptrofs.unsigned (Ptrofs.add a (Ptrofs.repr PGSIZE)) =
-    Ptrofs.unsigned a + PGSIZE.
-Proof.
-   intros. apply ptrofs_add_simpl; try rep_lia; unfold PGSIZE; try rep_lia.
-Qed.*)
+Ltac ptrofs_add_simpl_PGSIZE := apply ptrofs_add_simpl; split_lia; unfold PGSIZE; rep_lia.
 
 Lemma PGSIZE_bounds :
    0 <= PGSIZE <= Ptrofs.max_unsigned.
@@ -333,7 +324,7 @@ Proof.
    destruct (sem_cmp_pp Cle (offset_val ofs (Vptr b_s_init p_s_tmp)) (* find a solution for magic number 4096 *)
    (Vptr b_n_init p_n_init)) eqn:e; auto_contradict.
    destruct v; auto_contradict.
-   assert (i = Int.zero \/ i = Int.one). { apply cmp_le_is_either_0_or_1 with (p:= (offset_val PGSIZE (Vptr b_s_init p_s_tmp))) (q:=(Vptr b_n_init p_n_init) ); auto. }
+   assert (i = Int.zero \/ i = Int.one). { apply cmp_le_is_either_0_or_1 with (p:= (offset_val ofs (Vptr b_s_init p_s_tmp))) (q:=(Vptr b_n_init p_n_init) ); auto. }
    destruct H.
    2: { subst. auto_contradict. }
    subst. unfold sem_cmp_pp in e. simpl in e. destruct (eq_block b_s_init b_n_init); auto_contradict.
@@ -345,7 +336,7 @@ Proof.
       apply ptrofs_add_simpl; split_lia. (*apply Z.add_nonneg_nonneg; unfold ofs; try rep_lia.*)
    }
    rewrite <- H2. unfold PGSIZE; apply l.
-Admitted.
+Qed.
 
 (************************ Proofs  *************************)
 
@@ -459,7 +450,7 @@ forward_while
          -- destruct H as [H2 [H3 H4]].
          assert (Ptrofs.unsigned p_s_init + (c_tmp + 1) * PGSIZE = Ptrofs.unsigned p_s_init + (c_tmp) * PGSIZE + PGSIZE) as H; try rep_lia; rewrite H.
          assert (Ptrofs.unsigned p_s_init + c_tmp * PGSIZE + PGSIZE =  Ptrofs.unsigned p_s_tmp + PGSIZE) as H5; try rep_lia; rewrite H5.
-         apply ptrofs_add_simpl; split_lia; rep_lia_PGSIZE.
+         ptrofs_add_simpl_PGSIZE.
          -- repeat split_lia. 
                 ++ apply c_tmp_bounds_max with (p_s_init:=p_s_init) (p_s_tmp:=p_s_tmp) (p_n_init:=p_n_init); try rep_lia.
                 ++ apply typed_true_offset_val_leq with (b_s_init:=b_s_init) (b_n_init :=b_n_init); unfold PGSIZE; auto.
@@ -469,20 +460,5 @@ forward_while
         rewrite H1. assert (Ptrofs.unsigned p_s_init + - Ptrofs.unsigned p_s_init = 0) by rep_lia.
         apply Z.add_nonneg_nonneg; unfold PGSIZE; rep_lia.
     - forward. Exists c_tmp p_s_tmp. entailer!. split_lia.
-        
-        destruct (sem_cmp_pp Cle (offset_val 4096 (Vptr b_s_init p_s_tmp)) (* find a solution for magic number 4096 *)
-        (Vptr b_n_init p_n_init)) eqn:e; auto_contradict.
-        destruct v; auto_contradict.
-        assert (i = Int.zero \/ i = Int.one). { apply cmp_le_is_either_0_or_1 with (p:= (offset_val PGSIZE (Vptr b_s_init p_s_tmp))) (q:=(Vptr b_n_init p_n_init) ); auto. }
-        destruct H2.
-        2: { subst. auto_contradict. }
-        subst.
-        unfold sem_cmp_pp in e. simpl in e. destruct (eq_block b_s_init b_n_init); auto_contradict.
-        destruct ((Some (negb (Ptrofs.ltu p_n_init (Ptrofs.add p_s_tmp (Ptrofs.repr 4096)))))) eqn:e1; auto_contradict.
-        destruct b; auto_contradict.
-        unfold negb in e1; unfold Ptrofs.ltu in e1. destruct (zlt (Ptrofs.unsigned p_n_init) (Ptrofs.unsigned (Ptrofs.add p_s_tmp (Ptrofs.repr 4096)))) eqn:e2; auto_contradict.
-        assert (Ptrofs.unsigned (Ptrofs.add p_s_tmp (Ptrofs.repr PGSIZE)) = Ptrofs.unsigned p_s_tmp + PGSIZE). {
-            apply ptrofs_add_simpl; split_lia; rep_lia_PGSIZE. (*apply Z.add_nonneg_nonneg; unfold PGSIZE; try rep_lia.*)
-        }
-        rewrite <- H2. unfold PGSIZE; apply l.
+        apply typed_false_offset_val_leq with (b_s_init:=b_s_init) (b_n_init:=b_n_init); try rep_lia; unfold PGSIZE; try rep_lia; auto.
 Qed.
