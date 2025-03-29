@@ -130,7 +130,6 @@ Definition freerange_no_loop_no_add_spec :=
          PROP ()
          RETURN ()
          SEP (
-            (*denote_tc_test_order new_head pa_end **)
                if pointer_le_bool new_head pa_end then
                freelistrep sh (S n) new_head *
                data_at sh t_struct_kmem (Vint (Int.repr xx), new_head) (gv _kmem)
@@ -176,7 +175,7 @@ Definition freerange_no_loop_no_add_1_spec :=
          ).
 
 (************** while loop ***************)
-Definition while_1_5_spec : ident * funspec :=
+Definition while_1_5_spec : ident * funspec := (* this is not including admits.. *)
     DECLARE _while_1_5
     WITH b_n_init:block, p_n_init:ptrofs, b_s_init:block, p_s_init:ptrofs
     PRE [  tptr tvoid, tptr tvoid ]
@@ -186,7 +185,17 @@ Definition while_1_5_spec : ident * funspec :=
                 Z.add (Ptrofs.unsigned p_s_init) PGSIZE <= Int.max_signed 
             ) (* the highest number is s + PGSIZE when it fails. The highest s + PGSIZE when it succeeds is n, so the highest after this is n + PGSIZE*)
         PARAMS (Vptr b_s_init p_s_init; Vptr b_n_init p_n_init)
-        SEP (denote_tc_test_order ((Vptr b_s_init (Ptrofs.add p_s_init (Ptrofs.repr (PGSIZE))))) (Vptr b_n_init p_n_init))
+        SEP (
+         denote_tc_test_order (Vptr b_s_init (Ptrofs.add p_s_init (Ptrofs.repr PGSIZE)))
+                                  (Vptr b_n_init p_n_init) &&
+         (!! (forall p_s_tmp,
+         Ptrofs.unsigned p_s_init <= Ptrofs.unsigned p_s_tmp <= Ptrofs.unsigned p_n_init ->
+         ((denote_tc_test_order (Vptr b_s_init (Ptrofs.add p_s_tmp (Ptrofs.repr PGSIZE)))
+         (Vptr b_n_init p_n_init)) |--
+            (denote_tc_test_order (Vptr b_s_init (Ptrofs.add p_s_tmp (Ptrofs.repr (PGSIZE + PGSIZE))))
+                                  (Vptr b_n_init p_n_init)))
+         ))
+        )
     POST [ tint ]
     EX c:Z, EX p_s_final:ptrofs,
         PROP (
@@ -196,49 +205,8 @@ Definition while_1_5_spec : ident * funspec :=
             (Ptrofs.unsigned p_n_init) < Z.add (Ptrofs.unsigned p_s_final) PGSIZE
             )
         RETURN (Vint (Int.repr (c)))
-        SEP ((*denote_tc_test_order ((Vptr b_s_init (Ptrofs.add p_s_final (Ptrofs.repr (PGSIZE))))) (Vptr b_n_init p_n_init)*)).
-
-(*Definition freerange_while_loop_spec : ident * funspec :=
-DECLARE _freerange_while_loop
-WITH b_n_init:block, p_n_init:ptrofs, b_s_init:block, p_s_init:ptrofs, sh : share, original_freelist_pointer : val, xx : Z, gv : globals, n:nat
-PRE [  tptr tvoid, tptr tvoid ]
-      PROP (
-            0 <= Ptrofs.unsigned p_s_init <= Ptrofs.unsigned p_n_init /\
-            Z.add (Ptrofs.unsigned p_n_init) PGSIZE <= Int.max_signed /\ 
-            Z.add (Ptrofs.unsigned p_s_init) PGSIZE <= Int.max_signed /\
-            
-            writable_share sh /\ 
-            is_pointer_or_null original_freelist_pointer
-
-         ) (* the highest number is s + PGSIZE when it fails. The highest s + PGSIZE when it succeeds is n, so the highest after this is n + PGSIZE*)
-      PARAMS (Vptr b_s_init p_s_init; Vptr b_n_init p_n_init)
-      SEP (denote_tc_test_order ((Vptr b_s_init (Ptrofs.add p_s_init (Ptrofs.repr (PGSIZE))))) (Vptr b_n_init p_n_init) &&
-            (freelistrep sh n original_freelist_pointer *
-            (!! malloc_compatible (sizeof t_run) (Vptr b_s_init p_s_init) &&
-            data_at sh (t_run) nullval (Vptr b_s_init p_s_init) *
-            data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem) ))
-      )
-POST [ tint ]
-EX c:Z, EX p_s_final:ptrofs,
-      PROP (
-         Ptrofs.unsigned p_s_final = Z.add (Ptrofs.unsigned p_s_init) (Z.mul c PGSIZE) /\ 
-         0 <= c /\ 
-         (Ptrofs.unsigned p_s_final) <= (Ptrofs.unsigned p_n_init) /\ 
-         (Ptrofs.unsigned p_n_init) < Z.add (Ptrofs.unsigned p_s_final) PGSIZE
-         )
-      RETURN (Vint (Int.repr (c)))
-      SEP ((*denote_tc_test_order ((Vptr b_s_init (Ptrofs.add p_s_final (Ptrofs.repr (PGSIZE))))) (Vptr b_n_init p_n_init)*)
-            if pointer_le_bool (Vptr b (Ptrofs.add p (Ptrofs.repr (PGSIZE)))) pa_end then
-               (freelistrep sh (S n) (Vptr b p) *
-               data_at sh t_struct_kmem (Vint (Int.repr xx), (Vptr b p)) (gv _kmem))
-            else
-               (freelistrep sh n original_freelist_pointer *
-               (!! malloc_compatible (sizeof t_run) (Vptr b p) &&
-               data_at sh (t_run) nullval (Vptr b p) *
-               data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem)))
-      ).*)
-     
-
+        SEP (denote_tc_test_order (Vptr b_s_init (Ptrofs.add p_s_final (Ptrofs.repr PGSIZE)))
+        (Vptr b_n_init p_n_init)).
 
 
 (************************ Gprog  *************************)
@@ -246,7 +214,7 @@ Definition Gprog : funspecs := [
    kfree1_freelist_spec;
    freerange_no_loop_no_add_spec;
    freerange_no_loop_no_add_1_spec;
-   while_1_5_spec
+   while_1_5_spec (*; freerange_while_loop_spec*)
 ].
 
 
@@ -386,55 +354,69 @@ forward_while
     )
    SEP (denote_tc_test_order ((Vptr b_s_init (Ptrofs.add p_s_tmp (Ptrofs.repr (PGSIZE))))) (Vptr b_n_init p_n_init))).
 
-   - EExists; EExists; entailer. 
+   - EExists; EExists; entailer.
    - entailer!. unfold PGSIZE. entailer.
-   -repeat forward.
-    +entailer!. destruct H0. destruct H1. destruct H2.
-     split; try rep_lia.
-     apply Z.le_trans with (m := Ptrofs.unsigned p_s_init + c_tmp * PGSIZE + PGSIZE); try rep_lia.
-     assert (Ptrofs.unsigned p_s_init + c_tmp * PGSIZE + PGSIZE = Ptrofs.unsigned p_s_init + (c_tmp + 1) * PGSIZE) by rep_lia.
-     rewrite H4.
-     destruct c_tmp; try contradiction; try discriminate; unfold PGSIZE; auto; try rep_lia. 
+   -repeat forward. 
+    +entailer!. destruct H as [H2 [H3 H4]].
+      split; try rep_lia.
+      apply Z.le_trans with (m := Ptrofs.unsigned p_s_init + c_tmp * PGSIZE + PGSIZE); try rep_lia.
+      assert (Ptrofs.unsigned p_s_init + c_tmp * PGSIZE + PGSIZE = Ptrofs.unsigned p_s_init + (c_tmp + 1) * PGSIZE) by rep_lia.
+      rewrite H.
+      destruct c_tmp; try contradiction; try discriminate; unfold PGSIZE; auto; try rep_lia.
     + Exists (c_tmp + 1, Ptrofs.add p_s_tmp (Ptrofs.repr PGSIZE)). entailer!.
         * split.
-            -- destruct H0. 
-                assert (Ptrofs.unsigned p_s_init + (c_tmp + 1) * PGSIZE = Ptrofs.unsigned p_s_init + (c_tmp) * PGSIZE + PGSIZE); try rep_lia.
-                rewrite H2.
-                assert (Ptrofs.unsigned p_s_init + c_tmp * PGSIZE + PGSIZE =  Ptrofs.unsigned p_s_tmp + PGSIZE); try rep_lia.
-                rewrite H3.
-                apply ptrofs_add_simpl; split; try rep_lia.
-                apply Z.add_nonneg_nonneg; unfold PGSIZE; try rep_lia.
-            -- split; try rep_lia. split; try rep_lia.
+         -- destruct H as [H2 [H3 H4]].
+         assert (Ptrofs.unsigned p_s_init + (c_tmp + 1) * PGSIZE = Ptrofs.unsigned p_s_init + (c_tmp) * PGSIZE + PGSIZE); try rep_lia.
+         rewrite H.
+         assert (Ptrofs.unsigned p_s_init + c_tmp * PGSIZE + PGSIZE =  Ptrofs.unsigned p_s_tmp + PGSIZE); try rep_lia.
+         rewrite H5.
+         apply ptrofs_add_simpl; split; try rep_lia.
+         apply Z.add_nonneg_nonneg; unfold PGSIZE; try rep_lia.
+         -- split; try rep_lia. split; try rep_lia.
                 (* fix : c_tmp + 1 <= Int.max_signed*)
                 ++ apply Z.le_trans with (m := Ptrofs.unsigned p_s_init + c_tmp * PGSIZE + PGSIZE); try rep_lia.
                     assert (Ptrofs.unsigned p_s_init + c_tmp * PGSIZE + PGSIZE = Ptrofs.unsigned p_s_init + (c_tmp + 1) * PGSIZE) by rep_lia.
-                    rewrite H1.
+                    rewrite H2.
                     destruct c_tmp; try contradiction; try discriminate; unfold PGSIZE; auto; try rep_lia.
                 ++ 
                 destruct (sem_cmp_pp Cle (offset_val 4096 (Vptr b_s_init p_s_tmp)) (* find a solution for magic number 4096 *)
                 (Vptr b_n_init p_n_init)) eqn:e; try contradiction; try discriminate.
                 destruct v; try discriminate; try contradiction.
-                assert (i = Int.zero \/ i = Int.one). {
-                    apply cmp_le_is_either_0_or_1 with (p:= (offset_val PGSIZE (Vptr b_s_init p_s_tmp))) (q:=(Vptr b_n_init p_n_init) ); auto.
-                }
-                destruct H1; try contradiction; try discriminate.
+                assert (i = Int.zero \/ i = Int.one). { apply cmp_le_is_either_0_or_1 with (p:= (offset_val PGSIZE (Vptr b_s_init p_s_tmp))) (q:=(Vptr b_n_init p_n_init) ); auto. }
+                destruct H2; try contradiction; try discriminate.
                 ** subst; try contradiction; try discriminate.
-                ** rewrite H1 in e. 
+                ** rewrite H2 in e. 
                     unfold sem_cmp_pp in e; simpl in e. destruct (eq_block b_s_init b_n_init); try discriminate; try contradiction.
                     subst. destruct ((negb (Ptrofs.ltu p_n_init (Ptrofs.add p_s_tmp (Ptrofs.repr 4096))))) eqn:e1; try discriminate; try contradiction.
                     unfold negb in e1. destruct (Ptrofs.ltu p_n_init (Ptrofs.add p_s_tmp (Ptrofs.repr 4096))) eqn:e2; try discriminate; try contradiction.
                     unfold Ptrofs.ltu in e2. destruct (zlt (Ptrofs.unsigned p_n_init) (Ptrofs.unsigned (Ptrofs.add p_s_tmp (Ptrofs.repr 4096)))) eqn: e3; try contradiction; try discriminate.
                     unfold PGSIZE. try rep_lia.
-        * admit. (* fix denote_tc_test_order..*)
-    - forward. Exists c_tmp. Exists p_s_tmp. entailer!. 
+        * entailer!. specialize (H0 p_s_tmp). 
+        apply H0. split; try rep_lia.
+        destruct (sem_cmp_pp Cle (offset_val 4096 (Vptr b_s_init p_s_tmp)) (Vptr b_n_init p_n_init)) eqn:e1; try contradiction; try discriminate.
+        destruct v eqn:e2; try discriminate; try contradiction.
+        assert (i = Int.zero \/ i = Int.one). { apply cmp_le_is_either_0_or_1 with (p:= (offset_val PGSIZE (Vptr b_s_init p_s_tmp))) (q:=(Vptr b_n_init p_n_init) ); auto. }
+        destruct H2. rewrite H2 in HRE; try discriminate; try contradiction.
+        rewrite H2 in e1. unfold sem_cmp_pp in e1. simpl in e1.
+        destruct (eq_block b_s_init b_n_init); try discriminate; try contradiction.
+        destruct ((Some (negb (Ptrofs.ltu p_n_init (Ptrofs.add p_s_tmp (Ptrofs.repr 4096)))))) eqn:e3; try discriminate; try contradiction.
+        destruct b; try discriminate; try contradiction.
+        unfold negb in e3; unfold Ptrofs.ltu in e3. destruct (zlt (Ptrofs.unsigned p_n_init) (Ptrofs.unsigned (Ptrofs.add p_s_tmp (Ptrofs.repr 4096)))) eqn:e4; try discriminate; try contradiction.
+        assert (Ptrofs.unsigned (Ptrofs.add p_s_tmp (Ptrofs.repr PGSIZE)) = Ptrofs.unsigned p_s_tmp + PGSIZE). { apply ptrofs_add_simpl; split; try rep_lia. apply Z.add_nonneg_nonneg; unfold PGSIZE; try rep_lia. }
+        destruct H1 as [H11 [H12 [H13 H14]]].
+        rewrite H11.
+        apply Zle_left_rev.
+        assert ( Ptrofs.unsigned p_s_init + c_tmp * PGSIZE + - Ptrofs.unsigned p_s_init =  Ptrofs.unsigned p_s_init + - Ptrofs.unsigned p_s_init + c_tmp * PGSIZE) by rep_lia. 
+        rewrite H1. assert (Ptrofs.unsigned p_s_init + - Ptrofs.unsigned p_s_init = 0) by rep_lia.
+        apply Z.add_nonneg_nonneg; try rep_lia.
+        unfold PGSIZE; try rep_lia.
+    - forward. Exists c_tmp. Exists p_s_tmp. entailer!.
         split; try rep_lia. 
         destruct (sem_cmp_pp Cle (offset_val 4096 (Vptr b_s_init p_s_tmp)) (* find a solution for magic number 4096 *)
         (Vptr b_n_init p_n_init)) eqn:e; try contradiction; try discriminate.
         destruct v; try discriminate; try contradiction.
-        assert (i = Int.zero \/ i = Int.one). {
-            apply cmp_le_is_either_0_or_1 with (p:= (offset_val PGSIZE (Vptr b_s_init p_s_tmp))) (q:=(Vptr b_n_init p_n_init) ); auto.
-        }
-        destruct H1.
+        assert (i = Int.zero \/ i = Int.one). { apply cmp_le_is_either_0_or_1 with (p:= (offset_val PGSIZE (Vptr b_s_init p_s_tmp))) (q:=(Vptr b_n_init p_n_init) ); auto. }
+        destruct H2.
         2: { subst. try contradiction; try discriminate. }
         subst.
         unfold sem_cmp_pp in e. simpl in e. destruct (eq_block b_s_init b_n_init); try discriminate; try contradiction.
@@ -444,6 +426,5 @@ forward_while
         assert (Ptrofs.unsigned (Ptrofs.add p_s_tmp (Ptrofs.repr PGSIZE)) = Ptrofs.unsigned p_s_tmp + PGSIZE). {
             apply ptrofs_add_simpl; split; try rep_lia. apply Z.add_nonneg_nonneg; unfold PGSIZE; try rep_lia.
         }
-        rewrite <- H1. unfold PGSIZE; apply l.
-Admitted.
-
+        rewrite <- H2. unfold PGSIZE; apply l.
+Qed.
