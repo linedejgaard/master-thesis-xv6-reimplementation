@@ -210,23 +210,33 @@ Definition while_1_5_spec : ident * funspec := (* this is not including admits..
 (************** freerange kfree simple ***************)
 Definition freerange_while_loop_spec : ident * funspec := (* this is not including admits.. *)
     DECLARE _freerange_while_loop
-    WITH b_n_init:block, p_n_init:ptrofs, b_s_init:block, p_s_init:ptrofs
+    WITH b_n_init:block, p_n_init:ptrofs, b_s_init:block, p_s_init:ptrofs, 
+            sh : share, original_freelist_pointer : val, xx : Z, gv : globals, n:nat
     PRE [  tptr tvoid, tptr tvoid ]
         PROP (
                 0 <= Ptrofs.unsigned p_s_init <= Ptrofs.unsigned p_n_init /\
                 Z.add (Ptrofs.unsigned p_n_init) PGSIZE <= Int.max_signed /\ 
                 Z.add (Ptrofs.unsigned p_s_init) PGSIZE <= Int.max_signed 
             ) (* the highest number is s + PGSIZE when it fails. The highest s + PGSIZE when it succeeds is n, so the highest after this is n + PGSIZE*)
-        PARAMS (Vptr b_s_init p_s_init; Vptr b_n_init p_n_init)
+        PARAMS (Vptr b_s_init p_s_init; Vptr b_n_init p_n_init) GLOBALS (gv)
         SEP (
          denote_tc_test_order (Vptr b_s_init (Ptrofs.add p_s_init (Ptrofs.repr PGSIZE))) (Vptr b_n_init p_n_init) &&
          (!! (forall p_s_tmp,
                   Ptrofs.unsigned p_s_init <= Ptrofs.unsigned p_s_tmp <= Ptrofs.unsigned p_n_init ->
                   ((denote_tc_test_order (Vptr b_s_init (Ptrofs.add p_s_tmp (Ptrofs.repr PGSIZE))) (Vptr b_n_init p_n_init)) |--
                      (denote_tc_test_order (Vptr b_s_init (Ptrofs.add p_s_tmp (Ptrofs.repr (PGSIZE + PGSIZE)))) (Vptr b_n_init p_n_init)))
-         ))
+         )) &&
+         (freelistrep sh n original_freelist_pointer *
+         ((!! forall p_s_tmp, Ptrofs.unsigned p_s_init <= Ptrofs.unsigned p_s_tmp <= Ptrofs.unsigned p_n_init -> 
+             malloc_compatible (sizeof t_run) (Vptr b_s_init p_s_tmp)) &&
+         (!! (forall p_s_tmp,
+             Ptrofs.unsigned p_s_init <= Ptrofs.unsigned p_s_tmp <= Ptrofs.unsigned p_n_init ->
+             data_at sh (t_run) nullval (Vptr b_s_init p_s_tmp) |--
+             data_at sh (t_run) nullval (Vptr b_s_init (Ptrofs.add p_s_tmp (Ptrofs.repr PGSIZE)))
+         )) *
+         data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem) ))
         )
-    POST [ tint ]
+    POST [ tvoid ]
     EX c:Z, EX p_s_final:ptrofs,
         PROP (
             Ptrofs.unsigned p_s_final = Z.add (Ptrofs.unsigned p_s_init) (Z.mul c PGSIZE) /\ 
@@ -235,7 +245,9 @@ Definition freerange_while_loop_spec : ident * funspec := (* this is not includi
             (Ptrofs.unsigned p_n_init) < Z.add (Ptrofs.unsigned p_s_final) PGSIZE
             )
         RETURN (Vint (Int.repr (c)))
-        SEP (denote_tc_test_order (Vptr b_s_init (Ptrofs.add p_s_final (Ptrofs.repr PGSIZE))) (Vptr b_n_init p_n_init)
+        SEP (denote_tc_test_order (Vptr b_s_init (Ptrofs.add p_s_final (Ptrofs.repr PGSIZE))) (Vptr b_n_init p_n_init) &&
+               (freelistrep sh (Nat.add (Z.to_nat c) n) (Vptr b_s_init p_s_final) *
+               data_at sh t_struct_kmem (Vint (Int.repr xx), (Vptr b_s_init p_s_final)) (gv _kmem))
         ).
 
 
@@ -244,7 +256,7 @@ Definition Gprog : funspecs := [
    kfree1_freelist_spec;
    freerange_no_loop_no_add_spec;
    freerange_no_loop_no_add_1_spec;
-   while_1_5_spec (*; freerange_while_loop_spec*)
+   while_1_5_spec; freerange_while_loop_spec
 ].
 
 (************************ Helper functions and tactics  *************************)
@@ -452,6 +464,47 @@ Qed.
 
 Lemma body_while_1_5: semax_body Vprog Gprog f_while_1_5 while_1_5_spec.
 Proof. start_function. repeat forward.
+forward_while
+ (EX c_tmp: Z, EX p_s_tmp:ptrofs,
+   PROP  (
+    Ptrofs.unsigned p_s_tmp = Z.add (Ptrofs.unsigned p_s_init) (Z.mul c_tmp PGSIZE) /\ 
+    0 <= c_tmp /\
+    c_tmp <= Int.max_signed /\
+    Ptrofs.unsigned p_s_tmp <= Ptrofs.unsigned p_n_init
+   )
+   LOCAL (
+    temp _c (Vint (Int.repr c_tmp));
+    temp _pa_start (Vptr b_s_init p_s_tmp);
+    temp _pa_end (Vptr b_n_init p_n_init)
+    )
+   SEP (denote_tc_test_order ((Vptr b_s_init (Ptrofs.add p_s_tmp (Ptrofs.repr (PGSIZE))))) (Vptr b_n_init p_n_init))).
+   - repeat EExists; entailer.
+   - entailer!. entailer.
+   - repeat forward. 
+    +entailer!. apply c_tmp_bounds with (p_s_init:=p_s_init) (p_s_tmp:=p_s_tmp) (p_n_init:=p_n_init); try rep_lia. 
+    + Exists (c_tmp + 1, Ptrofs.add p_s_tmp (Ptrofs.repr PGSIZE)). entailer!.
+        * split.
+         -- destruct H as [H2 [H3 H4]].
+         assert (Ptrofs.unsigned p_s_init + (c_tmp + 1) * PGSIZE = Ptrofs.unsigned p_s_init + (c_tmp) * PGSIZE + PGSIZE) as H; try rep_lia; rewrite H.
+         assert (Ptrofs.unsigned p_s_init + c_tmp * PGSIZE + PGSIZE =  Ptrofs.unsigned p_s_tmp + PGSIZE) as H5; try rep_lia; rewrite H5.
+         ptrofs_add_simpl_PGSIZE.
+         -- repeat split_lia. 
+                ++ apply c_tmp_bounds_max with (p_s_init:=p_s_init) (p_s_tmp:=p_s_tmp) (p_n_init:=p_n_init); try rep_lia.
+                ++ apply typed_true_offset_val_leq with (b_s_init:=b_s_init) (b_n_init :=b_n_init); unfold PGSIZE; auto.
+        * entailer!. specialize (H0 p_s_tmp); apply H0. split_lia.
+        destruct H1 as [H11 [H12 [H13 H14]]]. rewrite H11. apply Zle_left_rev.
+        assert ( Ptrofs.unsigned p_s_init + c_tmp * PGSIZE + - Ptrofs.unsigned p_s_init =  Ptrofs.unsigned p_s_init + - Ptrofs.unsigned p_s_init + c_tmp * PGSIZE) by rep_lia. 
+        rewrite H1. assert (Ptrofs.unsigned p_s_init + - Ptrofs.unsigned p_s_init = 0) by rep_lia.
+        apply Z.add_nonneg_nonneg; unfold PGSIZE; rep_lia.
+    - forward. Exists c_tmp p_s_tmp. entailer!. split_lia.
+        apply typed_false_offset_val_leq with (b_s_init:=b_s_init) (b_n_init:=b_n_init); try rep_lia; unfold PGSIZE; try rep_lia; auto.
+Qed.
+
+
+(** working in progress*)
+
+Lemma body_freerange_while_loop_spec: semax_body Vprog Gprog f_freerange_while_loop freerange_while_loop_spec.
+Proof. start_function. 
 forward_while
  (EX c_tmp: Z, EX p_s_tmp:ptrofs,
    PROP  (
