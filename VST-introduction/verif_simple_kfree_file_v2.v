@@ -299,15 +299,13 @@ Proof.
    (Vptr b_n_init p_n_init)) eqn:e; auto_contradict.
    destruct v; auto_contradict.
    assert (i = Int.zero \/ i = Int.one). { apply cmp_le_is_either_0_or_1 with (p:= (offset_val ofs (Vptr b_s_init p_s_tmp))) (q:=(Vptr b_n_init p_n_init) ); auto. }
-   destruct H; auto_contradict.
-   ** subst; auto_contradict.
-   ** rewrite H in e. 
-      unfold sem_cmp_pp in e; simpl in e. destruct (eq_block b_s_init b_n_init); auto_contradict.
-      intros. subst.
-      destruct ((negb (Ptrofs.ltu p_n_init (Ptrofs.add p_s_tmp (Ptrofs.repr ofs))))) eqn:e1; auto_contradict.
-      unfold negb in e1. destruct (Ptrofs.ltu p_n_init (Ptrofs.add p_s_tmp (Ptrofs.repr ofs))) eqn:e2; auto_contradict.
-      unfold Ptrofs.ltu in e2. destruct (zlt (Ptrofs.unsigned p_n_init) (Ptrofs.unsigned (Ptrofs.add p_s_tmp (Ptrofs.repr ofs)))) eqn: e3; auto_contradict.
-      try rep_lia.
+   destruct H; subst; auto_contradict.
+   unfold sem_cmp_pp in e; simpl in e. destruct (eq_block b_s_init b_n_init); auto_contradict.
+   intros. subst.
+   destruct ((negb (Ptrofs.ltu p_n_init (Ptrofs.add p_s_tmp (Ptrofs.repr ofs))))) eqn:e1; auto_contradict.
+   unfold negb in e1. destruct (Ptrofs.ltu p_n_init (Ptrofs.add p_s_tmp (Ptrofs.repr ofs))) eqn:e2; auto_contradict.
+   unfold Ptrofs.ltu in e2. destruct (zlt (Ptrofs.unsigned p_n_init) (Ptrofs.unsigned (Ptrofs.add p_s_tmp (Ptrofs.repr ofs)))) eqn: e3; auto_contradict.
+   try rep_lia.
 Qed.
 
 Lemma typed_false_offset_val_leq (b_s_init b_n_init : block) 
@@ -325,16 +323,12 @@ Proof.
    (Vptr b_n_init p_n_init)) eqn:e; auto_contradict.
    destruct v; auto_contradict.
    assert (i = Int.zero \/ i = Int.one). { apply cmp_le_is_either_0_or_1 with (p:= (offset_val ofs (Vptr b_s_init p_s_tmp))) (q:=(Vptr b_n_init p_n_init) ); auto. }
-   destruct H.
-   2: { subst. auto_contradict. }
+   destruct H; subst; auto_contradict.
    subst. unfold sem_cmp_pp in e. simpl in e. destruct (eq_block b_s_init b_n_init); auto_contradict.
-   destruct ((Some (negb (Ptrofs.ltu p_n_init (Ptrofs.add p_s_tmp (Ptrofs.repr ofs)))))) eqn:e1; auto_contradict.
-   destruct b; auto_contradict.
+   destruct ((negb (Ptrofs.ltu p_n_init (Ptrofs.add p_s_tmp (Ptrofs.repr ofs))))) eqn:e1; auto_contradict.
    unfold negb in e1; unfold Ptrofs.ltu in e1. destruct (zlt (Ptrofs.unsigned p_n_init) (Ptrofs.unsigned (Ptrofs.add p_s_tmp (Ptrofs.repr ofs)))) eqn:e2; auto_contradict.
    intros.
-   assert (Ptrofs.unsigned (Ptrofs.add p_s_tmp (Ptrofs.repr ofs)) = Ptrofs.unsigned p_s_tmp + ofs). {
-      apply ptrofs_add_simpl; split_lia. (*apply Z.add_nonneg_nonneg; unfold ofs; try rep_lia.*)
-   }
+   assert (Ptrofs.unsigned (Ptrofs.add p_s_tmp (Ptrofs.repr ofs)) = Ptrofs.unsigned p_s_tmp + ofs) by ptrofs_add_simpl_PGSIZE.
    rewrite <- H2. unfold PGSIZE; apply l.
 Qed.
 
@@ -440,7 +434,6 @@ forward_while
     temp _pa_end (Vptr b_n_init p_n_init)
     )
    SEP (denote_tc_test_order ((Vptr b_s_init (Ptrofs.add p_s_tmp (Ptrofs.repr (PGSIZE))))) (Vptr b_n_init p_n_init))).
-
    - repeat EExists; entailer.
    - entailer!. entailer.
    - repeat forward. 
