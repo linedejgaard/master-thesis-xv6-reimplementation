@@ -125,7 +125,7 @@ Definition while_1_4_spec : ident * funspec :=
         SEP ().
 
 
-Definition while_1_5_spec : ident * funspec :=
+Definition while_1_5_spec : ident * funspec := (* this is including admits.. *)
     DECLARE _while_1_5
     WITH b_n_init:block, p_n_init:ptrofs, b_s_init:block, p_s_init:ptrofs
     PRE [  tptr tvoid, tptr tvoid ]
@@ -992,31 +992,7 @@ forward_while
                     unfold negb in e1. destruct (Ptrofs.ltu p_n_init (Ptrofs.add p_s_tmp (Ptrofs.repr 4096))) eqn:e2; try discriminate; try contradiction.
                     unfold Ptrofs.ltu in e2. destruct (zlt (Ptrofs.unsigned p_n_init) (Ptrofs.unsigned (Ptrofs.add p_s_tmp (Ptrofs.repr 4096)))) eqn: e3; try contradiction; try discriminate.
                     unfold PGSIZE. try rep_lia.
-        * (* admit starts here.. *) 
-        (*apply denote_tc_test_order_step.
-        destruct (sem_cmp_pp Cle (offset_val 4096 (Vptr b_s_init p_s_tmp)) (Vptr b_n_init p_n_init)) eqn:e; try discriminate; try contradiction.
-        destruct v; try contradiction; try discriminate.
-        assert (i = Int.zero \/ i = Int.one). {
-            apply cmp_le_is_either_0_or_1 with (p:= (offset_val PGSIZE (Vptr b_s_init p_s_tmp))) (q:=(Vptr b_n_init p_n_init) ); auto.
-        }
-        destruct H1; rewrite H1 in HRE; try contradiction; try discriminate.
-        rewrite H1 in e. unfold sem_cmp_pp in e; simpl in e.
-        destruct (eq_block b_s_init b_n_init); try discriminate; try contradiction.
-        unfold negb in e. destruct (Ptrofs.ltu p_n_init (Ptrofs.add p_s_tmp (Ptrofs.repr 4096))) eqn:e2; try discriminate; try contradiction.
-        unfold Ptrofs.ltu in e2. destruct (zlt (Ptrofs.unsigned p_n_init) (Ptrofs.unsigned (Ptrofs.add p_s_tmp (Ptrofs.repr 4096)))) eqn: e3; try contradiction; try discriminate.
-        assert ( Ptrofs.unsigned (Ptrofs.add p_s_tmp (Ptrofs.repr PGSIZE)) = )
-        rewrite Ptrofs.unsigned_repr; try rep_lia.
-                    unfold PGSIZE. try rep_lia.
-
-
-        apply denote_tc_test_order_step.
-        apply 
-        rewrite Ptrofs.add_unsigned.
-        rewrite Ptrofs.unsigned_repr.
-        assert (Ptrofs.unsigned p_s_tmp + 2 * PGSIZE <= Ptrofs.unsigned p_n_init). { admit. }
-        entailer.
-        by lia.*)
-        admit. (* fix denote_tc_test_order..*)
+        * admit. (* fix denote_tc_test_order..*)
     - forward. Exists c_tmp. Exists p_s_tmp. entailer!. 
         split; try rep_lia. 
         destruct (sem_cmp_pp Cle (offset_val 4096 (Vptr b_s_init p_s_tmp)) (* find a solution for magic number 4096 *)
