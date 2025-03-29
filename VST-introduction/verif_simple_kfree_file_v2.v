@@ -7,7 +7,6 @@ Definition Vprog : varspecs. mk_varspecs prog. Defined.
 Local Open Scope logic.
 
 Definition t_run := Tstruct _run noattr.
-
 Definition t_struct_kmem := Tstruct _struct_kmem noattr.
 
 (************** pointer comparison **************'*)
@@ -208,6 +207,37 @@ Definition while_1_5_spec : ident * funspec := (* this is not including admits..
         SEP (denote_tc_test_order (Vptr b_s_init (Ptrofs.add p_s_final (Ptrofs.repr PGSIZE)))
         (Vptr b_n_init p_n_init)).
 
+(************** freerange kfree simple ***************)
+Definition freerange_while_loop_spec : ident * funspec := (* this is not including admits.. *)
+    DECLARE _freerange_while_loop
+    WITH b_n_init:block, p_n_init:ptrofs, b_s_init:block, p_s_init:ptrofs
+    PRE [  tptr tvoid, tptr tvoid ]
+        PROP (
+                0 <= Ptrofs.unsigned p_s_init <= Ptrofs.unsigned p_n_init /\
+                Z.add (Ptrofs.unsigned p_n_init) PGSIZE <= Int.max_signed /\ 
+                Z.add (Ptrofs.unsigned p_s_init) PGSIZE <= Int.max_signed 
+            ) (* the highest number is s + PGSIZE when it fails. The highest s + PGSIZE when it succeeds is n, so the highest after this is n + PGSIZE*)
+        PARAMS (Vptr b_s_init p_s_init; Vptr b_n_init p_n_init)
+        SEP (
+         denote_tc_test_order (Vptr b_s_init (Ptrofs.add p_s_init (Ptrofs.repr PGSIZE))) (Vptr b_n_init p_n_init) &&
+         (!! (forall p_s_tmp,
+                  Ptrofs.unsigned p_s_init <= Ptrofs.unsigned p_s_tmp <= Ptrofs.unsigned p_n_init ->
+                  ((denote_tc_test_order (Vptr b_s_init (Ptrofs.add p_s_tmp (Ptrofs.repr PGSIZE))) (Vptr b_n_init p_n_init)) |--
+                     (denote_tc_test_order (Vptr b_s_init (Ptrofs.add p_s_tmp (Ptrofs.repr (PGSIZE + PGSIZE)))) (Vptr b_n_init p_n_init)))
+         ))
+        )
+    POST [ tint ]
+    EX c:Z, EX p_s_final:ptrofs,
+        PROP (
+            Ptrofs.unsigned p_s_final = Z.add (Ptrofs.unsigned p_s_init) (Z.mul c PGSIZE) /\ 
+            0 <= c /\ 
+            (Ptrofs.unsigned p_s_final) <= (Ptrofs.unsigned p_n_init) /\ 
+            (Ptrofs.unsigned p_n_init) < Z.add (Ptrofs.unsigned p_s_final) PGSIZE
+            )
+        RETURN (Vint (Int.repr (c)))
+        SEP (denote_tc_test_order (Vptr b_s_init (Ptrofs.add p_s_final (Ptrofs.repr PGSIZE))) (Vptr b_n_init p_n_init)
+        ).
+
 
 (************************ Gprog  *************************)
 Definition Gprog : funspecs := [
@@ -331,6 +361,8 @@ Proof.
    assert (Ptrofs.unsigned (Ptrofs.add p_s_tmp (Ptrofs.repr ofs)) = Ptrofs.unsigned p_s_tmp + ofs) by ptrofs_add_simpl_PGSIZE.
    rewrite <- H2. unfold PGSIZE; apply l.
 Qed.
+
+
 
 (************************ Proofs  *************************)
 
