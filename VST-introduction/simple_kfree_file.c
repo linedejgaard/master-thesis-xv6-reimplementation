@@ -57,8 +57,8 @@ int while_1_5(void *pa_start, void *pa_end) {  // admit on pointer
 
 void freerange_while_loop(void *pa_start, void *pa_end) {  // admit on pointer
   while ((char*)pa_start + PGSIZE <= (char*)pa_end) { 
-      pa_start = (char*)pa_start + PGSIZE;
       kfree1(pa_start);
+      pa_start = (char*)pa_start + PGSIZE;
   }
 }
 
