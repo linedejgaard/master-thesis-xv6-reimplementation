@@ -587,17 +587,10 @@ Definition freerange_while_loop_spec : ident * funspec := (* this is not includi
                |-- (denote_tc_test_order (Vptr b_s_init (Ptrofs.add p_s_tmp (Ptrofs.repr (PGSIZE + PGSIZE)))) (Vptr b_n_init p_n_init))
          )))
          &&
-         (((freelistrep sh n original_freelist_pointer (*&&
-            (!! forall p_s_tmp, Ptrofs.unsigned p_s_init <= Ptrofs.unsigned p_s_tmp + PGSIZE <= Ptrofs.unsigned p_n_init -> 
-               freelistrep sh n (Vptr b_s_init p_s_tmp) |-- freelistrep sh (S n) (Vptr b_s_init (Ptrofs.add p_s_tmp (Ptrofs.repr PGSIZE))))*))
-            (** available_range sh (Vptr b_s_init p_s_init) (Vptr b_n_init p_n_init) (compute_c (Vptr b_s_init p_s_init) (Vptr b_n_init p_n_init) PGSIZE)*)
+         (((freelistrep sh n original_freelist_pointer)
             * available_range sh (Vptr b_s_init p_s_init) (Vptr b_n_init p_n_init) PGSIZE
             * (data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem))
-               (*((data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem)) &&
-               ((!! forall p_s_tmp, Ptrofs.unsigned p_s_init <= Ptrofs.unsigned p_s_tmp + PGSIZE <= Ptrofs.unsigned p_n_init -> 
-                  (data_at sh t_struct_kmem (Vint (Int.repr xx), (Vptr b_s_init p_s_init)) (gv _kmem)) |-- 
-                  (data_at sh t_struct_kmem (Vint (Int.repr xx), (Vptr b_s_init (Ptrofs.add p_s_tmp (Ptrofs.repr PGSIZE)))) (gv _kmem))))
-         )*))))
+               )))
     POST [ tvoid ]
     EX c_final:Z, EX p_s_final:ptrofs,
         PROP (
@@ -781,15 +774,9 @@ forward_while
     ) 
    SEP (
       denote_tc_test_order ((Vptr b_s_init (Ptrofs.add p_s_tmp (Ptrofs.repr (PGSIZE))))) (Vptr b_n_init p_n_init) &&
-      (*(!! forall p_s_tmp, Ptrofs.unsigned p_s_init <= Ptrofs.unsigned p_s_tmp <= Ptrofs.unsigned p_n_init -> 
-             malloc_compatible (sizeof t_run) (Vptr b_s_init p_s_tmp)) &&*)
       (freelistrep sh (Nat.add (Z.to_nat c_tmp) n) (head) *
-      (*available_range sh (Vptr b_s_init p_s_tmp) (Vptr b_n_init p_n_init) (compute_c (Vptr b_s_init p_s_tmp) (Vptr b_n_init p_n_init) PGSIZE) **)
       available_range sh (Vptr b_s_init p_s_tmp) (Vptr b_n_init p_n_init) PGSIZE *
       data_at sh t_struct_kmem (Vint (Int.repr xx), head) (gv _kmem)
-        (* (data_at sh (t_run) nullval (Vptr b_s_init (Ptrofs.add p_s_tmp (Ptrofs.repr PGSIZE)))) *
-         (data_at sh t_struct_kmem (Vint (Int.repr xx), (head)) (gv _kmem))*)
-        (* I havent written anything baout freelistrep nor data_at with the kmem.. *)
       )
       )
   )%assert.
