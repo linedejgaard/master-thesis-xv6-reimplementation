@@ -26,6 +26,7 @@ void *kalloc1(void)
   return (void*)r;
 }
 
+// not added to client 1 yet
 void freerange_while_loop(void *pa_start, void *pa_end) {  // admit on pointer
   while ((char*)pa_start + PGSIZE <= (char*)pa_end) { 
       kfree1(pa_start);
