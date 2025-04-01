@@ -8,6 +8,73 @@ Definition Vprog : varspecs. mk_varspecs prog. Defined.
 
 Local Open Scope logic.
 
+(************************ freelistrep *********************************)
+Fixpoint freelistrep (sh: share) (n: nat) (p: val) : mpred :=
+ match n with
+ | S n' => EX next: val, 
+        !! malloc_compatible (sizeof t_run) p &&  (* p is compatible with a memory block of size sizeof theader. *)
+        data_at sh t_run next p * (* at the location p, there is a t_run structure with the value next *)
+        freelistrep sh n' next (* "*" ensures no loops... *)
+ | O => !! (p = nullval) && emp
+ end.
+
+Arguments freelistrep sh n p : simpl never.
+
+Lemma freelistrep_local_prop: forall sh n p, 
+   freelistrep sh n p |--  !! (is_pointer_or_null p /\ (n=0<->p=nullval) /\ (n>0<->isptr p))%nat.
+Proof.
+  intros.
+  induction n as [| n' IH].
+  - unfold freelistrep. entailer!. split; auto.
+    + split; auto.
+    + split; try lia. intros. simpl in *. inversion H.
+  - unfold freelistrep. destruct p; Intro y; entailer!. split.
+    + split; intros; inversion H2.
+    + split; intros; auto. try lia. 
+   Qed.
+#[export] Hint Resolve freelistrep_local_prop : saturate_local.
+
+
+Lemma freelistrep_valid_pointer:
+  forall sh n p, 
+  readable_share sh ->
+   freelistrep sh n p |-- valid_pointer p.
+Proof.
+  intros. destruct n.
+  - unfold freelistrep. entailer!.
+  - unfold freelistrep. Intro y; entailer.
+Qed. 
+#[export] Hint Resolve freelistrep_valid_pointer : valid_pointer.
+
+
+Lemma freelistrep_null: forall sh n x,
+       x = nullval ->
+       freelistrep sh n x = !! (n = O) && emp.
+Proof.
+   intros.
+   destruct n; unfold freelistrep; fold freelistrep.
+   autorewrite with norm. auto.
+   apply pred_ext.
+   Intros y. entailer. 
+   destruct n; entailer!; try discriminate H0. 
+Qed.
+
+
+Lemma freelistrep_nonnull: forall n sh x,
+   x <> nullval ->
+   freelistrep sh n x =
+   EX m : nat, EX next:val,
+          !! (n = S m) && !! malloc_compatible (sizeof t_run) x && data_at sh t_run next x * freelistrep sh m next.
+Proof.
+   intros; apply pred_ext.
+   - destruct n. 
+         + unfold freelistrep. entailer!.
+         + unfold freelistrep; fold freelistrep. Intros y.
+         Exists n y. entailer!.
+   - Intros m y. rewrite H0. unfold freelistrep at 2; fold freelistrep. Exists y. entailer!.
+Qed.
+
+
 (************************ specs *********************************)
 Definition kfree1_spec := 
     DECLARE _kfree1
@@ -16,7 +83,7 @@ Definition kfree1_spec :=
           PROP(
                writable_share sh /\
                is_pointer_or_null original_freelist_pointer /\
-               (Nat.le (S O) (number_structs_available)) (* there is at least one available *)
+               (Nat.le (S O) (number_structs_available) ) (* there is at least one available *)
                ) 
           PARAMS (new_head) GLOBALS(gv)
           SEP (
@@ -25,7 +92,7 @@ Definition kfree1_spec :=
              (data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem) )
           )
        POST [ tvoid ]
-          PROP()
+          PROP(isptr new_head)
           RETURN () 
           SEP (
              freelistrep sh (S n) new_head *
@@ -35,19 +102,35 @@ Definition kfree1_spec :=
 
 Definition kalloc1_spec := (* this doesn't assume that the list is empty, but that q is either a pointer or a nullval *)
 DECLARE _kalloc1
-WITH sh : share, original_freelist_pointer:val, xx:Z, next:val, gv:globals
+WITH sh : share, original_freelist_pointer:val, xx:Z, n:nat, next:val, gv:globals
 PRE [ ]
-    PROP(writable_share sh; is_pointer_or_null next) 
+    PROP(writable_share sh /\ 
+        ((Nat.eq O n /\ original_freelist_pointer = nullval) \/ (Nat.lt O n /\ isptr original_freelist_pointer)) /\
+        is_pointer_or_null next
+    ) 
     PARAMS () GLOBALS(gv)
-    SEP ( data_at sh (t_run) next original_freelist_pointer;
+    SEP ( 
+        (*data_at sh t_run next original_freelist_pointer **)
+        freelistrep sh n original_freelist_pointer * (* TODO: fix this.. *)
         data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem)) (* q can be nullval meaning that there is only one run *)
 POST [ tptr tvoid ]
     PROP()
     RETURN (original_freelist_pointer) (* we return the head like in the pop function*)
     SEP (
-        data_at sh (t_run) next original_freelist_pointer;
-        data_at sh t_struct_kmem (Vint (Int.repr xx), next) (gv _kmem)
+        if (eq_dec original_freelist_pointer nullval) then
+        (
+            (*data_at sh t_run next original_freelist_pointer **)
+            freelistrep sh n original_freelist_pointer * (* TODO: fix this.. *)
+            data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem) (* q can be nullval meaning that there is only one run *)
+        )
+        else 
+            (
+                data_at sh t_run next original_freelist_pointer * (* TODO: fix this.. *)
+                freelistrep sh (Nat.sub n (S O)) next *
+                data_at sh t_struct_kmem (Vint (Int.repr xx), next) (gv _kmem)
+            )
         ).
+
 
 Definition client1_spec := (* kind of pop *)
 DECLARE _client1
@@ -56,8 +139,10 @@ PRE [ tptr tvoid ]
     PROP(
         writable_share sh /\
         is_pointer_or_null new_head /\
-        is_pointer_or_null original_freelist_pointer /\
-        (Nat.le (S O) number_structs_available)
+        (*is_pointer_or_null original_freelist_pointer /\*)
+        (Nat.le (S O) number_structs_available) /\
+
+        ((Nat.eq O n /\ original_freelist_pointer = nullval) \/ (Nat.lt O n /\ isptr original_freelist_pointer))
     ) 
     PARAMS (new_head) GLOBALS(gv)
     SEP ( 
@@ -67,7 +152,7 @@ PRE [ tptr tvoid ]
     )
 POST [ tptr tvoid ]
     PROP()
-        RETURN (original_freelist_pointer) (* we return the head like in the pop function*)
+        RETURN (new_head) (* we return the head like in the pop function*)
         SEP (
             freelistrep sh n original_freelist_pointer *
             data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem)
@@ -99,29 +184,28 @@ Qed.
 
 
 Lemma body_kalloc1: semax_body Vprog Gprog f_kalloc1 kalloc1_spec.
-Proof. start_function. forward. (*unfold abbreviate in POSTCONDITION.*)
-forward_if (PROP ()
-            LOCAL (temp _r original_freelist_pointer; 
-                  temp _t'1 (if eq_dec original_freelist_pointer nullval 
-                              then nullval else next); gvars gv)
-            SEP (data_at sh t_run next original_freelist_pointer; 
-               data_at sh t_struct_kmem (Vint (Int.repr xx), next) (gv _kmem))).
-- forward. forward. entailer!. destruct (eq_dec original_freelist_pointer nullval); auto. subst. inversion H0.
-- forward. entailer!. inversion H1. inversion H0. 
-- destruct (eq_dec original_freelist_pointer nullval).
-   + forward. 
-   + forward. 
-Qed.
+Proof. start_function. Intros. destruct H; forward. (*unfold abbreviate in POSTCONDITION. *)
+Admitted.
 
 
 Lemma body_client1: semax_body Vprog Gprog f_client1 client1_spec.
 Proof.
 start_function.
 forward_call (sh, new_head, original_freelist_pointer, xx, gv, n, PGSIZE, number_structs_available). (* call kfree1 *)
-- destruct H as [H1 [H2 [H3 H4]]]; split; auto.
-- forward_call (sh, new_head, xx, gv, S n, next). (* call kalloc1 *)
-    + entailer!.
-    + destruct H as [H1 [H2 [H3 H4]]]; split; auto.
-    + (*unfold abbreviate in POSTCONDITION.*) forward. destruct (0 <? (S n))%nat eqn:en; auto_contradict.
-    admit.
+- destruct H as [H1 [H2 [H3 H4]]]; split; auto. destruct H4.
+    + destruct H. rewrite H0. unfold is_pointer_or_null; unfold nullval; simpl; auto.
+    + destruct H. destruct original_freelist_pointer; auto_contradict. unfold is_pointer_or_null; auto.
+- forward_call (sh, new_head, xx, (S n), original_freelist_pointer, gv).
+    + entailer!. 
+    + destruct H as [H1 [H2 [H3 H4]]]; split; auto. split.
+        * right. unfold Nat.lt. split; try rep_lia. unfold is_pointer_or_null in H2. destruct new_head; auto.
+        * destruct n. 
+            -- destruct H4; destruct H; subst; auto. unfold is_pointer_or_null; unfold nullval; simpl; auto.
+            -- destruct H4.
+                ++ destruct H; subst; auto. unfold is_pointer_or_null; unfold nullval; simpl; auto.
+                ++ destruct H. unfold is_pointer_or_null. destruct original_freelist_pointer; try inversion H4; auto. 
+    + forward. entailer. destruct (eq_dec new_head nullval).
+        * rewrite e in H0; auto_contradict.
+        * entailer. assert ((S n - 1)%nat = n); try rep_lia. rewrite H10. entailer!. admit.
 Admitted.
+    
