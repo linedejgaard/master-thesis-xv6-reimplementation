@@ -154,6 +154,8 @@ POST [ tptr tvoid ]
     PROP()
         RETURN (new_head) (* we return the head like in the pop function*)
         SEP (
+            data_at sh t_run original_freelist_pointer new_head *
+            available sh (number_structs_available - 1) (add_offset new_head PGSIZE) PGSIZE *
             freelistrep sh n original_freelist_pointer *
             data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem)
             ).
@@ -206,6 +208,6 @@ forward_call (sh, new_head, original_freelist_pointer, xx, gv, n, PGSIZE, number
                 ++ destruct H. unfold is_pointer_or_null. destruct original_freelist_pointer; try inversion H4; auto. 
     + forward. entailer. destruct (eq_dec new_head nullval).
         * rewrite e in H0; auto_contradict.
-        * entailer. assert ((S n - 1)%nat = n); try rep_lia. rewrite H10. entailer!. admit.
-Admitted.
+        * entailer. assert ((S n - 1)%nat = n); try rep_lia. rewrite H10. entailer!.
+Qed.
     
