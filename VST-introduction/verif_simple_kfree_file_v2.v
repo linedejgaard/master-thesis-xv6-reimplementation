@@ -374,9 +374,7 @@ Proof.
   intros. unfold add_offset. reflexivity.
 Qed.
 
-
-
-Lemma compute_c_correct1:
+(*Lemma compute_c_correct1:
   forall b (p1 p2: ptrofs) size,
    (*0 < size ->
     Ptrofs.unsigned p1 <= Ptrofs.unsigned p2 -> *)
@@ -397,6 +395,30 @@ Proof.
       assert ((1*((Ptrofs.unsigned p2 - Ptrofs.unsigned p1) / size))%Z = ((Ptrofs.unsigned p2 - Ptrofs.unsigned p1) / size)) by rep_lia.
       apply Z.le_trans with (m:= (size * ((Ptrofs.unsigned p2 - Ptrofs.unsigned p1) / size))%Z); try rep_lia.
       rewrite <- H2 at 1. apply Z.mul_le_mono_nonneg_r; try rep_lia. apply Z_div_nonneg_nonneg; try rep_lia.
+   - assert (0 <= (Ptrofs.unsigned p2 - Ptrofs.unsigned p1) mod size) by (apply Z_mod_nonneg_nonneg; try rep_lia).
+      rewrite em in H2; auto_contradict. 
+   Qed.*)
+
+Lemma compute_c_correct1:
+forall b (p1 p2: ptrofs) size,
+   (*0 < size ->
+   Ptrofs.unsigned p1 <= Ptrofs.unsigned p2 -> *)
+   0 < size ->
+   Ptrofs.unsigned p1 <= Ptrofs.unsigned p2 ->
+   Ptrofs.unsigned p1 + (size * (compute_c (Vptr b p1) (Vptr b p2) size)) <= Ptrofs.unsigned p2.
+Proof.
+   intros.
+   unfold compute_c.
+   destruct (size <=? 0); try rep_lia.
+   unfold Ptrofs.ltu; destruct (zlt (Ptrofs.unsigned p2) (Ptrofs.unsigned p1)) eqn:e1; try rep_lia.
+   assert ((Ptrofs.unsigned p2 - Ptrofs.unsigned p1) = size * ((Ptrofs.unsigned p2 - Ptrofs.unsigned p1) / size) + (Ptrofs.unsigned p2 - Ptrofs.unsigned p1) mod size) by (apply Z.div_mod; rep_lia). 
+   destruct ((Ptrofs.unsigned p2 - Ptrofs.unsigned p1) mod size) eqn:em; auto_contradict.
+   - rewrite Z.add_comm. rewrite Z.le_add_le_sub_r. rewrite H1 at 2. rewrite Z.add_0_r.
+   assert ((1*((Ptrofs.unsigned p2 - Ptrofs.unsigned p1) / size))%Z = ((Ptrofs.unsigned p2 - Ptrofs.unsigned p1) / size)) by rep_lia. 
+   rewrite <- H2 at 1. apply Z.mul_le_mono_nonneg_l; try rep_lia.
+   - rewrite Z.add_comm; rewrite Z.le_add_le_sub_r; rewrite H1 at 2.
+      assert ((1*((Ptrofs.unsigned p2 - Ptrofs.unsigned p1) / size))%Z = ((Ptrofs.unsigned p2 - Ptrofs.unsigned p1) / size)) by rep_lia.
+      apply Z.le_trans with (m:= (size * ((Ptrofs.unsigned p2 - Ptrofs.unsigned p1) / size))%Z); try rep_lia.
    - assert (0 <= (Ptrofs.unsigned p2 - Ptrofs.unsigned p1) mod size) by (apply Z_mod_nonneg_nonneg; try rep_lia).
       rewrite em in H2; auto_contradict. 
    Qed.
@@ -490,13 +512,94 @@ Lemma ensure_comparable_range_sound:
 Proof.
   intros.
   unfold ensure_comparable_range.
-
   assert (Vundef <> Vlong Int64.zero) by (unfold not; intros; auto_contradict).
-
   destruct p_start; try (rewrite FF_andp); 
   destruct p_end; try (rewrite FF_andp); auto_contradict.
   destruct (sameblock (Vptr b i) (Vptr b0 i0)); try rep_lia; auto.
 Qed.
+
+Lemma contradict_ec :
+  forall pq pp size,
+    0 < size ->
+    Ptrofs.unsigned pq >= Ptrofs.unsigned pp ->
+    Z.to_nat ((Ptrofs.unsigned pq - Ptrofs.unsigned pp) / size + 1) = 0%nat ->
+    False.
+Proof.
+  intros pq pp size Hsize Hge Hec.
+  assert (diff_ge_0 : Ptrofs.unsigned pq - Ptrofs.unsigned pp >= 0) by lia.
+  assert (div_ge_0 : 0 <= (Ptrofs.unsigned pq - Ptrofs.unsigned pp) / size) by (apply Z_div_nonneg_nonneg; try rep_lia).
+  assert (plus_ge_1 : 1 <= (Ptrofs.unsigned pq - Ptrofs.unsigned pp) / size + 1 ); try rep_lia.
+Qed.
+
+Lemma ensure_comparable_range_not_step:
+  forall sh (bp bq: block) (pp pq pp_tmp: ptrofs) size,
+    (ensure_comparable_range sh (Vptr bp pp) (Vptr bq pq) size) |-- denote_tc_test_order (Vptr bp pp) (Vptr bq pq).
+Proof.
+   intros.
+   unfold ensure_comparable_range.
+   destruct (sameblock (Vptr bp pp) (Vptr bq pq)) eqn:eb.
+   - apply sameblock_true in eb. subst.
+      destruct (Z.to_nat (compute_c (Vptr bq pp) (Vptr bq pq) size + 1)) eqn:ec;
+      unfold ensure_comparable.
+      + entailer. auto_contradict.
+      + apply andp_left1. entailer.
+   - entailer. auto_contradict.
+Qed.
+
+Lemma ensure_comparable_range_step:
+  forall sh (bp bq: block) (pp pq: ptrofs) size,
+    0 < size ->
+    (ensure_comparable_range sh (Vptr bp pp) (Vptr bq pq) size) |-- denote_tc_test_order (add_offset (Vptr bp pp) size) (Vptr bq pq).
+Proof.
+   intros.
+   unfold ensure_comparable_range.
+   destruct (sameblock (Vptr bp pp) (Vptr bq pq)) eqn:eb.
+   - apply sameblock_true in eb. subst.
+      destruct (Z.to_nat (compute_c (Vptr bq pp) (Vptr bq pq) size + 1)) eqn:ec;
+      unfold ensure_comparable.
+      + entailer. auto_contradict.
+      + fold ensure_comparable. apply andp_left2. destruct n eqn:en.
+         * unfold ensure_comparable. entailer!. unfold add_offset, nullval in H0; simpl in H0. inversion H0.
+         * unfold ensure_comparable; fold ensure_comparable. apply andp_left1. entailer.
+   - unfold denote_tc_test_order. unfold test_order_ptrs. apply sameblock_false in eb.
+      destruct (add_offset (Vptr bp pp) size); entailer; auto_contradict.
+Qed.
+
+
+
+Lemma ensure_comparable_range_arbitrary:
+  forall sh (bp bq: block) (pp pq pp_tmp: ptrofs) (c size:Z),
+    0 < size ->
+    0 <= c ->
+    Ptrofs.unsigned pp_tmp = Ptrofs.unsigned pp + c * size ->
+    Ptrofs.unsigned pp_tmp <= Ptrofs.unsigned pq ->
+    (ensure_comparable_range sh (Vptr bp pp) (Vptr bq pq) size) |-- denote_tc_test_order (add_offset (Vptr bp pp_tmp) size) (Vptr bq pq).
+Proof.
+   intros.
+   induction c; auto_contradict. 
+   - rewrite Z.mul_0_l in H1. rewrite Z.add_0_r in H1.
+   assert (pp_tmp = pp). { admit. } subst.
+      apply ensure_comparable_range_step; auto.
+   - unfold ensure_comparable_range. destruct (sameblock (Vptr bp pp) (Vptr bq pq)) eqn:eb.
+   2: {
+      unfold nullval. simpl. 
+      assert (Vptr bp pp <> Vlong Int64.zero). { unfold not. intros. inversion H3. }
+      assert ((Vptr bp pp = Vlong Int64.zero) <-> False). { split; intros; auto_contradict. }
+      rewrite H4. entailer.
+   }
+   apply sameblock_true in eb. rewrite eb in *.
+   destruct (Z.to_nat (compute_c (Vptr bq pp) (Vptr bq pq) size + 1)) eqn:ec.
+   + admit. (*contradiction*) 
+   + (*rewrite H1. simpl. apply andp_left2.
+      induction n; intros.
+      * simpl. entailer!. unfold nullval in H3. inversion H3.
+      * unfold compute_c in ec. destruct (size <=? 0) eqn:es; auto_contradict.
+   
+   unfold ensure_comparable; fold ensure_comparable. unfold Ptrofs.ltu in ec; destruct (zlt (Ptrofs.unsigned pq) (Ptrofs.unsigned pp)) eqn:elt; auto_contradict.
+   assert (Z.to_nat ((Ptrofs.unsigned pq - Ptrofs.unsigned pp) / size + 1) = S (Z.to_nat ((Ptrofs.unsigned pq - Ptrofs.unsigned pp) / size))); try rep_lia.
+   assert (Z.to_nat(((Ptrofs.unsigned pq - Ptrofs.unsigned pp) / size)) = S n); try rep_lia.*)
+   admit.
+Admitted.
 
 (*Lemma ensure_comparable_monotone:
   forall sh n1 n2 p q size,
@@ -677,31 +780,28 @@ Definition freerange_while_loop_spec : ident * funspec := (* this is not includi
             ) (* the highest number is s + PGSIZE when it fails. The highest s + PGSIZE when it succeeds is n, so the highest after this is n + PGSIZE*)
         PARAMS (Vptr b_s_init p_s_init; Vptr b_n_init p_n_init) GLOBALS (gv)
         SEP (
-         denote_tc_test_order (Vptr b_s_init (Ptrofs.add p_s_init (Ptrofs.repr PGSIZE))) (Vptr b_n_init p_n_init) &&
-         (*(denote_tc_test_order (Vptr b_s_init (Ptrofs.add p_s_init (Ptrofs.repr PGSIZE))) (Vptr b_n_init p_n_init) &&
-         (!! (forall p_s_tmp,
-            Ptrofs.unsigned p_s_init <= Ptrofs.unsigned p_s_tmp <= Ptrofs.unsigned p_n_init ->
-            (denote_tc_test_order (Vptr b_s_init (Ptrofs.add p_s_tmp (Ptrofs.repr PGSIZE))) (Vptr b_n_init p_n_init)) 
-               |-- (denote_tc_test_order (Vptr b_s_init (Ptrofs.add p_s_tmp (Ptrofs.repr (PGSIZE + PGSIZE)))) (Vptr b_n_init p_n_init))
-         )))
-         &&*)
+         ensure_comparable_range sh (Vptr b_s_init p_s_init) (Vptr b_n_init p_n_init) PGSIZE 
+         (*denote_tc_test_order (Vptr b_s_init (Ptrofs.add p_s_init (Ptrofs.repr PGSIZE))) (Vptr b_n_init p_n_init)*) &&
          (((freelistrep sh n original_freelist_pointer)
             * available_range sh (Vptr b_s_init p_s_init) (Vptr b_n_init p_n_init) PGSIZE
             * (data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem))
                )))
     POST [ tvoid ]
-    EX c_final:Z, EX p_s_final:ptrofs,
+    EX c_final:Z, EX p_s_final:ptrofs, EX curr_head:val,
         PROP (
             Ptrofs.unsigned p_s_final = Z.add (Ptrofs.unsigned p_s_init) (Z.mul c_final PGSIZE) /\ 
             0 <= c_final /\ 
             (Ptrofs.unsigned p_s_final) <= (Ptrofs.unsigned p_n_init) /\ 
-            (Ptrofs.unsigned p_n_init) < Z.add (Ptrofs.unsigned p_s_final) PGSIZE
+            (Ptrofs.unsigned p_n_init) < Z.add (Ptrofs.unsigned p_s_final) PGSIZE /\
+
+            ((curr_head = original_freelist_pointer /\ c_final = 0) \/ (curr_head = (Vptr b_s_init (Ptrofs.sub p_s_final (Ptrofs.repr PGSIZE)))  /\ c_final <> 0))
             )
         RETURN ()
-        SEP (denote_tc_test_order (Vptr b_s_init (Ptrofs.add p_s_final (Ptrofs.repr PGSIZE))) (Vptr b_n_init p_n_init) &&
+        SEP ((*denote_tc_test_order (Vptr b_s_init (Ptrofs.add p_s_final (Ptrofs.repr PGSIZE))) (Vptr b_n_init p_n_init) &&*)
             if (0<?c_final) then
-               (freelistrep sh (Nat.add (Z.to_nat c_final) n) (Vptr b_s_init p_s_final) *
-               data_at sh t_struct_kmem (Vint (Int.repr xx), (Vptr b_s_init p_s_final)) (gv _kmem))
+               (freelistrep sh (Nat.add (Z.to_nat c_final) n) (curr_head) *
+               available_range sh (Vptr b_s_init p_s_final) (Vptr b_n_init p_n_init) PGSIZE *
+               data_at sh t_struct_kmem (Vint (Int.repr xx), (curr_head)) (gv _kmem))
             else
             (((freelistrep sh n original_freelist_pointer)
             * (data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem))
@@ -837,7 +937,7 @@ forward_while
     )
    SEP (denote_tc_test_order ((Vptr b_s_init (Ptrofs.add p_s_tmp (Ptrofs.repr (PGSIZE))))) (Vptr b_n_init p_n_init))).
    - repeat EExists; entailer. (* the precondition (of the whole loop) implies the loop invariant *)
-   - entailer!. entailer. (* the loop-condition expression type-checks (i.e., guarantees to evalu- ate successfully) *)
+   - entailer!. entailer. (* the loop-condition expression type-checks (i.e., guarantees to evaluate successfully) *)
    - repeat forward. (* the postcondition of the loop body implies the loop invariant *)
     +entailer!. apply c_tmp_bounds with (p_s_init:=p_s_init) (p_s_tmp:=p_s_tmp) (p_n_init:=p_n_init); try rep_lia. 
     + Exists (c_tmp + 1, Ptrofs.add p_s_tmp (Ptrofs.repr PGSIZE)). entailer!.
@@ -860,6 +960,7 @@ Qed.
 
 (** working in progress*)
 
+
 Lemma body_freerange_while_loop_spec: semax_body Vprog Gprog f_freerange_while_loop freerange_while_loop_spec.
 Proof. start_function. 
 forward_while
@@ -877,14 +978,14 @@ forward_while
       temp _pa_end (Vptr b_n_init p_n_init)
     ) 
    SEP (
-      denote_tc_test_order ((Vptr b_s_init (Ptrofs.add p_s_tmp (Ptrofs.repr (PGSIZE))))) (Vptr b_n_init p_n_init) &&
+      ensure_comparable_range sh (Vptr b_s_init p_s_init) (Vptr b_n_init p_n_init) PGSIZE  &&
       (freelistrep sh (Nat.add (Z.to_nat c_tmp) n) (curr_head) *
       available_range sh (Vptr b_s_init p_s_tmp) (Vptr b_n_init p_n_init) PGSIZE *
       data_at sh t_struct_kmem (Vint (Int.repr xx), curr_head) (gv _kmem))
       )
   )%assert.
-  - Exists 0 p_s_init original_freelist_pointer. entailer. 
-   - entailer. apply andp_left1. entailer.
+   - Exists 0 p_s_init original_freelist_pointer. entailer. 
+   - entailer. apply andp_left1. entailer. apply ensure_comparable_range_arbitrary with (c:=c_tmp); try rep_lia. destruct H0; unfold PGSIZE; auto.
    - forward_call (sh, (Vptr b_s_init p_s_tmp), curr_head, xx, gv, (Nat.add (Z.to_nat c_tmp) n), PGSIZE, (Z.to_nat (compute_c (Vptr b_s_init p_s_tmp) (Vptr b_n_init p_n_init) PGSIZE))).
       + apply andp_left2. sep_apply available_range_correct. entailer!.
       + destruct H as [H1 [H2 [H3 [H4 H5]]]]; destruct H0 as [H01 [H02 [H03 [H04 H05]]]]; split; auto.
@@ -939,7 +1040,7 @@ forward_while
             rewrite H0; auto. 
             split; auto; rep_lia.
         * apply andp_right.
-         -- admit.
+         --  admit. (* ensure comparable*)
          -- assert (S (Z.to_nat c_tmp + n) = (Z.to_nat (c_tmp + 1) + n)%nat) by rep_lia.
             rewrite H7. entailer!.
             unfold available_range.
@@ -952,44 +1053,57 @@ forward_while
                unfold Ptrofs.ltu. destruct (zlt (Ptrofs.unsigned p_n_init) (Ptrofs.unsigned p_s_tmp)) eqn:e1.
                ** try rep_lia. 
                ** destruct (zlt (Ptrofs.unsigned p_n_init) (Ptrofs.unsigned (Ptrofs.add p_s_tmp (Ptrofs.repr PGSIZE)))) eqn:e2.
-                  --- (* admit starts here*)  assert ((Ptrofs.unsigned p_n_init - (Ptrofs.unsigned p_s_tmp + PGSIZE)) / PGSIZE = 0). {
+                  --- assert ((Ptrofs.unsigned p_n_init - (Ptrofs.unsigned p_s_tmp + PGSIZE)) / PGSIZE = 0). {
                      apply Zdiv_small; apply typed_true_offset_val_leq with (b_s_init:=b_s_init) (b_n_init :=b_n_init) in HRE. split.
                      +++ apply Zle_minus_le_0.
                         rewrite <- ptrofs_add_simpl; auto; unfold PGSIZE; try rep_lia.
                      +++ unfold PGSIZE in l. rep_lia. 
                      }
-                     assert ((Ptrofs.unsigned p_n_init - (Ptrofs.unsigned p_s_tmp)) / PGSIZE = 1). {  
-                     replace (1)%Z with (PGSIZE/PGSIZE); auto.
-                     destruct H0. admit.
+                     assert((Ptrofs.unsigned p_n_init - (Ptrofs.unsigned p_s_tmp + PGSIZE)) = PGSIZE * ((Ptrofs.unsigned p_n_init - (Ptrofs.unsigned p_s_tmp + PGSIZE))/PGSIZE) + ((Ptrofs.unsigned p_n_init - (Ptrofs.unsigned p_s_tmp + PGSIZE)) mod PGSIZE)). {
+                        apply Z.div_mod; rep_lia.
                      }
-                     rewrite H11. simpl. entailer!.
+                     (*rewrite H10 in H11. rewrite Z.mul_0_r in H11. rewrite Z.add_0_l in H11.*)
+                    (* rewrite <- Zminus_mod_idemp_r in H11. rewrite <- Zplus_mod_idemp_r in H11.
+                     rewrite Z_mod_same_full in H11. rewrite Z.add_0_r in H11. rewrite Zminus_mod_idemp_r in H11.
+                     assert (Ptrofs.unsigned p_n_init - (Ptrofs.unsigned p_s_tmp) =
+                                 (PGSIZE * ((Ptrofs.unsigned p_n_init - (Ptrofs.unsigned p_s_tmp + PGSIZE)) / PGSIZE) +
+                                 (Ptrofs.unsigned p_n_init - Ptrofs.unsigned p_s_tmp) mod PGSIZE) + PGSIZE). {
+                                 symmetry. 
+                                 rewrite Zeq_plus_swap. rewrite <- H11. try rep_lia.
+                                 }*)
+                                 
+                     assert ((Ptrofs.unsigned p_n_init - (Ptrofs.unsigned p_s_tmp)) / PGSIZE = 1). {
+                        admit.
+                     }
+                     rewrite H12. simpl. entailer!.
                   --- assert ((Z.to_nat ((Ptrofs.unsigned p_n_init - Ptrofs.unsigned p_s_tmp) / PGSIZE) - 1)%nat = (Z.to_nat ((Ptrofs.unsigned p_n_init -
                            Ptrofs.unsigned (Ptrofs.add p_s_tmp (Ptrofs.repr PGSIZE))) / PGSIZE))). {
-                              admit.
+                              admit. (* arithmetics *)
                            }
                            rewrite H10. entailer!.
             ++ apply sameblock_false in eb. apply typed_true_same_block in HRE; auto_contradict.
-   - forward. Exists c_tmp p_s_tmp. entailer!. (* the loop invariant (and negation of the loop condition) is a strong enough precondition to prove the MORE-COMMANDS after the loop *)
+   - forward. Exists c_tmp p_s_tmp curr_head. entailer!. (* the loop invariant (and negation of the loop condition) is a strong enough precondition to prove the MORE-COMMANDS after the loop *)
             ++ split_lia. 
                apply typed_false_offset_val_leq with (b_s_init:=b_s_init) (b_n_init:=b_n_init); try rep_lia; unfold PGSIZE; try rep_lia; auto.
-            ++ apply andp_right.
-               ** apply andp_left1. entailer.
-               ** apply andp_left2. destruct (0 <? c_tmp) eqn:ec.
-                  --- destruct H0 as [H01 [H02 [H03 [H04 H05]]]].
-                        destruct H05; destruct H0.
-                        +++ rewrite H1 in ec. auto_contradict.
-                        +++ subst. admit. (*DER ER STADIG PROBLEMER MED HOVEDET...*)
-                  --- destruct H0 as [H01 [H02 [H03 [H04 H05]]]];  assert (0 = c_tmp); try rep_lia.
-                     destruct H05.
-                     +++ destruct H1; rewrite H1. replace (Z.to_nat (c_tmp) + n)%nat with n; try rep_lia.
-                           sep_apply available_range_correct. unfold compute_c. 
-                           destruct (PGSIZE <=? 0) eqn:e1; auto_contradict.
-                           unfold Ptrofs.ltu.
-                           destruct (zlt (Ptrofs.unsigned p_n_init) (Ptrofs.unsigned p_s_tmp)) eqn:e2.
-                     *** simpl; entailer!.
-                     *** apply typed_false_offset_val_leq with (b_s_init:=b_s_init) (b_n_init:=b_n_init) in HRE; try rep_lia.
-                           rewrite <- Z.lt_sub_lt_add_l in HRE.  
-                           assert ((Ptrofs.unsigned p_n_init - Ptrofs.unsigned p_s_tmp) / PGSIZE = 0). { apply Zdiv_small. split; try rep_lia; auto. }
-                           rewrite H3. simpl. entailer!.
-                     +++ destruct H1; rewrite H0 in H2; auto_contradict.
-Admitted. 
+               destruct H0 as [H01 [H02 [H03 [H04 H05]]]]; auto.
+            ++ apply andp_left2. destruct (0 <? c_tmp) eqn:ec.
+            --- destruct H0 as [H01 [H02 [H03 [H04 H05]]]].
+                  destruct H05; destruct H0.
+                  +++ rewrite H1 in ec. auto_contradict.
+                  +++ subst. entailer. (*DER ER STADIG PROBLEMER MED HOVEDET...*)
+            --- destruct H0 as [H01 [H02 [H03 [H04 H05]]]];  assert (0 = c_tmp); try rep_lia.
+               destruct H05.
+               +++ destruct H1; rewrite H1. replace (Z.to_nat (c_tmp) + n)%nat with n; try rep_lia.
+                     sep_apply available_range_correct. unfold compute_c. 
+                     destruct (PGSIZE <=? 0) eqn:e1; auto_contradict.
+                     unfold Ptrofs.ltu.
+                     destruct (zlt (Ptrofs.unsigned p_n_init) (Ptrofs.unsigned p_s_tmp)) eqn:e2.
+               *** simpl; entailer!.
+               *** apply typed_false_offset_val_leq with (b_s_init:=b_s_init) (b_n_init:=b_n_init) in HRE; try rep_lia.
+                     rewrite <- Z.lt_sub_lt_add_l in HRE.  
+                     assert ((Ptrofs.unsigned p_n_init - Ptrofs.unsigned p_s_tmp) / PGSIZE = 0). { apply Zdiv_small. split; try rep_lia; auto. }
+                     rewrite H3. simpl. entailer!.
+               +++ destruct H1; rewrite H0 in H2; auto_contradict.
+Admitted.
+            
+        
