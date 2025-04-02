@@ -81,7 +81,7 @@ Definition kfree1_spec :=
           PROP(
                writable_share sh /\
                is_pointer_or_null original_freelist_pointer /\
-               (Nat.le (S O) (number_structs_available) ) (* there is at least one available *)
+               (Nat.le (S O) (number_structs_available) ) 
                ) 
           PARAMS (new_head) GLOBALS(gv)
           SEP (
@@ -93,7 +93,6 @@ Definition kfree1_spec :=
           PROP(isptr new_head)
           RETURN () 
           SEP (
-             (*freelistrep sh (S n) new_head **)
              !! malloc_compatible (sizeof t_run) new_head && 
              data_at sh t_run original_freelist_pointer new_head * 
              freelistrep sh n original_freelist_pointer *
@@ -101,7 +100,7 @@ Definition kfree1_spec :=
              data_at sh t_struct_kmem (Vint (Int.repr xx), new_head) (gv _kmem)
              ).
 
-Definition kalloc1_spec := (* this doesn't assume that the list is empty, but that q is either a pointer or a nullval *)
+Definition kalloc1_spec :=
 DECLARE _kalloc1
 WITH sh : share, original_freelist_pointer:val, xx:Z, n:nat, next:val, gv:globals
 PRE [ ]
@@ -142,7 +141,7 @@ POST [ tptr tvoid ]
         ).
 
 
-Definition client1_spec := (* kind of pop *)
+Definition client1_spec := 
 DECLARE _client1
 WITH sh : share, new_head:val, original_freelist_pointer:val, xx:Z, gv:globals, n : nat, next:val, number_structs_available:nat
 PRE [ tptr tvoid ]
@@ -273,3 +272,4 @@ forward_call (sh, new_head, original_freelist_pointer, xx, gv, n, PGSIZE, number
         * rewrite e in H0; auto_contradict.
         * forward. assert ((S n - 1)%nat = n); try rep_lia. rewrite H10. entailer!.
 Qed.
+
