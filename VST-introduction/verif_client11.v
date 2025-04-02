@@ -167,12 +167,39 @@ POST [ tptr tvoid ]
             data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem)
             ).
 
+Definition client2_spec := 
+    DECLARE _client2
+    WITH sh : share, pa1:val, pa2:val, original_freelist_pointer:val, xx:Z, gv:globals, n : nat, next:val, number_structs_available:nat
+    PRE [ tptr tvoid, tptr tvoid ]
+        PROP(
+            writable_share sh /\
+            is_pointer_or_null pa1 /\
+            (Nat.le (S (S O)) number_structs_available) /\
+            ((Nat.eq O n /\ original_freelist_pointer = nullval) \/ (Nat.lt O n /\ isptr original_freelist_pointer))
+        ) 
+        PARAMS (pa1; pa2) GLOBALS(gv)
+        SEP (
+            freelistrep sh n original_freelist_pointer *
+            available sh number_structs_available pa1 PGSIZE *
+            data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem)
+        )
+    POST [ tptr tvoid ]
+        PROP( )
+            RETURN (pa1) (* we return the head like in the pop function*)
+            SEP (
+                data_at sh t_run original_freelist_pointer pa1 *
+                available sh (number_structs_available - 1) (add_offset pa1 PGSIZE) PGSIZE *
+                freelistrep sh n original_freelist_pointer *
+                data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem)
+                ).
+
 (************************ Gprog  *************************)
 
 Definition Gprog : funspecs := [
     kfree1_spec; 
     kalloc1_spec; 
-    client1_spec
+    client1_spec;
+    client2_spec
 ].
 
 (************************ Proofs  *************************)
@@ -208,7 +235,6 @@ destruct (eq_dec original_freelist_pointer nullval) eqn:eofln.
                 )
                 else 
                     (
-                        (*EX next,*)
                         data_at sh t_run next original_freelist_pointer * (* TODO: fix this.. *)
                         freelistrep sh (Nat.sub n (S O)) next *
                         data_at sh t_struct_kmem (Vint (Int.repr xx), next) (gv _kmem)
@@ -272,4 +298,40 @@ forward_call (sh, new_head, original_freelist_pointer, xx, gv, n, PGSIZE, number
         * rewrite e in H0; auto_contradict.
         * forward. assert ((S n - 1)%nat = n); try rep_lia. rewrite H10. entailer!.
 Qed.
+
+
+Lemma body_client2: semax_body Vprog Gprog f_client2 client2_spec.
+Proof.
+start_function.
+forward_call (sh, pa1, original_freelist_pointer, xx, gv, n, PGSIZE, number_structs_available). (* call kfree1 *)
+- destruct H as [H1 [H2 [H3 H4]]]; split; auto. destruct H4; destruct H; auto. rewrite H0; unfold is_pointer_or_null; simpl; auto. 
+    (*+ destruct H. rewrite H0. unfold is_pointer_or_null; unfold nullval; simpl; auto.
+    + destruct H. destruct original_freelist_pointer; auto_contradict. unfold is_pointer_or_null; auto.*)
+- forward_call (sh, pa2, pa1, xx, gv, S n, PGSIZE, (number_structs_available -1)%nat). (* call kfree1 *)
+    + entailer.
+    unfold freelistrep at 2; fold freelistrep. Exists original_freelist_pointer. entailer!.
+    admit. (* fix available..*)
+    + destruct H; auto.
+    + forward_call (sh, pa2, xx, (S (S n)), pa2, gv). (* call kalloc *)
+        * entailer.
+        * entailer.
+        * split; destruct H; auto.
+        right. split; auto. unfold Nat.lt; try rep_lia.
+        * destruct (eq_dec pa2 nullval).
+            -- rewrite e in H1; auto_contradict.
+            -- forward_call (sh, pa1, xx, (S n), pa1, gv).
+                ++ destruct (eq_dec pa1 nullval).
+                    ** rewrite e in H0. auto_contradict.
+                    ** entailer.
+                ++ destruct (eq_dec pa1 nullval).
+                    ** rewrite e in H0. auto_contradict.
+                    ** entailer.
+                ++ split; destruct H; auto.
+                    right; unfold Nat.lt; split; try rep_lia; auto.
+                ++ forward. destruct (eq_dec pa1 nullval). 
+                    ** entailer!. unfold freelistrep; fold freelistrep. entailer!.
+                        assert (S n = 0)%nat. { rewrite H8. auto. }
+                        try rep_lia.
+                    ** entailer . admit. (*there is a lot of junk in memory, I have to take care of*)
+Admitted.
 
