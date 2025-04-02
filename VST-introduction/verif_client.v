@@ -34,7 +34,6 @@ Proof.
    Qed.
 #[export] Hint Resolve freelistrep_local_prop : saturate_local.
 
-
 Lemma freelistrep_valid_pointer:
   forall sh n p, 
   readable_share sh ->
@@ -58,7 +57,6 @@ Proof.
    Intros y. entailer. 
    destruct n; entailer!; try discriminate H0. 
 Qed.
-
 
 Lemma freelistrep_nonnull: forall n sh x,
    x <> nullval ->
@@ -102,15 +100,13 @@ Definition kfree1_spec :=
 
 Definition kalloc1_spec := (* this doesn't assume that the list is empty, but that q is either a pointer or a nullval *)
 DECLARE _kalloc1
-WITH sh : share, original_freelist_pointer:val, xx:Z, n:nat, next:val, gv:globals
+WITH sh : share, original_freelist_pointer:val, xx:Z, n:nat, gv:globals
 PRE [ ]
     PROP(writable_share sh /\ 
-        ((Nat.eq O n /\ original_freelist_pointer = nullval) \/ (Nat.lt O n /\ isptr original_freelist_pointer)) /\
-        is_pointer_or_null next
+        ((Nat.eq O n /\ original_freelist_pointer = nullval) \/ (Nat.lt O n /\ isptr original_freelist_pointer))
     ) 
     PARAMS () GLOBALS(gv)
     SEP ( 
-        (*data_at sh t_run next original_freelist_pointer **)
         freelistrep sh n original_freelist_pointer * (* TODO: fix this.. *)
         data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem)) (* q can be nullval meaning that there is only one run *)
 POST [ tptr tvoid ]
@@ -125,6 +121,7 @@ POST [ tptr tvoid ]
         )
         else 
             (
+                EX next,
                 data_at sh t_run next original_freelist_pointer * (* TODO: fix this.. *)
                 freelistrep sh (Nat.sub n (S O)) next *
                 data_at sh t_struct_kmem (Vint (Int.repr xx), next) (gv _kmem)
@@ -184,10 +181,57 @@ Proof. start_function. Intros. destruct number_structs_available eqn:en; try rep
       Exists next_orig. entailer. fold freelistrep. fold available. replace ((S n0) - 1)%nat with n0; try rep_lia. entailer!.
 Qed.
 
-
 Lemma body_kalloc1: semax_body Vprog Gprog f_kalloc1 kalloc1_spec.
 Proof. start_function. Intros. destruct H; forward. (*unfold abbreviate in POSTCONDITION. *)
-Admitted.
+forward_if (
+   
+    PROP  (
+        (*r <> nullval*)
+    )
+    LOCAL (
+        temp _r original_freelist_pointer; 
+        gvars gv
+        )
+    SEP (
+        if (eq_dec original_freelist_pointer nullval) then
+        (
+            freelistrep sh n original_freelist_pointer * (* TODO: fix this.. *)
+            data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem) (* q can be nullval meaning that there is only one run *)
+        )
+        else 
+            (
+                EX next,
+                data_at sh t_run next original_freelist_pointer * (* TODO: fix this.. *)
+                freelistrep sh (Nat.sub n (S O)) next *
+                data_at sh t_struct_kmem (Vint (Int.repr xx), next) (gv _kmem)
+            )
+    )
+)%assert.
+- destruct n eqn:en; destruct H0 as [[H011 H012] | [H021 H022]]. (* original free list pointer is different from null *)
+    + rewrite H012 in H1; auto_contradict.
+    + unfold Nat.lt in H021; rep_lia.
+    + rewrite H012 in H1; auto_contradict.
+    + unfold freelistrep; fold freelistrep. Intros next. 
+        repeat forward. (*Exists next.*)
+        destruct (eq_dec original_freelist_pointer nullval) eqn:eofln; entailer!.
+        Exists next.
+        assert ((S n0 - 1)%nat = n0); try rep_lia.
+        rewrite H8; entailer.
+- destruct n eqn:en. (* original freelist pointer is null *)
+    + destruct H0 as [[H011 H012] | [H021 H022]]; forward; destruct (eq_dec original_freelist_pointer nullval) eqn:e1; auto_contradict; entailer. 
+    + destruct H0 as [[H011 H012] | [H021 H022]]; try (unfold Nat.lt in H011; rep_lia).
+        forward. destruct (eq_dec original_freelist_pointer nullval) eqn:e1; auto_contradict.
+        entailer.
+- destruct n eqn:en.
+    + destruct H0 as [[H011 H012] | [H021 H022]].
+        * destruct (eq_dec original_freelist_pointer nullval) eqn:e1; auto_contradict. forward.
+        * unfold Nat.lt in H021; try rep_lia.
+    + destruct H0 as [[H011 H012] | [H021 H022]].
+        * destruct (eq_dec original_freelist_pointer nullval) eqn:e1; auto_contradict.
+        * destruct (eq_dec original_freelist_pointer nullval) eqn:e1.
+            -- rewrite e in H022. auto_contradict.
+            -- forward.
+Qed.
 
 
 Lemma body_client1: semax_body Vprog Gprog f_client1 client1_spec.
