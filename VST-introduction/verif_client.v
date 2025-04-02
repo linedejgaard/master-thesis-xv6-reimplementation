@@ -106,7 +106,7 @@ PRE [ ]
         ((Nat.eq O n /\ original_freelist_pointer = nullval) \/ (Nat.lt O n /\ isptr original_freelist_pointer))
     ) 
     PARAMS () GLOBALS(gv)
-    SEP ( 
+    SEP (
         freelistrep sh n original_freelist_pointer * (* TODO: fix this.. *)
         data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem)) (* q can be nullval meaning that there is only one run *)
 POST [ tptr tvoid ]
@@ -142,21 +142,21 @@ PRE [ tptr tvoid ]
         ((Nat.eq O n /\ original_freelist_pointer = nullval) \/ (Nat.lt O n /\ isptr original_freelist_pointer))
     ) 
     PARAMS (new_head) GLOBALS(gv)
-    SEP ( 
+    SEP (
         freelistrep sh n original_freelist_pointer *
         available sh number_structs_available new_head PGSIZE *
         data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem)
     )
 POST [ tptr tvoid ]
-    PROP()
+    PROP( )
         RETURN (new_head) (* we return the head like in the pop function*)
         SEP (
-            data_at sh t_run original_freelist_pointer new_head *
+            EX next, (* ideally, I would like to have that next was the original freelist*)
+            data_at sh t_run next new_head *
             available sh (number_structs_available - 1) (add_offset new_head PGSIZE) PGSIZE *
-            freelistrep sh n original_freelist_pointer *
-            data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem)
+            freelistrep sh n next *
+            data_at sh t_struct_kmem (Vint (Int.repr xx), next) (gv _kmem)
             ).
-            
 
 (************************ Gprog  *************************)
 
@@ -241,17 +241,12 @@ forward_call (sh, new_head, original_freelist_pointer, xx, gv, n, PGSIZE, number
 - destruct H as [H1 [H2 [H3 H4]]]; split; auto. destruct H4.
     + destruct H. rewrite H0. unfold is_pointer_or_null; unfold nullval; simpl; auto.
     + destruct H. destruct original_freelist_pointer; auto_contradict. unfold is_pointer_or_null; auto.
-- forward_call (sh, new_head, xx, (S n), original_freelist_pointer, gv).
+- (*unfold abbreviate in POSTCONDITION.*) forward_call (sh, new_head, xx, (S n), gv). (* call kfree1 *)
     + entailer!. 
-    + destruct H as [H1 [H2 [H3 H4]]]; split; auto. split.
-        * right. unfold Nat.lt. split; try rep_lia. unfold is_pointer_or_null in H2. destruct new_head; auto.
-        * destruct n. 
-            -- destruct H4; destruct H; subst; auto. unfold is_pointer_or_null; unfold nullval; simpl; auto.
-            -- destruct H4.
-                ++ destruct H; subst; auto. unfold is_pointer_or_null; unfold nullval; simpl; auto.
-                ++ destruct H. unfold is_pointer_or_null. destruct original_freelist_pointer; try inversion H4; auto. 
-    + forward. entailer. destruct (eq_dec new_head nullval).
+    + destruct H as [H1 [H2 [H3 [[H411 H412] | [H421 H422]]]]]; split; auto.
+        * right; split; auto; try rep_lia.
+        * right; split; auto; try rep_lia.
+    + destruct (eq_dec new_head nullval) eqn:enh.
         * rewrite e in H0; auto_contradict.
-        * entailer. assert ((S n - 1)%nat = n); try rep_lia. rewrite H10. entailer!.
+        * forward. Exists x. entailer!. assert ((S n - 1)%nat = n); try rep_lia. rewrite H10. entailer!.
 Qed.
-    
