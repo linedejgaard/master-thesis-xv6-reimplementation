@@ -86,9 +86,9 @@ Definition kfree_spec_sz :=
 Definition kalloc_spec_sz :=
  DECLARE _kalloc1
    WITH n:Z, gv: globals
-   PRE [ size_t ]
+   PRE [ ]
        PROP (0 <= n <= Ptrofs.max_unsigned)
-       PARAMS (Vptrofs (Ptrofs.repr n)) GLOBALS (gv)
+       PARAMS () GLOBALS (gv)
        SEP (mem_mgr M gv)
     POST [ tptr tvoid ] EX p:_, (* The return value p is existentially quantified, meaning we don’t specify it explicitly, but we describe its properties. *)
        PROP ()
@@ -160,11 +160,11 @@ Qed.
 Definition kalloc_spec (M:MallocFreeAPD) {cs: compspecs} (t: type) :=
  DECLARE _kalloc1
    WITH gv: globals
-   PRE [ size_t ]
+   PRE [ ]
        PROP (0 <= sizeof t <= Ptrofs.max_unsigned;
                 complete_legal_cosu_type t = true; (* complete_legal_cosu_type is a property related to C types, ensuring that a type is complete, legal, and does not contain an incomplete struct/union type. *)
                 natural_aligned natural_alignment t = true)
-       PARAMS (Vptrofs (Ptrofs.repr (sizeof t))) GLOBALS (gv)
+       PARAMS () GLOBALS (gv)
        SEP (mem_mgr M gv)
     POST [ tptr tvoid ] EX p:_,
        PROP ()

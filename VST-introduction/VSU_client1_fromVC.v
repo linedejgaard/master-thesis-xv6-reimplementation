@@ -80,26 +80,6 @@ Qed.
 
 
 (* ################################################################# *)
-(** * malloc_token *)
-
-(** Suppose the user does [p = malloc(7);].  Then [p] points to
-  a newly allocated block of 7 bytes.  What does [malloc_token(p)]
-  represent?
-  - Normally, there must be some way for [free(p)] to figure out
-   the size of the block.  This can be done by having a header word,
-   just before address p, that gives the size (though there are other
-   ways to do it).  Normally, this header word is part of what 
-   malloc_token represents.  But in this implementation, all blocks
-   are the same size, so there's no need for such a header.
-  - The memory-manager's free list contains blocks all of size
-   sizeof(t_run), which  is ?? bytes when [sizeof(size_t)=4] or 
-   32 bytes when [sizeof(size_t)=8].  When [malloc(7)] splits a
-   block into two pieces, the malloc_token represents the
-   second piece, the portion of the block between offset 7 and the end.
-   That is the [memory_block] shown in the definition below.
-  - In addition, the malloc_token has three propositional facts about
-   address [p], that will assist the [free()] function in reconstituting
-   the two parts of the split block. *)
  
 Definition malloc_token_sz (sh: share) (n: Z) (p: val) : mpred := 
   !! (field_compatible t_run [] p 
@@ -132,15 +112,6 @@ Proof.
   try lia.
 Qed.
 
-(** [] *)
-
-(** The next three lines define an opaque constant that, nevertheless,
-  rep_lia can unfold.     See VC.pdf, chapter 65 "Opaque Constants". *)
-Definition N : Z := proj1_sig (opaque_constant 80000).
-Definition N_eq : N=_ := proj2_sig (opaque_constant _).
-#[export] Hint Rewrite N_eq : rep_lia.
-
-
 
 (* ################################################################# *)
 (** * Defining the mem_mgr APD *)
@@ -151,6 +122,7 @@ Definition N_eq : N=_ := proj2_sig (opaque_constant _).
 
 Definition mem_mgr (gv: globals) : mpred :=
     EX sh:share, EX head:val, EX xx:Z, EX n:nat,
+    !! (is_pointer_or_null head) &&
     data_at sh t_struct_kmem (Vint (Int.repr xx), head) (gv _kmem) *
     freelistrep sh n head.
 
@@ -169,7 +141,13 @@ Definition M : MallocFreeAPD :=
   Definition MFVprog : varspecs. mk_varspecs client1.prog. Defined.
   Definition MFGprog: funspecs := MF_imported_specs ++ MF_internal_specs.
 
-(** **** Exercise: 3 stars, standard (stdlib2_body_malloc) *)
+(** **** Exercise: 3 stars, standard (stdlib2_body_free) *)
+Lemma body_kfree: semax_body MFVprog MFGprog f_kfree1 (kfree_spec_sz M).
+Proof.
+  start_function.
+  destruct (eq_dec p nullval).
+  - forward.
+(* FILL IN HERE *) Admitted.
 
 Lemma body_kalloc: semax_body MFVprog MFGprog f_kalloc1 (kalloc_spec_sz M).
 Proof.
@@ -177,54 +155,5 @@ Proof.
 (* FILL IN HERE *) Admitted.
 (** [] *)
 
-(** **** Exercise: 3 stars, standard (stdlib2_body_free) *)
-Lemma body_free: semax_body MFVprog MFGprog f_kfree1 (kfree_spec_sz M).
-(* FILL IN HERE *) Admitted.
-(** [] *)
 
-(** [] *)
 
-(* ################################################################# *)
-(** * Initializers for global data *)
-
-Check @Comp_MkInitPred.
-(**  Each VSU may have private global variables that constitute its
-  "local state".  The client of the VSU should not access these
-  directly; and in separation logic all these variables should be
-  abstracted as a single abstract predicate.  Since these variables
-  may have initial values that concretely represent some abstract
-  state, we need an axiom in the VSU interface (proved as a lemma
-  in the VSU implementation), saying that the initial values
-  properly represent a proper state of the abstract predicate. *)
-
-(** **** Exercise: 2 stars, standard (stdlib2_initialize) *)
-Lemma initialize: VSU_initializer prog MF_globals.
-Proof.
-InitGPred_tac.
-unfold MF_globals.
-(* FILL IN HERE *) Admitted.
-
-(* ================================================================= *)
-(** ** Defining the pieces of a VSU
-
-    And now, in the usual way, we can put totether the pieces: *)
-
-(* ################################################################# *)
-(** * Constructing the Component and the VSU *)
-
-  (*Definition MF_Externs : funspecs := nil.
-
-Definition MallocFreeVSU: @VSU NullExtension.Espec
-         MF_Externs MF_imported_specs ltac:(QPprog prog) MF_ASI MF_globals.
-  Proof. 
-    mkVSU prog MF_internal_specs.
-    - solve_SF_internal body_malloc.
-    - solve_SF_internal body_free.
-    - solve_SF_internal body_exit.
-    - apply initialize; auto.
-Qed.*)
-
-(* ================================================================= *)
-(** ** Next Chapter: [VSU_main2] *)
-
-(* 2023-03-25 11:30 *)

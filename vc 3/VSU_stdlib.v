@@ -32,11 +32,11 @@ Axiom body_free:
  forall {Espec: OracleKind} {cs: compspecs} ,
    VST.floyd.library.body_lemma_of_funspec EF_free (snd (free_spec_sz M)).
 
-Axiom body_exit:
+(*Axiom body_exit:
  forall {Espec: OracleKind},
   VST.floyd.library.body_lemma_of_funspec
     (EF_external "exit" (mksignature (AST.Tint :: nil) AST.Tvoid cc_default))
-    (snd (exit_spec)).
+    (snd (exit_spec)).*)
 
 (* ================================================================= *)
 (** ** Internal functions *)
@@ -49,6 +49,7 @@ Axiom body_exit:
 
 Definition placeholder_spec :=
     (_placeholder, vacuous_funspec (Internal f_placeholder)).
+Print _placeholder.
 
 (* ================================================================= *)
 (** ** Definining the pieces of a VSU

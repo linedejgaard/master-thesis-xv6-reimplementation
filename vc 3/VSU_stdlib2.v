@@ -277,9 +277,8 @@ Proof.
   forward_if.
   - forward. Exists (Vlong (Int64.repr 0)). 
     simpl. entailer!.
-  - unfold _freelist. simpl.
-  
-    forward_if.
+  - unfold M. unfold mem_mgr. forward. 
+    (*forward_if.
   + induction 
   + induction
 
@@ -296,7 +295,7 @@ Proof.
     then emp
           (* malloc_token Ews (Tstruct _cons noattr) q means there is a pointer *)  (*  data_at_ Ews (Tstruct _cons noattr) q means there asserts that the memory exists but hasn't been assigned meaningful data yet *)
     else malloc_token Ews (Tstruct _cons noattr) q * data_at_ Ews (Tstruct _cons noattr) q; 
-    stack il p;mem_mgr gv)).
+    stack il p;mem_mgr gv)).*)
   
 (* FILL IN HERE *) Admitted.
 (** [] *)

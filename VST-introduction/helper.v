@@ -15,7 +15,8 @@ Ltac auto_contradict := try discriminate; try contradiction.
 Ltac split_lia := split; try rep_lia.
 Ltac simplify_signed_PGSIZE := rewrite Int.signed_repr; unfold PGSIZE; try rep_lia.
 
-
+Lemma S_pred : forall n, ((S n) - 1)%nat = n.
+Proof. lia. Qed.
 
 
 (****************** range available *********************)
