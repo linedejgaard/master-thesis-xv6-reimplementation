@@ -58,19 +58,20 @@ Proof.
    destruct n; entailer!; try discriminate H0. 
 Qed.
 
-(*Lemma freelistrep_nonnull: forall i il n sh x,
+Lemma freelistrep_nonnull: forall il sh x,
    x <> nullval ->
-   freelistrep sh n x =
-   EX m : list val, EX next:val,
-          !! (n = i::il) && !! malloc_compatible (sizeof t_run) x && data_at sh t_run next x * freelistrep sh m next.
+   freelistrep sh il x =
+   EX head : val, EX tail:list val,
+          !! (il = head::tail) && !! malloc_compatible (sizeof t_run) x && data_at sh t_run head x * freelistrep sh tail head.
 Proof.
    intros; apply pred_ext.
-   - destruct n. 
+   - destruct il. 
          + unfold freelistrep. entailer!.
-         + unfold freelistrep; fold freelistrep. 
-         Exists n v. entailer!. 
-   - Intros m y. rewrite H0. unfold freelistrep at 2; fold freelistrep. Exists y. entailer!.
-Qed.*)
+         + unfold freelistrep; fold freelistrep. entailer!.
+         Exists v il. 
+         entailer!. 
+   - Intros m y. rewrite H0. unfold freelistrep at 2; fold freelistrep. entailer!.
+Qed.
 
 
 (************************ specs *********************************)
