@@ -332,6 +332,6 @@ forward_call (sh, pa1, original_freelist_pointer, xx, gv, n, PGSIZE, number_stru
                     ** entailer!. unfold freelistrep; fold freelistrep. entailer!.
                         assert (S n = 0)%nat. { rewrite H8. auto. }
                         try rep_lia.
-                    ** entailer . admit. (*there is a lot of junk in memory, I have to take care of*)
+                    ** entailer. admit. (*there is a lot of junk in memory, I have to take care of*)
 Admitted.
 
