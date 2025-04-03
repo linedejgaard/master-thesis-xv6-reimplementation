@@ -284,6 +284,41 @@ Definition client4_spec :=
                 data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem)
                 ).
 
+Definition client5_spec := 
+    DECLARE _client5
+    WITH sh : share, pa1:val, pa2:val, original_freelist_pointer:val, xx:Z, gv:globals, n : nat, next:val, number_structs_available:nat
+    PRE [ tptr tvoid, tptr tvoid ]
+        PROP(
+            writable_share sh /\
+            isptr pa1 /\
+            isptr pa2 /\
+            (Nat.le (S (S O)) number_structs_available) /\
+            ((Nat.eq O n /\ original_freelist_pointer = nullval) \/ (Nat.lt O n /\ isptr original_freelist_pointer)) 
+        ) 
+        PARAMS (pa1; pa2) GLOBALS(gv)
+        SEP (
+            (EX v1,
+                !! malloc_compatible (sizeof t_run) pa1 &&
+                data_at sh t_run v1 pa1) *
+            (EX v2,
+                !! malloc_compatible (sizeof t_run) pa2 &&
+                data_at sh t_run v2 pa2) *
+            freelistrep sh n original_freelist_pointer *
+            (*available sh number_structs_available pa1 PGSIZE **)
+            data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem)
+        )
+    POST [ tptr tvoid ]
+        PROP( )
+            RETURN (pa2) (* we return the head like in the pop function*)
+            SEP 
+            (
+                data_at sh t_run original_freelist_pointer pa1 *
+                data_at sh t_run original_freelist_pointer pa2 *
+                (*available sh (number_structs_available - 1) (add_offset pa2 PGSIZE) PGSIZE **)
+                freelistrep sh n original_freelist_pointer *
+                data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem)
+                ).
+
 (************************ Gprog  *************************)
 
 Definition Gprog : funspecs := [
@@ -292,7 +327,8 @@ Definition Gprog : funspecs := [
     client1_spec;
     (*client2_spec;
     client3_spec;*)
-    client4_spec
+    client4_spec;
+    client5_spec
 ].
 
 (************************ Proofs  *************************)
@@ -468,3 +504,32 @@ forward_call (sh, pa1, original_freelist_pointer, xx, gv, n, next, number_struct
     + destruct H as [HH1 [H2 [H3 H4]]]. destruct H4; split; auto; split.
     + (*unfold abbreviate in POSTCONDITION. *) forward. entailer!.
 Qed. 
+
+Lemma body_client5: semax_body Vprog Gprog f_client5 client5_spec.
+Proof.
+start_function.
+Intros v1 v2.
+forward_call (sh, pa1, original_freelist_pointer, xx, gv, n, PGSIZE, number_structs_available). (* call kfree1 *)
+- Exists v1. entailer!.
+- destruct H as [HH1 [H2 [H3 H4]]]. destruct H4; split; auto; split; auto; destruct H4; destruct H4; auto. rewrite H5. simpl; auto.
+- forward_call (sh, pa1, xx, (S n), original_freelist_pointer, gv). (* call kalloc *)
+    + destruct (eq_dec pa1 nullval) eqn:epa1.
+        * subst; auto_contradict.
+        * rewrite S_pred. entailer!.
+    + destruct H as [HH1 [HH2 [H3 H4]]]. destruct H4; split; auto. right; split; auto. unfold Nat.lt; try rep_lia.
+    + destruct (eq_dec pa1 nullval) eqn:epa1.
+        * subst; auto_contradict.
+        * forward_call (sh, pa2, original_freelist_pointer, xx, gv, n, PGSIZE, number_structs_available). (* call kfree1 *)
+            -- Exists v2. rewrite S_pred. entailer!.
+            --  destruct H as [HH1 [HH2 [H3 H4]]]; split; auto; split; auto. destruct H4. destruct H4.
+                ++ destruct H4. rewrite H5. simpl; auto.
+                ++ destruct H4; auto.
+            -- forward_call (sh, pa2, xx, (S n), original_freelist_pointer, gv). (* call kalloc *)
+                ++ destruct (eq_dec pa2 nullval) eqn:epa2.
+                    ** entailer!.
+                    ** rewrite S_pred. entailer!.
+                ++ destruct H as [HH1 [HH2 [HH3 H4]]]; split; auto. right. unfold Nat.lt; split; auto; try rep_lia.
+                ++ destruct (eq_dec pa2 nullval) eqn:epa2.
+                    ** forward.
+                    ** forward. rewrite S_pred. entailer!.
+Qed.
