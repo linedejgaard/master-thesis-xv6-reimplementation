@@ -280,8 +280,8 @@ Definition Gprog : funspecs := [
     kfree1_spec; 
     kalloc1_spec; 
     client1_spec;
-    client2_spec;
-    client3_spec;
+    (*client2_spec;
+    client3_spec;*)
     client4_spec
 ].
 
@@ -381,7 +381,7 @@ forward_call (sh, new_head, original_freelist_pointer, xx, gv, n, PGSIZE, number
         * forward. rewrite S_pred. entailer!.
 Qed.
 
-Lemma body_client2: semax_body Vprog Gprog f_client2 client2_spec.
+(*Lemma body_client2: semax_body Vprog Gprog f_client2 client2_spec.
 Proof.
 start_function.
 forward_call (sh, pa1, original_freelist_pointer, xx, gv, n, PGSIZE, number_structs_available). (* call kfree1 *)
@@ -444,15 +444,15 @@ forward_call (sh, pa1, original_freelist_pointer, xx, gv, n, PGSIZE, number_stru
             ++ destruct (eq_dec pa2 nullval) eqn:epa2.
                 ** forward. entailer!. admit. admit.
                 ** forward. entailer!. admit. admit.
-Admitted. 
+Admitted. *)
 
 Lemma body_client4: semax_body Vprog Gprog f_client4 client4_spec.
 Proof.
 start_function.
 forward_call (sh, pa1, original_freelist_pointer, xx, gv, n, next, number_structs_available).
-- EExists. entailer!.
+- EExists. entailer!. admit.
 - admit. (* should be easy*)
--
+- 
  forward_call (sh, pa2, original_freelist_pointer, xx, gv, n, next, number_structs_available).
     + entailer!. admit.
     + admit.  (* should be easy*)
