@@ -11,7 +11,7 @@ Local Open Scope logic.
 (************************ freelistrep *********************************)
 Fixpoint freelistrep (sh: share) (il: list val) (p: val) : mpred := (* the list contains the next*)
  match il with
- | next::il' => 
+ | next::il' =>
         !! malloc_compatible (sizeof t_run) p &&  (* p is compatible with a memory block of size sizeof theader. *)
         data_at sh t_run next p * (* at the location p, there is a t_run structure with the value next *)
         freelistrep sh il' next (* "*" ensures no loops... *)
@@ -203,7 +203,7 @@ Definition client2_spec :=
             SEP 
             (
                 data_at sh t_run original_freelist_pointer pa1 *
-                data_at sh t_run original_freelist_pointer pa2 *
+                data_at sh t_run pa1 pa2 *
                 (*available sh (number_structs_available - 1) (add_offset pa2 PGSIZE) PGSIZE **)
                 freelistrep sh ls original_freelist_pointer *
                 data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem)
@@ -388,33 +388,33 @@ forward_call (sh, new_head, original_freelist_pointer, xx, gv, ls, PGSIZE, numbe
         * forward. 
 Qed.
 
-(*Lemma body_client2: semax_body Vprog Gprog f_client2 client2_spec.
+Lemma body_client2: semax_body Vprog Gprog f_client2 client2_spec.
 Proof.
 start_function.
 Intros v1 v2.
-forward_call (sh, pa1, original_freelist_pointer, xx, gv, n, PGSIZE, number_structs_available). (* call kfree1 *)
+forward_call (sh, pa1, original_freelist_pointer, xx, gv, ls, PGSIZE, number_structs_available). (* call kfree1 *)
 - Exists v1. entailer!.
 - destruct H as [HH1 [H2 [H3 H4]]]. destruct H4; split; auto; split; auto; destruct H4; destruct H4; auto. rewrite H5. simpl; auto.
-- forward_call (sh, pa2, pa1, xx, gv, (S n), PGSIZE, (number_structs_available -1)%nat). (* call kfree1 *)
-    + Exists v2. unfold freelistrep; fold freelistrep. entailer. Exists original_freelist_pointer.  entailer!.
-    + admit.
-    + forward_call (sh, pa2, xx, (S (S n)), pa1, gv). (* call kalloc *)
+- forward_call (sh, pa2, pa1, xx, gv, (original_freelist_pointer::ls), PGSIZE, (number_structs_available -1)%nat). (* call kfree1 *)
+    + Exists v2. entailer. unfold freelistrep; fold freelistrep. entailer!. 
+    + destruct H as [HH1 [HH2 [H3 H4]]]; split; auto.
+    + forward_call (sh, pa2, xx, (pa1::original_freelist_pointer::ls), pa1, gv). (* call kalloc *)
         * destruct (eq_dec pa2 nullval) eqn:epa2.
             -- entailer!.
-            -- rewrite S_pred. entailer!. 
-        * admit.
+            -- simpl. entailer!. 
+        * destruct H as [HH1 [HH2 [HH3 H4]]]; split; auto. right. split; auto.
+        unfold not; intros; auto_contradict.
         * destruct (eq_dec pa2 nullval) eqn:epa2.
-            -- admit. (* pa2 is not nullval *)
-            -- forward_call (sh, pa1, xx, (S n), original_freelist_pointer, gv).
+            -- rewrite e in H3; auto_contradict.
+            -- forward_call (sh, pa1, xx, (original_freelist_pointer::ls), original_freelist_pointer, gv). (* kalloc *)
                 ++ destruct (eq_dec pa1 nullval) eqn:epa1.
                     **repeat (rewrite S_pred). entailer!.
-                    **repeat (rewrite S_pred). unfold freelistrep; fold freelistrep. (* I need a way to store the information saved in the freelist.. *) admit.
-                ++ admit.
+                    **repeat (rewrite S_pred). simpl. entailer!. unfold freelistrep; fold freelistrep. entailer!.
+                ++ destruct H as [HH1 [HH2 [HH3 H4]]]; split; auto. right. split; auto. unfold not; intros; auto_contradict.
                 ++ destruct (eq_dec pa1 nullval) eqn:epa1.
-                    ** admit. (* pa1 cannot be nullval *) 
-                    ** forward. rewrite S_pred. entailer!.
-                        admit.
-Admitted.*)
+                    ** forward.
+                    ** forward. simpl. entailer!.
+Qed.
 
 
 Lemma body_client4: semax_body Vprog Gprog f_client4 client4_spec.
