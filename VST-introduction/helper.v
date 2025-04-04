@@ -104,8 +104,9 @@ Qed.
 Fixpoint available (sh: share) (n: nat) (p: val) (size: Z) : mpred :=
   match n with
   | S n' => 
+      EX v,
       !! malloc_compatible (sizeof t_run) p &&  (* Check memory compatibility *)
-      data_at sh t_run nullval p *            (* Store null value *)
+      data_at sh t_run v p *            (* Store null value *)
       available sh n' (add_offset p size) size (* Move to the next slot *)
   | O => !! (p = nullval) && emp
   end.
@@ -127,10 +128,8 @@ Lemma available_local_prop: forall sh n p size,
 Proof.
   intros.
   induction n as [| n' IH].
-  - unfold available. entailer!. split; auto.
-    + split; auto.
-    + split; try lia. intros. simpl in *. inversion H.
-  - unfold available. destruct p; entailer!. split; split; intros; try rep_lia; auto; auto_contradict.
+  - unfold available. entailer!. split; split; intros; auto; auto_contradict; try rep_lia.
+  - unfold available. Intros v. destruct p; entailer!. split; split; intros; try rep_lia; auto; auto_contradict.
    Qed.
 #[export] Hint Resolve available_local_prop : saturate_local.
 
@@ -158,7 +157,7 @@ Proof.
    destruct n; entailer!; try discriminate H0. 
 Qed.
 
-Lemma available_nonnull: forall n sh x size,
+(*Lemma available_nonnull: forall n sh x size,
    x <> nullval ->
    available sh n x size =
    EX m : nat, 
@@ -170,7 +169,7 @@ Proof.
          + unfold available; fold available.
          Exists n. entailer!.
    - Intros m. rewrite H0. unfold available at 2; fold available. entailer!.
-Qed.
+Qed.*)
 
 
 (** lemmas ***)
@@ -183,8 +182,9 @@ Qed.
 Lemma available_S:
   forall sh n p size,
     available sh (S n) p size =
+   (EX v,
     !! malloc_compatible (sizeof t_run) p &&
-    data_at sh t_run nullval p * available sh n (add_offset p size) size.
+    data_at sh t_run v p * available sh n (add_offset p size) size).
 Proof.
   intros. simpl. reflexivity.
 Qed.
@@ -198,3 +198,26 @@ Proof.
   destruct p_start, p_end; try apply derives_refl.
   destruct (sameblock (Vptr b i) (Vptr b0 i0)); entailer; auto_contradict.
 Qed.
+
+
+
+(****************** compare pointers range *********************)
+Fixpoint ensure_comparable (sh: share) (n: nat) (p q: val) (size: Z) : mpred :=
+  match n with
+  | S n' =>
+      denote_tc_test_order p q &&
+      ensure_comparable sh n' (add_offset p size) q size
+  | O => !! (p = nullval) && emp
+  end.
+
+Definition ensure_comparable_range (sh: share) (p_start p_end: val) (size: Z) :=
+   match p_start, p_end with
+   | Vptr b_s p_s, Vptr b_e p_e =>
+      if sameblock p_start p_end then
+         ensure_comparable sh (Z.to_nat ((compute_c p_start p_end size) + 1)) p_start p_end size
+      else !! (p_start = nullval) && emp
+   | _ , _ => !! (p_start = nullval) && emp
+   end.
+
+
+(* there are more lemmas in verif_simple kfree file v2*)

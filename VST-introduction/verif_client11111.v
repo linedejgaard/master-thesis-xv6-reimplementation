@@ -315,6 +315,57 @@ Definition client5_spec :=
                 data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem)
                 ).
 
+(************** freerange kfree simple ***************)
+Definition freerange_while_loop_spec : ident * funspec := (* this is not including admits.. *)
+    DECLARE _freerange_while_loop
+    WITH b_n_init:block, p_n_init:ptrofs, b_s_init:block, p_s_init:ptrofs, 
+            sh : share, original_freelist_pointer : val, xx : Z, gv : globals, ls:list val
+    PRE [  tptr tvoid, tptr tvoid ]
+        PROP (
+                0 <= Ptrofs.unsigned p_s_init <= Ptrofs.unsigned p_n_init /\
+                Z.add (Ptrofs.unsigned p_n_init) PGSIZE <= Int.max_signed /\ 
+                Z.add (Ptrofs.unsigned p_s_init) PGSIZE <= Int.max_signed /\
+                
+                writable_share sh /\
+                is_pointer_or_null original_freelist_pointer /\
+                isptr_lst (Z.to_nat (compute_c (Vptr b_s_init p_s_init) (Vptr b_n_init p_n_init) PGSIZE)) (Vptr b_s_init p_s_init) (PGSIZE) /\
+                (*(Nat.le (Z.to_nat (compute_c ((Vptr b_s_init p_s_init) (Vptr b_n_init p_n_init) PGSIZE))) number_structs_available) /\*)
+                ((ls = nil /\ original_freelist_pointer = nullval) \/ (ls <> nil /\ isptr original_freelist_pointer)) /\
+                b_s_init=b_n_init
+                
+            
+            ) (* the highest number is s + PGSIZE when it fails. The highest s + PGSIZE when it succeeds is n, so the highest after this is n + PGSIZE*)
+        PARAMS (Vptr b_s_init p_s_init; Vptr b_n_init p_n_init) GLOBALS (gv)
+        SEP (
+         ensure_comparable_range sh (add_offset (Vptr b_s_init p_s_init) PGSIZE) (Vptr b_n_init p_n_init) PGSIZE 
+         (*denote_tc_test_order (Vptr b_s_init (Ptrofs.add p_s_init (Ptrofs.repr PGSIZE))) (Vptr b_n_init p_n_init)*) &&
+         (((freelistrep sh ls original_freelist_pointer)
+            * available_range sh (Vptr b_s_init p_s_init) (Vptr b_n_init p_n_init) PGSIZE
+            * (data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem))
+               )))
+    POST [ tvoid ]
+    EX c_final:Z, EX p_s_final:ptrofs, EX curr_head:val, EX final_added_elem : list val,
+        PROP (
+            Ptrofs.unsigned p_s_final = Z.add (Ptrofs.unsigned p_s_init) (Z.mul c_final PGSIZE) /\ 
+            0 <= c_final /\ 
+            (Ptrofs.unsigned p_s_final) <= (Ptrofs.unsigned p_n_init) /\ 
+            (Ptrofs.unsigned p_n_init) < Z.add (Ptrofs.unsigned p_s_final) PGSIZE /\
+
+            ((curr_head = original_freelist_pointer /\ c_final = 0) \/ (curr_head = (Vptr b_s_init (Ptrofs.sub p_s_final (Ptrofs.repr PGSIZE)))  /\ c_final <> 0)) /\
+            final_added_elem = pointers (Z.to_nat (compute_c (Vptr b_s_init p_s_init) (Vptr b_n_init p_n_init) PGSIZE)) (Vptr b_s_init p_s_init) (PGSIZE)
+            )
+        RETURN ()
+        SEP ((*denote_tc_test_order (Vptr b_s_init (Ptrofs.add p_s_final (Ptrofs.repr PGSIZE))) (Vptr b_n_init p_n_init) &&*)
+            if (0<?c_final) then
+               (freelistrep sh (final_added_elem ++ ls) (curr_head) *
+               available_range sh (Vptr b_s_init p_s_final) (Vptr b_n_init p_n_init) PGSIZE *
+               data_at sh t_struct_kmem (Vint (Int.repr xx), (curr_head)) (gv _kmem))
+            else
+            (((freelistrep sh ls original_freelist_pointer)
+            * (data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem))
+               ))
+        ).
+
 (************************ Gprog  *************************)
 
 Definition Gprog : funspecs := [
@@ -324,7 +375,8 @@ Definition Gprog : funspecs := [
     client2_spec;
     client3_spec;
     client4_spec;
-    client5_spec
+    client5_spec;
+    freerange_while_loop_spec
 ].
 
 (************************ Proofs  *************************)
@@ -514,3 +566,220 @@ forward_call (sh, pa1, original_freelist_pointer, xx, gv, ls, PGSIZE, number_str
                     ** forward.
                     ** forward. simpl. entailer!.
 Qed.
+
+(** loop ***)
+
+Lemma body_freerange_while_loop_spec: semax_body Vprog Gprog f_freerange_while_loop freerange_while_loop_spec.
+Proof. start_function. 
+forward_while
+ (EX c_tmp:Z, EX p_s_tmp:ptrofs, EX curr_head:val, EX tmp_added_elem : list val,
+   PROP  (
+    Ptrofs.unsigned p_s_tmp = Z.add (Ptrofs.unsigned p_s_init) (Z.mul c_tmp PGSIZE) /\ 
+    0 <= c_tmp /\
+    c_tmp <= Int.max_signed /\
+    Ptrofs.unsigned p_s_tmp <= Ptrofs.unsigned p_n_init /\
+    ((curr_head = original_freelist_pointer /\ c_tmp = 0) \/ (curr_head = (Vptr b_s_init (Ptrofs.sub p_s_tmp (Ptrofs.repr PGSIZE)))  /\ c_tmp <> 0)) /\
+    tmp_added_elem = pointers (Z.to_nat c_tmp) (Vptr b_s_init p_s_tmp) PGSIZE /\
+    (c_tmp = (compute_c (Vptr b_s_init p_s_init) (Vptr b_n_init p_s_tmp) PGSIZE))
+   )
+   LOCAL (
+      gvars gv;
+      temp _pa_start (Vptr b_s_init p_s_tmp);
+      temp _pa_end (Vptr b_n_init p_n_init)
+    ) 
+   SEP (
+      ensure_comparable_range sh (add_offset (Vptr b_s_init p_s_tmp) PGSIZE) (Vptr b_n_init p_n_init) PGSIZE  &&
+      (freelistrep sh (tmp_added_elem ++ ls) (curr_head) *
+      available_range sh (Vptr b_s_init p_s_tmp) (Vptr b_n_init p_n_init) PGSIZE *
+      data_at sh t_struct_kmem (Vint (Int.repr xx), curr_head) (gv _kmem))
+      )
+  )%assert.
+   - Exists 0 p_s_init original_freelist_pointer (pointers (Z.to_nat (compute_c (Vptr b_s_init p_s_init) (Vptr b_n_init p_s_init) PGSIZE)) ((Vptr b_s_init p_s_init)) PGSIZE). entailer!. 
+   rewrite compute_c_equal.
+   2: { unfold PGSIZE; try rep_lia. }
+   2: { destruct H as [H1 [H2 [H3 [H4 [H5 [H6 [H7 H8]]]]]]]; subst; auto. }
+   split; auto. rewrite compute_c_equal.
+   rewrite <- pointers_empty. simpl; entailer!.
+   unfold PGSIZE; try rep_lia.
+   destruct H as [H1 [H2 [H3 [H4 [H5 [H6 [H7 H8]]]]]]]; subst; auto.
+   - entailer. apply andp_left1. unfold ensure_comparable_range. 
+     destruct (sameblock (Vptr b_s_init p_s_init) (Vptr b_n_init p_n_init)) eqn:esb; entailer; auto_contradict.
+     + assert (Z.to_nat
+            (compute_c (add_offset (Vptr b_s_init p_s_tmp) PGSIZE) (Vptr b_n_init p_n_init) PGSIZE +
+            1) = S (Z.to_nat
+            (compute_c (add_offset (Vptr b_s_init p_s_tmp) PGSIZE) (Vptr b_n_init p_n_init) PGSIZE))). {
+            unfold add_offset.
+            rewrite Z2Nat.inj_add; try rep_lia.
+            unfold compute_c. destruct (PGSIZE <=? 0); try rep_lia.
+            unfold Ptrofs.ltu. destruct (zlt (Ptrofs.unsigned p_n_init)
+                (Ptrofs.unsigned (Ptrofs.add p_s_tmp (Ptrofs.repr PGSIZE)))) eqn:ez; try rep_lia.
+            apply Z_div_pos.
+            - unfold PGSIZE; try rep_lia.
+            - apply Zle_minus_le_0; try rep_lia.
+            }
+            unfold add_offset.
+            destruct (sameblock (Vptr b_s_init (Ptrofs.add p_s_init (Ptrofs.repr PGSIZE)))
+            (Vptr b_n_init p_n_init)) eqn:eb.
+            * unfold add_offset in H1.
+            rewrite H1. unfold ensure_comparable; fold ensure_comparable. destruct c_tmp eqn:ec; try rep_lia.
+            -- assert (p_s_tmp = p_s_init). { admit. }
+                rewrite H2.
+                destruct (sameblock (Vptr b_s_init (Ptrofs.add p_s_init (Ptrofs.repr PGSIZE)))
+                (Vptr b_n_init p_n_init)) eqn:eb2; auto_contradict.
+                apply andp_left1; unfold PGSIZE; unfold denote_tc_test_order. entailer!.
+            -- destruct (sameblock (Vptr b_s_init (Ptrofs.add p_s_tmp (Ptrofs.repr PGSIZE)))
+            (Vptr b_n_init p_n_init)) eqn:eb2; auto_contradict.
+                ++ apply andp_left1; unfold PGSIZE; unfold denote_tc_test_order. entailer!.
+                ++ assert (Vptr b_s_init (Ptrofs.add p_s_tmp (Ptrofs.repr PGSIZE)) = nullval <-> False). {
+                    split; intros; auto_contradict.
+                }
+                rewrite H2. entailer!.
+            * destruct (sameblock (Vptr b_s_init (Ptrofs.add p_s_tmp (Ptrofs.repr PGSIZE)))
+            (Vptr b_n_init p_n_init)) eqn:eb2; auto_contradict.
+                ++ assert ((Z.to_nat
+                (compute_c (Vptr b_s_init (Ptrofs.add p_s_tmp (Ptrofs.repr PGSIZE)))
+                   (Vptr b_n_init p_n_init) PGSIZE + 1)) = 
+                S (Z.to_nat
+                (compute_c (Vptr b_s_init (Ptrofs.add p_s_tmp (Ptrofs.repr PGSIZE)))
+                    (Vptr b_n_init p_n_init) PGSIZE))). {
+                    unfold add_offset.
+                    rewrite Z2Nat.inj_add; try rep_lia.
+                    unfold compute_c. destruct (PGSIZE <=? 0); try rep_lia.
+                    unfold Ptrofs.ltu. destruct (zlt (Ptrofs.unsigned p_n_init)
+                        (Ptrofs.unsigned (Ptrofs.add p_s_tmp (Ptrofs.repr PGSIZE)))) eqn:ez; try rep_lia.
+                    apply Z_div_pos.
+                    - unfold PGSIZE; try rep_lia.
+                    - apply Zle_minus_le_0; try rep_lia.
+                    }
+                    rewrite H2. unfold ensure_comparable; fold ensure_comparable. apply andp_left2.
+                    destruct H0 as [H01 [H02 [H03 [H04 [[[H051 H052] | H052] [H061 H062]]]]]].
+                    --admit. (* compariable*)
+                    -- admit. (* comparison*)
+                ++ assert (Vptr b_s_init (Ptrofs.add p_s_tmp (Ptrofs.repr PGSIZE)) = nullval <-> False). {
+                        split; intros; auto_contradict.
+                    }
+                    rewrite H2. entailer!.
+    + unfold add_offset. apply sameblock_false in esb.  destruct H as [H1 [H2 [H3 [H4 [H5 [H6 [H7 H8]]]]]]]; subst; auto_contradict.
+   - forward_call (sh, (Vptr b_s_init p_s_tmp), curr_head, xx, gv, (tmp_added_elem ++ ls), PGSIZE,  (Z.to_nat (compute_c (Vptr b_s_init p_s_tmp) (Vptr b_n_init p_n_init) PGSIZE - c_tmp))). (* call kfree1 *)
+   (*- forward_call (sh, (Vptr b_s_init p_s_tmp), curr_head, xx, gv, (Nat.add (Z.to_nat c_tmp) n), PGSIZE, (Z.to_nat (compute_c (Vptr b_s_init p_s_tmp) (Vptr b_n_init p_n_init) PGSIZE))).*)
+      + apply andp_left2. sep_apply available_range_correct. EExists. entailer. destruct c_tmp; try rep_lia.
+        * destruct H0 as [H01 [H02 [H03 [H04 [[H051 | H052] H06]]]]].
+            -- entailer. rewrite compute_c_equal. rewrite <- available_empty.
+                ++ entailer.  inversion H0.
+                ++ unfold PGSIZE; rep_lia.
+                ++ admit. (* should be provable from HRE *)
+            -- admit. (* available*)
+        * rewrite compute_c_not_equal with (pt_s := p_s_tmp) (pt_e :=p_n_init) (b :=b_s_init).
+            -- entailer. induction (Z.to_nat ((Ptrofs.unsigned p_n_init - Ptrofs.unsigned p_s_tmp) / PGSIZE)).
+                ++ assert (Vptr b_s_init p_s_tmp = nullval). { rewrite <- H7. auto. }
+                    inversion H9.
+                ++ unfold available; fold available. Intros v. entailer!. admit. (* available..*)
+            -- unfold PGSIZE; rep_lia.
+            -- admit. (* b_s_init and b_n_init should be equal to be able to compare. *)
+            -- apply typed_true_offset_val_leq with (b_s_init:=b_s_init) (b_n_init :=b_n_init) in HRE; unfold PGSIZE; auto.
+                admit. (* should be provable from HRE*) 
+            -- auto.
+            --  admit. (* b_s_init and b_n_init should be equal to be able to compare. should be provable form HRE *)
+      + admit. (* look at assumptions*)
+      + Intros. forward. Exists (c_tmp + 1, Ptrofs.add p_s_tmp (Ptrofs.mul (Ptrofs.repr (Ctypes.sizeof tschar)) (ptrofs_of_int Signed (Int.repr PGSIZE))), Vptr b_s_init p_s_tmp). (* Vptr b_s_init p_s_tmp is current head*)
+      entailer!. 
+      * repeat split_lia.
+       -- destruct H0 as [H01 [H02 [H03 [H04 H05]]]]; rewrite ptrofs_add_simpl; simplify_signed_PGSIZE.
+          ++ rewrite H01.
+          assert ((c_tmp * PGSIZE + PGSIZE) = ((c_tmp+1) * PGSIZE)%Z); try rep_lia.
+          unfold PGSIZE in H0 at 2. try rep_lia. 
+          ++ split; try rep_lia.
+          apply Z.le_lt_trans with (m := Int.max_signed); try rep_lia.
+          apply typed_true_offset_val_leq with (b_s_init:=b_s_init) (b_n_init :=b_n_init) in HRE; unfold PGSIZE; auto.
+          apply Z.le_trans with (m := Ptrofs.unsigned p_n_init + PGSIZE); try rep_lia.
+          unfold PGSIZE; try rep_lia.
+       -- apply c_tmp_bounds_max with (p_s_init:=p_s_init) (p_s_tmp:=p_s_tmp) (p_n_init:=p_n_init); try rep_lia.
+       -- rewrite ptrofs_add_simpl; try rep_lia.
+          ++ apply typed_true_offset_val_leq with (b_s_init:=b_s_init) (b_n_init :=b_n_init) in HRE; unfold PGSIZE; auto.
+             rewrite ptrofs_add_simpl in HRE; try rep_lia.   
+             ** simplify_signed_PGSIZE. 
+             ** (* this is the almost the same as above.. *)  split; try rep_lia.
+             apply Z.le_lt_trans with (m := Int.max_signed); try rep_lia.
+             (*apply typed_true_offset_val_leq with (b_s_init:=b_s_init) (b_n_init :=b_n_init) in HRE; unfold PGSIZE; auto.*)
+             apply Z.le_trans with (m := Ptrofs.unsigned p_n_init + PGSIZE); try rep_lia.
+             unfold PGSIZE; try rep_lia.
+          ++ split; try rep_lia. simplify_signed_PGSIZE.
+          ++ (** this is the same as above*)simplify_signed_PGSIZE; split_lia. apply Z.le_lt_trans with (m := Int.max_signed); try rep_lia.
+             (*apply typed_true_offset_val_leq with (b_s_init:=b_s_init) (b_n_init :=b_n_init) in HRE; unfold PGSIZE; auto.*)
+             apply Z.le_trans with (m := Ptrofs.unsigned p_n_init + PGSIZE); try rep_lia.
+             unfold PGSIZE; try rep_lia.
+       -- destruct H0 as [H01 [H02 [H03 [H04 H05]]]].
+          right.
+          replace (Ptrofs.repr (Int.signed (Int.repr PGSIZE))) with (Ptrofs.repr PGSIZE) by auto.
+          assert ((Ptrofs.sub (Ptrofs.add p_s_tmp (Ptrofs.repr PGSIZE)) (Ptrofs.repr PGSIZE)) = p_s_tmp). {
+             rewrite Ptrofs.sub_add_opp. rewrite Ptrofs.add_assoc. rewrite Ptrofs.add_neg_zero.
+             apply Ptrofs.add_zero.
+          }
+          rewrite H0; auto. 
+          split; auto; rep_lia.
+      * apply andp_right.
+       --  admit. (* ensure comparable*)
+       -- assert (S (Z.to_nat c_tmp + n) = (Z.to_nat (c_tmp + 1) + n)%nat) by rep_lia.
+          rewrite H7. entailer!.
+          unfold available_range.
+          destruct (sameblock (Vptr b_s_init
+                (Ptrofs.add p_s_tmp (Ptrofs.repr (Int.signed (Int.repr PGSIZE)))))
+             (Vptr b_n_init p_n_init)) eqn:eb.
+          ++ replace (Ptrofs.repr (Int.signed (Int.repr PGSIZE))) with (Ptrofs.repr PGSIZE) by auto.
+             unfold add_offset.
+             unfold compute_c; destruct (PGSIZE <=? 0) eqn:ep; auto_contradict.
+             unfold Ptrofs.ltu. destruct (zlt (Ptrofs.unsigned p_n_init) (Ptrofs.unsigned p_s_tmp)) eqn:e1.
+             ** try rep_lia. 
+             ** destruct (zlt (Ptrofs.unsigned p_n_init) (Ptrofs.unsigned (Ptrofs.add p_s_tmp (Ptrofs.repr PGSIZE)))) eqn:e2.
+                --- assert ((Ptrofs.unsigned p_n_init - (Ptrofs.unsigned p_s_tmp + PGSIZE)) / PGSIZE = 0). {
+                   apply Zdiv_small; apply typed_true_offset_val_leq with (b_s_init:=b_s_init) (b_n_init :=b_n_init) in HRE. split.
+                   +++ apply Zle_minus_le_0.
+                      rewrite <- ptrofs_add_simpl; auto; unfold PGSIZE; try rep_lia.
+                   +++ unfold PGSIZE in l. rep_lia. 
+                   }
+                   assert((Ptrofs.unsigned p_n_init - (Ptrofs.unsigned p_s_tmp + PGSIZE)) = PGSIZE * ((Ptrofs.unsigned p_n_init - (Ptrofs.unsigned p_s_tmp + PGSIZE))/PGSIZE) + ((Ptrofs.unsigned p_n_init - (Ptrofs.unsigned p_s_tmp + PGSIZE)) mod PGSIZE)). {
+                      apply Z.div_mod; rep_lia.
+                   }
+                   (*rewrite H10 in H11. rewrite Z.mul_0_r in H11. rewrite Z.add_0_l in H11.*)
+                  (* rewrite <- Zminus_mod_idemp_r in H11. rewrite <- Zplus_mod_idemp_r in H11.
+                   rewrite Z_mod_same_full in H11. rewrite Z.add_0_r in H11. rewrite Zminus_mod_idemp_r in H11.
+                   assert (Ptrofs.unsigned p_n_init - (Ptrofs.unsigned p_s_tmp) =
+                               (PGSIZE * ((Ptrofs.unsigned p_n_init - (Ptrofs.unsigned p_s_tmp + PGSIZE)) / PGSIZE) +
+                               (Ptrofs.unsigned p_n_init - Ptrofs.unsigned p_s_tmp) mod PGSIZE) + PGSIZE). {
+                               symmetry. 
+                               rewrite Zeq_plus_swap. rewrite <- H11. try rep_lia.
+                               }*)
+                               
+                   assert ((Ptrofs.unsigned p_n_init - (Ptrofs.unsigned p_s_tmp)) / PGSIZE = 1). {
+                      admit.
+                   }
+                   rewrite H12. simpl. entailer!.
+                --- assert ((Z.to_nat ((Ptrofs.unsigned p_n_init - Ptrofs.unsigned p_s_tmp) / PGSIZE) - 1)%nat = (Z.to_nat ((Ptrofs.unsigned p_n_init -
+                         Ptrofs.unsigned (Ptrofs.add p_s_tmp (Ptrofs.repr PGSIZE))) / PGSIZE))). {
+                            admit. (* arithmetics *)
+                         }
+                         rewrite H10. entailer!.
+          ++ apply sameblock_false in eb. apply typed_true_same_block in HRE; auto_contradict.
+ - forward. Exists c_tmp p_s_tmp curr_head. entailer!. (* the loop invariant (and negation of the loop condition) is a strong enough precondition to prove the MORE-COMMANDS after the loop *)
+          ++ split_lia. 
+             apply typed_false_offset_val_leq with (b_s_init:=b_s_init) (b_n_init:=b_n_init); try rep_lia; unfold PGSIZE; try rep_lia; auto.
+             destruct H0 as [H01 [H02 [H03 [H04 H05]]]]; auto.
+          ++ apply andp_left2. destruct (0 <? c_tmp) eqn:ec.
+          --- destruct H0 as [H01 [H02 [H03 [H04 H05]]]].
+                destruct H05; destruct H0.
+                +++ rewrite H1 in ec. auto_contradict.
+                +++ subst. entailer. (*DER ER STADIG PROBLEMER MED HOVEDET...*)
+          --- destruct H0 as [H01 [H02 [H03 [H04 H05]]]];  assert (0 = c_tmp); try rep_lia.
+             destruct H05.
+             +++ destruct H1; rewrite H1. replace (Z.to_nat (c_tmp) + n)%nat with n; try rep_lia.
+                   sep_apply available_range_correct. unfold compute_c. 
+                   destruct (PGSIZE <=? 0) eqn:e1; auto_contradict.
+                   unfold Ptrofs.ltu.
+                   destruct (zlt (Ptrofs.unsigned p_n_init) (Ptrofs.unsigned p_s_tmp)) eqn:e2.
+             *** simpl; entailer!.
+             *** apply typed_false_offset_val_leq with (b_s_init:=b_s_init) (b_n_init:=b_n_init) in HRE; try rep_lia.
+                   rewrite <- Z.lt_sub_lt_add_l in HRE.  
+                   assert ((Ptrofs.unsigned p_n_init - Ptrofs.unsigned p_s_tmp) / PGSIZE = 0). { apply Zdiv_small. split; try rep_lia; auto. }
+                   rewrite H3. simpl. entailer!.
+             +++ destruct H1; rewrite H0 in H2; auto_contradict.
+Admitted.
