@@ -629,7 +629,7 @@ forward_while
                     }
                     rewrite H2. entailer!.
     + unfold add_offset. apply sameblock_false in esb.  destruct H as [H1 [H2 [H3 [H4 [H5 [H6 [H7 H8]]]]]]]; subst; auto_contradict.
-   - forward_call (sh, (Vptr b_s_init p_s_tmp), curr_head, xx, gv, (tmp_added_elem ++ ls), PGSIZE,  (Z.to_nat (compute_c (Vptr b_s_init p_s_tmp) (Vptr b_n_init p_n_init) PGSIZE - c_tmp))). (* call kfree1 *)
+   - forward_call (sh, (Vptr b_s_init p_s_tmp), curr_head, xx, gv, (tmp_added_elem ++ ls), PGSIZE). (* call kfree1 *)
    (*- forward_call (sh, (Vptr b_s_init p_s_tmp), curr_head, xx, gv, (Nat.add (Z.to_nat c_tmp) n), PGSIZE, (Z.to_nat (compute_c (Vptr b_s_init p_s_tmp) (Vptr b_n_init p_n_init) PGSIZE))).*)
       + apply andp_left2. sep_apply available_range_correct. EExists. entailer. destruct c_tmp; try rep_lia.
         * destruct H0 as [H01 [H02 [H03 [H04 [[H051 | H052] H06]]]]].
