@@ -295,8 +295,35 @@ Definition client5_spec :=
                 data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem)
                 ).
 
+
+Definition client6_spec := 
+    DECLARE _client6
+    WITH sh : share, pa1:val, original_freelist_pointer:val, xx:Z, gv:globals, ls : list val, next:val
+    PRE [ tptr tvoid ]
+        PROP(
+            writable_share sh /\
+            isptr_lst (2)%nat pa1 PGSIZE /\
+            ((ls = nil /\ original_freelist_pointer = nullval) \/ (ls <> nil /\ isptr original_freelist_pointer)) /\
+            Int.min_signed <= Int.signed (Int.repr 2) + Int.signed (Int.repr 1) <= Int.max_signed
+        ) 
+        PARAMS (pa1) GLOBALS(gv)
+        SEP (
+            available sh (2)%nat pa1 PGSIZE *
+            freelistrep sh ls original_freelist_pointer *
+            data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem)
+        )
+    POST [ tptr tvoid ]
+        PROP( )
+            RETURN (add_offset pa1 PGSIZE) (* we return the head like in the pop function*)
+            SEP 
+            (
+                data_at sh t_run pa1 (add_offset pa1 PGSIZE) *
+                freelistrep sh (original_freelist_pointer::ls) pa1 *
+                data_at sh t_struct_kmem (Vint (Int.repr xx), pa1) (gv _kmem)
+                ).
+
 (************** freerange kfree simple ***************)
-Definition freerange_while_loop_spec : ident * funspec := (* this is not including admits.. *)
+(*Definition freerange_while_loop_spec : ident * funspec := (* this is not including admits.. *)
     DECLARE _freerange_while_loop
     WITH b_n_init:block, p_n_init:ptrofs, b_s_init:block, p_s_init:ptrofs, 
             sh : share, original_freelist_pointer : val, xx : Z, gv : globals, ls:list val
@@ -341,7 +368,7 @@ Definition freerange_while_loop_spec : ident * funspec := (* this is not includi
             (((freelistrep sh ls original_freelist_pointer)
             * (data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem))
                ))
-        ).
+        ).*)
 
 (************************ Gprog  *************************)
 
@@ -353,7 +380,8 @@ Definition Gprog : funspecs := [
     client3_spec;
     client4_spec;
     client5_spec;
-    freerange_while_loop_spec
+    client6_spec(*;
+    freerange_while_loop_spec*)
 ].
 
 (************************ Proofs  *************************)
@@ -509,7 +537,7 @@ forward_call (sh, pa1, original_freelist_pointer, xx, gv, ls).
 - forward_call (sh, pa2, original_freelist_pointer, xx, gv, ls).
     + Exists v2. entailer!.
     + destruct H as [HH1 [H2 [H3 H4]]]. destruct H4; split; auto; split.
-    + (*unfold abbreviate in POSTCONDITION. *) forward. entailer!.
+    + (*unfold abb iate in POSTCONDITION. *) forward. entailer!.
 Qed. 
 
 Lemma body_client5: semax_body Vprog Gprog f_client5 client5_spec.
@@ -536,8 +564,94 @@ forward_call (sh, pa1, original_freelist_pointer, xx, gv, ls, PGSIZE). (* call k
                 ** Intros ab0. forward. inversion H7. rewrite H6; rewrite H17. entailer!.
 Qed.
 
-(** loop : it keeps looping from Intros, but I think it is working with admits form another file - probably verif_simple_kfree_file_v2.v ***)
 
+Lemma body_client6: semax_body Vprog Gprog f_client6 client6_spec.
+Proof.
+    start_function.
+    Intros. forward. (*forward. unfold abb iate in POSTCONDITION.*)
+    forward_while 
+    (EX i:Z, EX p_tmp:val, EX curr_head:val, EX tmp_added_elem : list val,
+    PROP  (
+        0 <= i <= 2 /\
+        ((curr_head = original_freelist_pointer /\ i = 0) \/ (curr_head = (sub_offset p_tmp PGSIZE)  /\ i <> 0)) /\
+        tmp_added_elem = (pointers_with_original_head (Z.to_nat i) (pa1) PGSIZE original_freelist_pointer) /\
+        p_tmp = add_offset pa1 (i * PGSIZE)%Z /\
+        Int.min_signed <=
+        Int.signed (Int.repr i) + Int.signed (Int.repr 1) <=
+        Int.max_signed 
+    )
+    LOCAL (
+        gvars gv;
+        temp _pa_start p_tmp;
+        temp _i (Vint (Int.repr i))
+        ) 
+    SEP (
+        (freelistrep sh (tmp_added_elem ++ ls) (curr_head) *
+        available sh (Z.to_nat(2-i)) p_tmp PGSIZE *
+        data_at sh t_struct_kmem (Vint (Int.repr xx), curr_head) (gv _kmem))
+        )
+    )%assert.
+    - entailer. Exists 0 pa1 original_freelist_pointer (pointers_with_original_head (Z.to_nat 0) pa1 PGSIZE original_freelist_pointer). (*entailer. *)
+        rewrite <- pointers_with_head_empty. simpl; entailer. Exists v. entailer.
+        Exists x. entailer!. unfold add_offset. destruct pa1; auto_contradict.
+    - entailer.
+    - Intros. destruct (Z.to_nat (2 - i)) eqn:e1; refold_available.
+        +assert (i = 2); try rep_lia.
+        +forward_call (sh, p_tmp, curr_head, xx, gv, (tmp_added_elem ++ ls), PGSIZE). (* call kfree1 *)
+            * Intros v. Exists v. entailer!.
+            * destruct H as [H1 [H2 [[[H311 H312] | [H321 H322]] H4]]]; destruct H0 as [H01 [[[H0211 H0212] | [H0221 H0222]] [H031 [H0321 H0322]]]]; split; auto; split; try (subst; simpl; auto);  unfold isptr_lst in H2; destruct H2; try (rewrite add_offset_0; auto);
+                  try (destruct i; auto_contradict;
+                  destruct pa1; auto_contradict;
+                  unfold add_offset; unfold sub_offset; unfold is_pointer_or_null; auto).
+            *Intros. forward. forward. Exists ((((i+1)%Z, (add_offset p_tmp PGSIZE):val), p_tmp:val), (curr_head::(pointers_with_original_head(Z.to_nat (i)) pa1 PGSIZE)original_freelist_pointer):list val).
+                entailer!.
+                destruct H as [HH1 [HH2 [[[H311 H312] | [H321 H322]] HH4]]]; destruct H0 as [H01 [[[H0211 H0212] | [H0221 H0222]] [H031 [H0321 H0322]]]]; 
+                repeat split; try rep_lia; auto; auto_contradict; try (subst; simpl; try rep_lia); try ( unfold isptr_lst in HH2; destruct HH2; auto);
+                try (rewrite add_offset_0; auto); try (apply add_offset_eq_offset_val); auto.
+                ++ right; split; try rep_lia. rewrite sub_add_offset_correct; auto.
+                ++ right; split; try rep_lia. rewrite sub_add_offset_correct; auto; unfold PGSIZE; try rep_lia.
+                ++ replace (Z.to_nat (i + 1)) with (S (Z.to_nat (i))); try rep_lia. unfold pointers_with_original_head at 2; fold pointers_with_original_head.
+                destruct (Z.to_nat i) eqn:ei.
+                    ** assert (i = 0); try rep_lia.
+                    ** unfold pointers_acc; fold pointers_acc. simpl. induction n0; assert (i = 1); try rep_lia.
+                    simpl. rewrite H13; rewrite sub_add_offset_correct; auto. unfold PGSIZE; try rep_lia.
+                ++ rewrite add_offset_add; auto.
+                ++ right. rewrite sub_add_offset_correct; auto. split; auto; unfold not; intros; auto_contradict.
+                ++ assert (i = 1); try rep_lia. right; rewrite H13. unfold not; intros; split; try rep_lia.
+                    rewrite sub_add_offset_correct; auto. unfold PGSIZE; rep_lia. rewrite Z.mul_1_l; destruct H0; auto.
+                ++ replace (Z.to_nat (i + 1)) with (S (Z.to_nat (i))); try rep_lia.  assert (i = 1); try rep_lia. rewrite H13; rewrite Z.mul_1_l. simpl. rewrite sub_add_offset_correct; auto; unfold PGSIZE; try rep_lia.
+                ++assert (i = 1); try rep_lia. rewrite H13. rewrite add_offset_add; auto.
+                ++ simpl. destruct H0 as [H01 [[[H0211 H0212] | [H0221 H0222]] [H031 [H0321 H0322]]]].
+                    ** rewrite H031.  rewrite H0212. unfold pointers_with_original_head. destruct (Z.to_nat 0) eqn:e0; try rep_lia.
+                    simpl. refold_freelistrep. assert (n = S O); try rep_lia. rewrite H0. unfold available. entailer.
+                    **assert (i = 1); try rep_lia. rewrite H031.  rewrite H0. simpl. refold_freelistrep. assert (n = O); try rep_lia. rewrite H13. unfold available. entailer!.
+    - forward_call (sh, add_offset pa1 PGSIZE, xx, (pa1::original_freelist_pointer::ls), gv). (* call kalloc *)
+    + entailer. 
+      destruct H as [HH1 [HH2 [[[H311 H312] | [H321 H322]] HH4]]]; destruct H0 as [H01 [[[H0211 H0212] | [H0221 H0222]] [H031 [H0321 H0322]]]]; rewrite H031; refold_freelistrep; entailer.
+        * unfold pointers_with_original_head. assert (i = 2); try rep_lia. rewrite H7. destruct (0 <? Z.to_nat 2)%nat eqn:ei; try rep_lia.
+            -- assert (sub_offset (add_offset pa1 (2 * PGSIZE)) PGSIZE = (add_offset pa1 (1 * PGSIZE))). {
+            rewrite sub_add_offset_n with (p := pa1) (size := PGSIZE) (n :=2); try rep_lia; auto.
+            unfold PGSIZE; rep_lia.
+            unfold isptr_lst in HH2; destruct HH2; auto.
+            }
+            rewrite H8. simpl. refold_freelistrep. entailer!.
+            --  assert (0 < Z.to_nat 2)%nat; try rep_lia. auto_contradict.
+        * assert (i = 2); try rep_lia. rewrite H7. replace (Z.to_nat 2) with (S (S O)); try rep_lia.
+            unfold pointers_with_original_head; fold pointers_with_original_head.
+            assert (sub_offset (add_offset pa1 (2 * PGSIZE)) PGSIZE = (add_offset pa1 (1 * PGSIZE))). {
+            rewrite sub_add_offset_n with (p := pa1) (size := PGSIZE) (n :=2); try rep_lia; auto.
+            unfold PGSIZE; rep_lia.
+            unfold isptr_lst in HH2; destruct HH2; auto.
+            } rewrite H8. unfold pointers_acc. simpl. refold_freelistrep. entailer!.
+    + destruct H as [HH1 [HH2 [[[H311 H312] | [H321 H322]] HH4]]]; split; auto.
+        * right; split; auto; unfold not; intros. inversion H. unfold isptr_lst in HH2; destruct HH2 as [HH21 [HH22 HH23]]; auto.
+        * right. split; auto. unfold not. intros. inversion H. unfold isptr_lst in HH2; destruct HH2 as [HH21 [HH22 HH23]]; auto.
+    + forward. 
+        * destruct (eq_dec (add_offset pa1 PGSIZE) nullval) eqn:ee; auto_contradict.
+            destruct H as [HH1 [HH2 [[[H311 H312] | [H321 H322]] HH4]]]; unfold isptr_lst in HH2; destruct HH2 as [HH21 [HH22 HH23]]; rewrite e in HH22; auto_contradict.
+            Intros ab. inversion H2. entailer!.
+Qed.            
+            
 Lemma body_freerange_while_loop_spec: semax_body Vprog Gprog f_freerange_while_loop freerange_while_loop_spec.
 Proof. start_function. 
 forward_while
