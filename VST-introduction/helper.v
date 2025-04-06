@@ -18,6 +18,106 @@ Ltac simplify_signed_PGSIZE := rewrite Int.signed_repr; unfold PGSIZE; try rep_l
 Lemma S_pred : forall n, ((S n) - 1)%nat = n.
 Proof. lia. Qed.
 
+Lemma cmp_le_is_either_0_or_1 : forall p q i,
+   sem_cmp_pp Cle p q = Some (Vint i) ->
+   (i = Int.zero) \/ (i = Int.one).
+Proof.
+intros.
+destruct (eq_dec i Int.zero). left; auto.
+destruct (eq_dec i Int.one). right; auto.
+unfold sem_cmp_pp in H. inversion H.
+unfold bool2val in H1. unfold Z.b2z in H1. unfold option_map in H1.
+destruct (Val.cmplu_bool true2 Cle p q).
+- destruct b; inversion H1; exfalso.
+   + apply n0; auto.
+   + apply n; auto.
+- inversion H1.
+Qed.
+
+
+Lemma ptrofs_add_simpl :
+  forall a ofs,
+    0 <= ofs <= Ptrofs.max_unsigned ->
+    0 <= Ptrofs.unsigned a + ofs < Ptrofs.modulus ->
+    Ptrofs.unsigned (Ptrofs.add a (Ptrofs.repr ofs)) =
+    Ptrofs.unsigned a + ofs.
+Proof.
+  intros.
+  unfold Ptrofs.add.
+  rewrite Ptrofs.unsigned_repr.
+  - rewrite Ptrofs.unsigned_repr; auto.
+  - destruct H; assert (Ptrofs.unsigned (Ptrofs.repr ofs) = ofs). { apply Ptrofs.unsigned_repr; try rep_lia. } split.
+    + rewrite H2; try rep_lia.
+    + rewrite H2; auto; try rep_lia.
+Qed.
+
+Ltac ptrofs_add_simpl_PGSIZE := apply ptrofs_add_simpl; split_lia; unfold PGSIZE; rep_lia.
+
+
+Lemma typed_true_offset_val_leq (b_s_init b_n_init : block) 
+      (p_s_tmp p_n_init : ptrofs) (ofs : Z) :
+  typed_true tint
+    match sem_cmp_pp Cle (offset_val ofs (Vptr b_s_init p_s_tmp)) (Vptr b_n_init p_n_init) with
+    | Some v' => v'
+    | None => Vundef
+    end ->
+  Ptrofs.unsigned (Ptrofs.add p_s_tmp (Ptrofs.repr ofs)) <= Ptrofs.unsigned p_n_init.
+Proof.
+   destruct (sem_cmp_pp Cle (offset_val ofs (Vptr b_s_init p_s_tmp)) 
+   (Vptr b_n_init p_n_init)) eqn:e; auto_contradict.
+   destruct v; auto_contradict.
+   assert (i = Int.zero \/ i = Int.one). { apply cmp_le_is_either_0_or_1 with (p:= (offset_val ofs (Vptr b_s_init p_s_tmp))) (q:=(Vptr b_n_init p_n_init) ); auto. }
+   destruct H; subst; auto_contradict.
+   unfold sem_cmp_pp in e; simpl in e. destruct (eq_block b_s_init b_n_init); auto_contradict.
+   intros. subst.
+   destruct ((negb (Ptrofs.ltu p_n_init (Ptrofs.add p_s_tmp (Ptrofs.repr ofs))))) eqn:e1; auto_contradict.
+   unfold negb in e1. destruct (Ptrofs.ltu p_n_init (Ptrofs.add p_s_tmp (Ptrofs.repr ofs))) eqn:e2; auto_contradict.
+   unfold Ptrofs.ltu in e2. destruct (zlt (Ptrofs.unsigned p_n_init) (Ptrofs.unsigned (Ptrofs.add p_s_tmp (Ptrofs.repr ofs)))) eqn: e3; auto_contradict.
+   try rep_lia.
+Qed.
+
+Lemma typed_false_offset_val_leq (b_s_init b_n_init : block) 
+      (p_s_tmp p_n_init : ptrofs) (ofs : Z) :
+   Ptrofs.unsigned p_s_tmp + ofs < Ptrofs.modulus -> (* I know the ofs =PGSIZE*)
+   0 <= ofs <= Ptrofs.max_unsigned ->
+   typed_false tint
+      match sem_cmp_pp Cle (offset_val ofs (Vptr b_s_init p_s_tmp)) (Vptr b_n_init p_n_init) with
+      | Some v' => v'
+      | None => Vundef
+      end ->
+   Ptrofs.unsigned p_n_init < Ptrofs.unsigned p_s_tmp + ofs.
+Proof.
+   destruct (sem_cmp_pp Cle (offset_val ofs (Vptr b_s_init p_s_tmp)) 
+   (Vptr b_n_init p_n_init)) eqn:e; auto_contradict.
+   destruct v; auto_contradict.
+   assert (i = Int.zero \/ i = Int.one). { apply cmp_le_is_either_0_or_1 with (p:= (offset_val ofs (Vptr b_s_init p_s_tmp))) (q:=(Vptr b_n_init p_n_init) ); auto. }
+   destruct H; subst; auto_contradict.
+   subst. unfold sem_cmp_pp in e. simpl in e. destruct (eq_block b_s_init b_n_init); auto_contradict.
+   destruct ((negb (Ptrofs.ltu p_n_init (Ptrofs.add p_s_tmp (Ptrofs.repr ofs))))) eqn:e1; auto_contradict.
+   unfold negb in e1; unfold Ptrofs.ltu in e1. destruct (zlt (Ptrofs.unsigned p_n_init) (Ptrofs.unsigned (Ptrofs.add p_s_tmp (Ptrofs.repr ofs)))) eqn:e2; auto_contradict.
+   intros.
+   assert (Ptrofs.unsigned (Ptrofs.add p_s_tmp (Ptrofs.repr ofs)) = Ptrofs.unsigned p_s_tmp + ofs) by ptrofs_add_simpl_PGSIZE.
+   rewrite <- H2. unfold PGSIZE; apply l.
+Qed.
+
+Lemma sameblock_true :
+forall b_s_init b_n_init p_s_tmp p_n_init,
+   sameblock (Vptr b_s_init p_s_tmp) (Vptr b_n_init p_n_init) = true ->
+   b_s_init = b_n_init.
+Proof.
+   intros. unfold sameblock in H.
+   destruct (peq b_s_init b_n_init); try rep_lia; auto_contradict.
+Qed.
+
+Lemma sameblock_false :
+forall b_s_init b_n_init p_s_tmp p_n_init,
+   sameblock (Vptr b_s_init p_s_tmp) (Vptr b_n_init p_n_init) = false ->
+   b_s_init <> b_n_init.
+Proof.
+   intros. unfold sameblock in H.
+   destruct (peq b_s_init b_n_init); try rep_lia; auto_contradict.
+Qed.
+
 
 (****************** range available *********************)
 
@@ -38,6 +138,36 @@ Definition compute_c (p_start p_end: val) (size: Z) : Z :=
           (Ptrofs.unsigned p2 - Ptrofs.unsigned p1) / size (* take the floor *)
    | _ , _ => 0
    end.
+
+Lemma compute_c_equal :
+   forall p_start p_end size,
+   0 < size ->
+   p_start = p_end ->
+   compute_c p_start p_end size = 0.
+Proof.
+   intros. unfold compute_c. destruct p_start; auto.
+   destruct p_end; auto.
+   destruct (size <=? 0); auto.
+   unfold Ptrofs.ltu.
+   destruct (zlt (Ptrofs.unsigned i0) (Ptrofs.unsigned i)); auto.
+   inversion H0. subst. replace (Ptrofs.unsigned i0 - Ptrofs.unsigned i0) with (0); try rep_lia.
+   apply Z.div_0_l; try rep_lia.
+Qed.
+
+Lemma compute_c_not_equal :
+forall p_start p_end size pt_s pt_e b,
+0 < size ->
+p_start <> p_end ->
+Ptrofs.unsigned pt_s < Ptrofs.unsigned  pt_e ->
+Vptr b pt_s = p_start ->
+Vptr b pt_e = p_end ->
+compute_c p_start p_end size =  (Ptrofs.unsigned pt_e - Ptrofs.unsigned pt_s) / size.
+Proof.
+   intros. unfold compute_c.
+   rewrite <- H2. rewrite <- H3.
+   destruct (size <=? 0) eqn:e; try rep_lia.
+   unfold Ptrofs.ltu; destruct (zlt (Ptrofs.unsigned pt_e) (Ptrofs.unsigned pt_s)) eqn:e1; try rep_lia.
+Qed.
 
 Lemma compute_c_correct1:
 forall b (p1 p2: ptrofs) size,
@@ -84,6 +214,7 @@ Proof.
     - rewrite Z.mul_comm. apply Zplus_le_compat_l; rep_lia.
 Qed.
 
+
 (* add offset *)
 
 Definition add_offset (p: val) (ofs: Z) : val := 
@@ -98,6 +229,227 @@ Lemma add_offset_correct:
 Proof.
    intros. unfold add_offset. reflexivity.
 Qed.
+
+Lemma add_offset_0:
+   forall p,
+    isptr p ->
+     add_offset p 0 = p.
+Proof.
+   intros. destruct p; auto_contradict. unfold add_offset. rewrite ptrofs_add_repr_0_r; auto.
+Qed.
+
+(* subtract offset *)
+
+Definition sub_offset (p: val) (ofs: Z) : val := 
+   match p with
+   | Vptr b1 p1 => Vptr b1 (Ptrofs.sub p1 (Ptrofs.repr ofs))
+   | _ => nullval
+   end.
+
+Lemma sub_offset_correct:
+   forall b p size,
+     sub_offset (Vptr b p) size = Vptr b (Ptrofs.sub p (Ptrofs.repr size)).
+Proof.
+   intros. unfold sub_offset. reflexivity.
+Qed.
+
+Lemma sub_add_offset_correct:
+   forall p size,
+   0 < size ->
+   isptr p ->
+   sub_offset (add_offset p size) size = p.
+Proof.
+intros; destruct p; auto_contradict.
+  unfold add_offset, sub_offset.
+  rewrite Ptrofs.sub_add_opp.
+  rewrite Ptrofs.add_assoc.
+  rewrite Ptrofs.add_neg_zero. 
+  rewrite Ptrofs.add_zero; auto.
+Qed.
+
+Lemma sub_add_offset_n:
+   forall p size n,
+   0 < size ->
+   (0 < n) ->
+   isptr p ->
+   sub_offset (add_offset p (n*size)) size = add_offset p ((n-1)*size).
+Proof.
+intros; destruct p; auto_contradict.
+  unfold add_offset, sub_offset.
+  rewrite Ptrofs.sub_add_opp.
+  rewrite Ptrofs.add_assoc.
+  (*destruct n; try rep_lia.
+  replace (S n - 1)%nat with n; try rep_lia.
+  replace (Z.of_nat (S n)) with (1 + Z.of_nat n); try rep_lia.
+  rewrite<- ptrofs_mul_repr.
+  rewrite <- ptrofs_add_repr.
+  rewrite Ptrofs.mul_add_distr_l.
+  rewrite <- ptrofs_mul_repr.
+  replace (Ptrofs.repr 1) with Ptrofs.one; auto.
+  rewrite Ptrofs.mul_commut. rewrite Ptrofs.mul_one.
+  rewrite Ptrofs.add_assoc.*)
+  Admitted.
+
+Lemma add_sub_offset_correct:
+   forall p size,
+   0 < size ->
+   isptr p ->
+     add_offset (sub_offset p size) size = p.
+Proof.
+intros; destruct p; auto_contradict.
+unfold add_offset, sub_offset.
+rewrite <- Ptrofs.sub_add_l.
+rewrite Ptrofs.sub_add_opp.
+rewrite Ptrofs.add_assoc.
+rewrite Ptrofs.add_neg_zero. 
+rewrite Ptrofs.add_zero; auto.
+Qed.
+
+Lemma add_offset_eq_offset_val:
+  forall pa1 size,
+    isptr pa1 ->
+    add_offset pa1 size = offset_val size pa1.
+Proof.
+  intros pa1 size H.
+  destruct pa1; try contradiction.
+  (* pa1 is a Vptr *)
+  unfold add_offset, offset_val.
+  simpl.
+  reflexivity.
+Qed.
+
+Lemma add_offset_isptr:
+   forall p size,
+   0 < size ->
+   isptr p ->
+   isptr (add_offset p size).
+Proof.
+   intros.
+   unfold add_offset; destruct p; auto_contradict.
+   auto.
+Qed.
+
+Lemma add_offset_add:
+  forall (pa1:val) (i size : Z),
+    isptr pa1 ->
+    add_offset (add_offset pa1 (i * size)) size =
+    add_offset pa1 ((i + 1) * size).
+Proof.
+   intros pa1 i size H.
+   unfold add_offset. destruct pa1; auto_contradict.
+   f_equal.
+   rewrite Ptrofs.add_assoc.
+   rewrite ptrofs_add_repr.
+   assert (i * size + size = ((i + 1) * size)%Z); try rep_lia.
+   rewrite H0; auto.
+Qed.
+
+
+(** is pointers *)
+Fixpoint isptr_lst (n: nat) (p: val) (size: Z) : Prop :=
+  match n with
+  | S n' => 
+      (isptr p) /\ (isptr_lst n' (add_offset p size) size)
+  | O => isptr p (* TODO: is this correct?? *)
+  end.
+
+(* list of pointers *)
+Fixpoint pointers_acc (n: nat) (p: val) (size: Z) (acc: list val) : list val :=
+  match n with
+  | O => acc
+  | S n' => pointers_acc n' (add_offset p size) size (p :: acc)
+  end.
+
+(*Definition pointers (n: nat) (p: val) (size: Z) : list val :=
+   pointers_acc n p size nil.*)
+
+Lemma pointers_acc_correct:
+   forall n size q acc,
+   pointers_acc (S n) q size acc = pointers_acc n (add_offset q size) size (q :: acc).
+Proof.
+   intros.
+   unfold pointers_acc; fold pointers_acc; auto.
+Qed.
+
+Lemma add_to_pointers:
+   forall n p size,
+   isptr p ->
+   add_offset p (Z.of_nat n * size) :: pointers_acc n p size [] =
+   pointers_acc n (add_offset p size) size [p].
+Proof.
+   intros.
+   induction n; unfold pointers_acc.
+   - rewrite add_offset_0; auto.
+   - fold pointers_acc. rewrite <- pointers_acc_correct with (q:=(add_offset p size)); auto.
+   rewrite <- pointers_acc_correct with (q:=p); auto.
+Admitted.
+
+Definition pointers_with_original_head (n: nat) (p: val) (size: Z) (head:val): list val :=
+   match n with
+   | O => nil
+   | S O => [head]
+   | S n' => pointers_acc n' p size [head]
+   end.
+   
+Lemma add_to_pointers_with_head: (* TODO: I think n should be greater than 0.. *)
+   forall n p size head,
+   isptr p ->
+   add_offset p (Z.of_nat n * size) :: pointers_acc n p size [head] =
+   pointers_acc n (add_offset p size) size [p; head].
+Proof.
+   intros.
+   induction n; unfold pointers_acc.
+   - rewrite add_offset_0; auto.
+   - fold pointers_acc. rewrite <- pointers_acc_correct with (q:=(add_offset p size)); auto.
+   rewrite <- pointers_acc_correct with (q:=p); auto.
+   unfold pointers_acc; fold pointers_acc. rewrite<- IHn.
+Admitted.
+
+Lemma pointers_acc_length:
+  forall (n : nat) (p : val) (size : Z) (acc : list val),
+    length (pointers_acc n p size acc) = (n + length acc)%nat.
+Proof.
+  induction n as [| n' IH]; intros.
+  - simpl. reflexivity.
+  - simpl. rewrite IH. simpl. rewrite <- plus_n_Sm. auto.
+Qed.
+
+Lemma pointers_with_head_non_empty:
+   forall n p size head,
+   isptr p ->
+   (0 < n)%nat ->
+   pointers_with_original_head n p size head <> [].
+Proof.
+   intros.
+   destruct n eqn:en; try rep_lia.
+   unfold not.
+   unfold pointers_with_original_head. destruct n0.
+   - intros; auto_contradict.
+   - intros. destruct n0. unfold pointers_acc in H1; auto_contradict.
+   assert (length (pointers_acc (S (S n0)) p size [head]) = (O)). {
+      rewrite H1. auto.
+   } 
+   assert (length (pointers_acc ((S (S n0))) p size [head]) = (((S (S n0))) + length [head])%nat). {
+      apply pointers_acc_length.
+   }
+   rewrite H3 in H2. try rep_lia.
+Qed.
+
+   
+(*Lemma pointers_empty :
+   forall p size,
+   nil = pointers 0 p size.
+Proof.
+   intros. unfold pointers; auto.
+Qed.*)
+
+Lemma pointers_with_head_empty :
+   forall p size head,
+   nil = pointers_with_original_head 0 p size head.
+Proof.
+   intros. unfold pointers_with_original_head; auto.
+Qed.
+
 
 (* available and available range *)
 
@@ -121,7 +473,6 @@ Definition available_range (sh: share) (p_start p_end: val) (size: Z) :=
    end.
 
 Arguments available_range sh p_start p_end size : simpl never.
-
 
 Lemma available_local_prop: forall sh n p size, 
    available sh n p size |--  !! (is_pointer_or_null p /\ (n=0<->p=nullval) /\ (n>0<->isptr p))%nat.
@@ -157,20 +508,19 @@ Proof.
    destruct n; entailer!; try discriminate H0. 
 Qed.
 
-(*Lemma available_nonnull: forall n sh x size,
+Lemma available_nonnull: forall n sh x size,
    x <> nullval ->
    available sh n x size =
-   EX m : nat, 
-          !! (n = S m) && !! malloc_compatible (sizeof t_run) x && data_at sh t_run nullval x * available sh m (add_offset x size) size.
+   EX m : nat, EX v: val,
+          !! (n = S m) && !! malloc_compatible (sizeof t_run) x && data_at sh t_run v x * available sh m (add_offset x size) size.
 Proof.
    intros; apply pred_ext.
    - destruct n. 
          + unfold available. entailer!.
-         + unfold available; fold available.
-         Exists n. entailer!.
-   - Intros m. rewrite H0. unfold available at 2; fold available. entailer!.
-Qed.*)
-
+         + unfold available; fold available. Intros v.
+         Exists n. Exists v. entailer!.
+   - Intros m v. rewrite H0. unfold available at 2; fold available. Exists v. entailer!.
+Qed.
 
 (** lemmas ***)
 Lemma available_0:
@@ -199,6 +549,10 @@ Proof.
   destruct (sameblock (Vptr b i) (Vptr b0 i0)); entailer; auto_contradict.
 Qed.
 
+Ltac refold_available :=
+  unfold available;
+  fold available.
+
 
 
 (****************** compare pointers range *********************)
@@ -218,6 +572,7 @@ Definition ensure_comparable_range (sh: share) (p_start p_end: val) (size: Z) :=
       else !! (p_start = nullval) && emp
    | _ , _ => !! (p_start = nullval) && emp
    end.
+
 
 
 (* there are more lemmas in verif_simple kfree file v2*)
