@@ -341,10 +341,10 @@ Definition client7_spec :=
             data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem)
         )
     POST [ tptr tvoid ]
-        EX top, EX next,
+        EX top, EX next, (* TODO: fix top and next is the same?? *)
         PROP( 
-            top = (hd (nullval) (pointers_with_original_head (Z.to_nat (n)) pa1 PGSIZE original_freelist_pointer)) /\
-            next = (hd (nullval) (pointers_with_original_head (Z.to_nat (n-1)) pa1 PGSIZE original_freelist_pointer))
+            (*top = (hd (nullval) (pointers_with_original_head (Z.to_nat (n)) pa1 PGSIZE original_freelist_pointer)) /\
+            next = (hd (nullval) (pointers_with_original_head (Z.to_nat (n-1)) pa1 PGSIZE original_freelist_pointer))*)
         )
             RETURN (top) (* we return the head like in the pop function*)
             SEP 
@@ -1003,10 +1003,29 @@ start_function.
             }
             rewrite <- H0221 in H; rewrite e in H; auto_contradict.
             -- subst. inversion H322.
-            -- Exists curr_head curr_head. simpl. entailer.
+            -- rewrite H031. Exists curr_head curr_head. assert (i = n); try rep_lia. rewrite H. 
+            assert (isptr (sub_offset p_tmp PGSIZE)). {
+                assert (isptr pa1). {
+                        destruct (Z.to_nat n) eqn:en; auto_contradict; try rep_lia; unfold isptr_lst in HH2; fold isptr_lst in HH2; destruct HH2;
+                        unfold add_offset; destruct pa1; auto_contradict; auto.
+                } 
+                rewrite H0321. rewrite sub_add_offset_n; auto; try rep_lia.
+                unfold add_offset. destruct pa1; auto_contradict. auto. unfold PGSIZE; rep_lia.
+            }
+            rewrite e in H0221. rewrite <- H0221 in H0. auto_contradict.
+        * Intros ab. destruct H as [HH1 [HH2 [[[H311 H312] | [H321 H322]] HH4]]]; destruct H0 as [H01 [[[H0211 H0212] | [H0221 H0222]] [H031 [H0321 H0322]]]].
+            -- subst. auto_contradict.
+            -- admit.
+            -- subst. simpl in H4. assert (n = 0); try rep_lia. rewrite H. simpl. entailer.
+            refold_freelistrep. Exists original_freelist_pointer. Exists (fst ab). entailer.
+            -- Exists curr_head. Exists (fst ab). entailer.
+            assert (isptr pa1). {
+                        destruct (Z.to_nat n) eqn:en; auto_contradict; try rep_lia; unfold isptr_lst in HH2; fold isptr_lst in HH2; destruct HH2;
+                        unfold add_offset; destruct pa1; auto_contradict; auto.
+                } 
+            rewrite sub_add_offset_n; try rep_lia; auto.
             admit.
-              assert (i = n); try rep_lia. subst. entailer!. admit.
-        * Intros ab. Exists curr_head (fst ab). admit.
+            unfold PGSIZE; try rep_lia.
 Admitted.            
  
             
