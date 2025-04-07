@@ -116,9 +116,13 @@ PRE [ ]
     ) 
     PARAMS () GLOBALS(gv)
     SEP (
-        !! malloc_compatible (sizeof t_run) original_freelist_pointer && 
-        freelistrep sh ls original_freelist_pointer *
-        data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem)
+        if (eq_dec original_freelist_pointer nullval) then
+            freelistrep sh ls original_freelist_pointer *
+            data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem)
+        else 
+            (!! malloc_compatible (sizeof t_run) original_freelist_pointer && 
+            freelistrep sh ls original_freelist_pointer *
+            data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem))
         )  
 POST [ tptr tvoid ]
     PROP()
@@ -364,7 +368,7 @@ Definition client7_spec :=
 
 Definition client8_spec := 
     DECLARE _client8
-    WITH sh : share, pa1:val, original_freelist_pointer:val, xx:Z, gv:globals, ls : list val, next:val, n:Z
+    WITH sh : share, pa1:val, original_freelist_pointer:val, xx:Z, gv:globals, ls : list val, n:Z
     PRE [ tptr tvoid, tint ]
         PROP(
             writable_share sh /\
@@ -384,11 +388,37 @@ Definition client8_spec :=
         PROP( 
             added_elem = (pointers_with_original_head (Z.to_nat n) (pa1) PGSIZE original_freelist_pointer) /\
             head = (hd nullval ((pointers_with_original_head (Z.to_nat n+1) (pa1) PGSIZE original_freelist_pointer)++ls))
-            (*top = hd nullval before_alloc_fl = next *)
-            (* final_fl = tl before_alloc_fl *)
-            (*top = (hd (nullval) (pointers_with_original_head (Z.to_nat (n)) pa1 PGSIZE original_freelist_pointer)) /\
-            next = (hd (nullval) (pointers_with_original_head (Z.to_nat (n-1)) pa1 PGSIZE original_freelist_pointer))*)
+            )
+            RETURN () (* we return the head like in the pop function*)
+            SEP 
+            (
+                freelistrep sh (added_elem++ls) head *
+                data_at sh t_struct_kmem (Vint (Int.repr xx), head) (gv _kmem)
+                ).
+
+Definition client9_spec := 
+    DECLARE _client9
+    WITH sh : share, pa1:val, original_freelist_pointer:val, xx:Z, gv:globals, ls : list val, n:Z
+    PRE [ tptr tvoid, tint ]
+        PROP(
+            writable_share sh /\
+            isptr_lst (Z.to_nat n)%nat pa1 PGSIZE /\
+            ((ls = nil /\ original_freelist_pointer = nullval) \/ (ls <> nil /\ isptr original_freelist_pointer)) /\
+            Int.min_signed <= Int.signed (Int.repr n) + Int.signed (Int.repr 1) <= Int.max_signed /\
+            0 <= n <= Int.max_signed
+        ) 
+        PARAMS (pa1; Vint (Int.repr n)) GLOBALS(gv)
+        SEP (
+            available sh (Z.to_nat n) pa1 PGSIZE *
+            freelistrep sh ls original_freelist_pointer *
+            data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem)
         )
+    POST [ tptr tvoid ]
+        EX head, EX added_elem, (* TODO: fix top and next is the same?? *)
+        PROP( 
+            added_elem = (pointers_with_original_head (Z.to_nat n) (pa1) PGSIZE original_freelist_pointer) /\
+            head = (hd nullval ((pointers_with_original_head (Z.to_nat n+1) (pa1) PGSIZE original_freelist_pointer)++ls))
+            )
             RETURN () (* we return the head like in the pop function*)
             SEP 
             (
@@ -507,9 +537,11 @@ destruct (eq_dec original_freelist_pointer nullval) eqn:eofln.
         )%assert; 
     try (rewrite H012 in H; auto_contradict).
     + destruct ls; auto_contradict. refold_freelistrep. Intros. 
-    forward. destruct (eq_dec original_freelist_pointer nullval) eqn:e1; auto_contradict. forward. entailer.
-    + destruct (eq_dec original_freelist_pointer nullval) eqn:e1; auto_contradict. forward. entailer.
-    + rewrite e in H; auto_contradict.
+    forward. destruct (eq_dec original_freelist_pointer nullval) eqn:e1; auto_contradict. entailer. refold_freelistrep. entailer!.
+    +forward.
+    + destruct (eq_dec original_freelist_pointer nullval) eqn:e1; auto_contradict. destruct ls; auto_contradict. refold_freelistrep. Intros. forward. forward. entailer.
+    + forward. entailer.
+    + forward.
 - Intros. destruct H as [H1 [[H111 H112] | [H121 H122]]]; try (subst; auto_contradict).
     destruct ls; auto_contradict; refold_freelistrep. Intros. forward.
         forward_if (
@@ -548,7 +580,7 @@ start_function.
 forward_call (sh, new_head, original_freelist_pointer, xx, gv, ls, PGSIZE). (* call kfree1 *)
 - destruct H as [HH1 [HH2 [[H411 H412] | [H421 H422]]]]; split; auto; split; auto. rewrite H412; unfold is_pointer_or_null; unfold nullval; simpl; auto.
 - forward_call (sh, new_head, xx, original_freelist_pointer::ls, gv). (* call kalloc *)
-    + refold_freelistrep. entailer!.
+    + refold_freelistrep. destruct (eq_dec new_head nullval); try (rewrite e in H0; auto_contradict). entailer!. 
     + destruct H as [HH1 [HH2 [[H411 H412] | [H421 H422]]]]; split; auto;  right; split; auto; unfold not; intros; inversion H.
     + destruct (eq_dec new_head nullval) eqn:enh.
         * rewrite e in H0; auto_contradict.
@@ -627,7 +659,7 @@ forward_call (sh, pa1, original_freelist_pointer, xx, gv, ls, PGSIZE). (* call k
 -  Exists v1. entailer!.
 - destruct H as [HH1 [HH2 [H3 [[H411 H412] | [H421 H422]]]]]; split; auto; split; auto. rewrite H412; unfold is_pointer_or_null; unfold nullval; simpl; auto.
 - forward_call (sh, pa1, xx, original_freelist_pointer::ls, gv). (* call kalloc *)
-    + refold_freelistrep. entailer!.
+    + refold_freelistrep. destruct (eq_dec pa1 nullval); try (rewrite e in H0; auto_contradict). entailer!. 
     + destruct H as [HH1 [HH2 [H3 [[H411 H412] | [H421 H422]]]]]; split; auto;  right; split; auto; unfold not; intros; inversion H.
     + destruct (eq_dec pa1 nullval) eqn:enh.
         * rewrite e in H0; auto_contradict.
@@ -636,7 +668,7 @@ forward_call (sh, pa1, original_freelist_pointer, xx, gv, ls, PGSIZE). (* call k
           -- Exists v2. entailer!.
           -- destruct H as [HH1 [HH2 [HH3 [[H411 H412] | [H421 H422]]]]]; split; auto; split; auto. rewrite H412; unfold is_pointer_or_null; unfold nullval; simpl; auto.
           -- forward_call (sh, pa2, xx, original_freelist_pointer::ls, gv). (* call kalloc *)
-            ++ refold_freelistrep. entailer!.
+            ++ refold_freelistrep. destruct (eq_dec pa2 nullval); try (rewrite e in H0; auto_contradict). entailer!. entailer!.  
             ++split; destruct H; auto. right; split; auto; unfold not; intros; auto_contradict.
             ++ destruct (eq_dec pa2 nullval) eqn:enh2.
                 ** forward.
@@ -714,7 +746,7 @@ Proof.
             apply PGSIZE_gt_0.
             unfold isptr_lst in HH2; destruct HH2; auto.
             }
-            rewrite H8. simpl. refold_freelistrep. entailer!.
+            rewrite H8. simpl. refold_freelistrep.  destruct (EqDec_val (add_offset pa1 PGSIZE) nullval); try (rewrite e in H0; auto_contradict). entailer!. entailer!.  
             --  assert (0 < Z.to_nat 2)%nat; try rep_lia. auto_contradict.
         * assert (i = 2); try rep_lia. rewrite H7. replace (Z.to_nat 2) with (S (S O)); try rep_lia.
             unfold pointers_with_original_head; fold pointers_with_original_head.
@@ -722,7 +754,7 @@ Proof.
             rewrite sub_add_offset_n with (p := pa1) (size := PGSIZE) (n :=2); try rep_lia; auto.
             apply PGSIZE_gt_0.
             unfold isptr_lst in HH2; destruct HH2; auto.
-            } rewrite H8. unfold pointers_acc. simpl. refold_freelistrep. entailer!.
+            } rewrite H8. unfold pointers_acc. simpl. refold_freelistrep. destruct (EqDec_val (add_offset pa1 PGSIZE) nullval); try (rewrite e in H0; auto_contradict). entailer!. entailer!.
     + destruct H as [HH1 [HH2 [[[H311 H312] | [H321 H322]] HH4]]]; split; auto.
         * right; split; auto; unfold not; intros. inversion H. unfold isptr_lst in HH2; destruct HH2 as [HH21 [HH22 HH23]]; auto.
         * right. split; auto. unfold not. intros. inversion H. unfold isptr_lst in HH2; destruct HH2 as [HH21 [HH22 HH23]]; auto.
@@ -902,7 +934,7 @@ start_function.
                 try rep_lia.
             -- apply PGSIZE_gt_0.
             -- destruct (Z.to_nat n) eqn:en1; auto_contradict; try rep_lia; unfold isptr_lst in HH2; fold isptr_lst in HH2; destruct HH2; auto.
-        * entailer. simpl. destruct ls; auto_contradict. refold_freelistrep. entailer!.
+        * entailer. simpl. destruct ls; auto_contradict. refold_freelistrep.  destruct (EqDec_val original_freelist_pointer nullval); try (rewrite e in H0; auto_contradict). entailer!. entailer!.
         * assert (Z.to_nat (n - i) = 0%nat); try rep_lia. rewrite H8. refold_available.
         assert (add_offset pa1 (i * PGSIZE) = nullval). { rewrite <- H4; auto. }
         unfold add_offset in H9. 
@@ -981,15 +1013,6 @@ start_function.
                 ++ admit.
 Admitted.            
 
-
-
-Lemma positive_product : forall i size,
-  0 < i -> 0 < size -> 0 < i * size.
-Proof.
-  intros i size H1 H2.
-  (* We are given i > 0 and PGSIZE > 0, so their product is positive *)
-  apply Z.mul_pos_pos; assumption.
-Qed.
 
 Lemma body_client8: semax_body Vprog Gprog f_client8 client8_spec.
 Proof.
@@ -1166,6 +1189,54 @@ start_function.
     }
     rewrite H8 in H9; auto_contradict.
 Qed.
+
+Lemma body_client9: semax_body Vprog Gprog f_client9 client9_spec.
+Proof.
+start_function.
+assert (isptr pa1). {
+                destruct H as [H1 [HH2 HH3]].
+                destruct (Z.to_nat n) eqn:en; unfold isptr_lst in HH2; fold isptr_lst in HH2; auto.
+                destruct HH2; auto.
+            }
+forward_call (sh, pa1:val, original_freelist_pointer:val, xx:Z, gv:globals, ls : list val, n:Z).
+- destruct H as [HH1 [HH2 [[[H311 H312] | [H321 H322]] HH4]]]; split; auto.
+- Intros vret. forward_call (sh, fst vret, xx, snd vret ++ ls, gv). (* call kalloc *)
+    + destruct H as [HH1 [HH2 [[[H311 H312] | [H321 H322]] HH4]]]. 
+        * destruct (eq_dec (fst vret) nullval).
+            -- entailer!.
+            -- destruct (snd vret).
+                ++ entailer. simpl. entailer!. assert (fst vret = nullval). { rewrite <- H7. auto. }
+                auto_contradict.
+                ++ simpl. refold_freelistrep. entailer.
+        * destruct (eq_dec (fst vret) nullval).
+            -- entailer!.
+            -- destruct (snd vret).
+                ++ destruct (Z.to_nat n); auto_contradict.
+                2: { 
+                    assert (pointers_with_original_head (S n1) pa1 PGSIZE original_freelist_pointer <> []). { apply pointers_with_head_non_empty; auto; try rep_lia. }
+                    rewrite H1 in H. auto_contradict.
+                }
+                rewrite app_nil_l. destruct ls; auto_contradict.
+                refold_freelistrep. entailer!.
+                ++ simpl. refold_freelistrep. entailer.
+    + destruct H as [HH1 [HH2 [[[H311 H312] | [H321 H322]] HH4]]]; split; auto.
+        * destruct (Z.to_nat n).
+            -- simpl in H1. left; subst. split; auto. unfold pointers_with_original_head in H1. rewrite H1. auto.
+            -- right. split; auto. rewrite H311. rewrite app_nil_r. rewrite H1.
+                apply pointers_with_head_non_empty; auto; try rep_lia. admit.
+        * right. split. destruct (snd vret).
+            -- rewrite app_nil_l. auto.
+            -- unfold not. intros; auto_contradict.
+            -- admit.
+    + forward. destruct (eq_dec (fst vret) nullval).
+        * Exists (fst vret). Exists (nil:list val). destruct (eq_dec nullval nullval).
+            -- destruct (eq_dec (fst vret) nullval); auto_contradict. admit.
+            -- unfold not in n0. exfalso; apply n0; auto.
+        * admit.
+Admitted.
+
+
+
 
             
 Lemma body_freerange_while_loop_spec: semax_body Vprog Gprog f_freerange_while_loop freerange_while_loop_spec.
