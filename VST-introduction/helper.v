@@ -8,6 +8,9 @@ Local Open Scope logic.
 Definition t_run := Tstruct _run noattr.
 Definition t_struct_kmem := Tstruct _struct_kmem noattr.
 Definition PGSIZE : Z := 4096.
+Definition t_struct_pipe := Tstruct _pipe noattr.
+Definition PIPESIZE : Z := 512.
+
 
 (************************ Helper functions and tactics  *************************)
 
@@ -647,6 +650,31 @@ Ltac refold_available :=
   unfold available;
   fold available.
 
+(********** pipe rep ************)
+(*Compute (reptype t_struct_pipe).
+	 = (list val * (val * (val * (val * val))))%type
+     : Type
+     *)
+
+(*Definition pipe_rep (pi: val) : mpred :=
+  (* assume memory at pi is correctly initialized pipe *)
+  (* if modeling abstraction: can hide internal structure *)
+  EX data: list byte,
+    !! (Zlength data = PIPESIZE) &&
+    data_at Tsh t_struct_pipe (data, 0%Z, 0%Z, 1%Z, 1%Z) pi.*)
+
+Definition list_repeat {A: Type} (n: nat) (x: A) : list A :=
+      repeat x n.
+
+Definition pipe_rep sh (pi: val) : mpred :=
+  data_at sh t_struct_pipe
+    ( (* data = uninitialized? depends on model *)
+      (list_repeat (Z.to_nat PIPESIZE) (Vundef)), (* array data[PIPESIZE] *)
+      (Vint (Int.repr 0), (* nread *)
+      (Vint (Int.repr 0), (* nwrite *)
+      (Vint (Int.repr 1), (* readopen *)
+       Vint (Int.repr 1)  (* writeopen *))))
+    ) pi.
 
 
 (****************** compare pointers range *********************)

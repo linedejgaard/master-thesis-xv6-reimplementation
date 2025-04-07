@@ -79,6 +79,7 @@ Qed.
 
 
 
+
 (************************ specs *********************************)
 Definition kfree1_spec := 
     DECLARE _kfree1
@@ -432,6 +433,47 @@ Definition client9_spec :=
             data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem)
                     )
                 ).
+
+Definition client_11_pipealloc_spec := 
+    DECLARE _client_11_pipealloc
+    WITH sh : share, original_freelist_pointer:val, xx:Z, ls:list val, gv:globals
+    PRE [ ]
+        PROP(
+            writable_share sh /\ 
+            (((ls = nil) /\ original_freelist_pointer = nullval) \/ ((ls <> nil) /\ isptr original_freelist_pointer))
+        ) 
+        PARAMS () GLOBALS(gv)
+        SEP (
+            if (eq_dec original_freelist_pointer nullval) then
+                freelistrep sh ls original_freelist_pointer *
+                data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem)
+            else 
+                (!! malloc_compatible (sizeof t_run) original_freelist_pointer && 
+                freelistrep sh ls original_freelist_pointer *
+                data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem))
+        )
+    POST [  tvoid ]
+        PROP( )
+            RETURN () (* we return the head like in the pop function*)
+            SEP 
+            (
+
+            if (eq_dec original_freelist_pointer nullval) then
+                (
+                    freelistrep sh ls original_freelist_pointer *
+                    data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem) (* q can be nullval meaning that there is only one run *)
+                )
+            else 
+                (
+                    EX next ls',
+                    (!! (next :: ls' = ls) &&
+                    !! malloc_compatible (sizeof t_run) original_freelist_pointer && 
+                    pipe_rep original_freelist_pointer *
+                    (*data_at sh t_run next  *)
+                    freelistrep sh ls' next *
+                    data_at sh t_struct_kmem (Vint (Int.repr xx), next) (gv _kmem))
+                )                
+                ).
 (* added values: 
 (pointers_with_original_head (Z.to_nat (n-1)) (pa1) PGSIZE original_freelist_pointer)
 *)
@@ -496,7 +538,8 @@ Definition Gprog : funspecs := [
     client5_spec;
     client6_spec;
     client7_spec;
-    client8_spec(*;
+    client8_spec;
+    client_11_pipealloc_spec(*;
     freerange_while_loop_spec*)
 ].
 
@@ -1262,7 +1305,21 @@ forward_call (sh, pa1:val, original_freelist_pointer:val, xx:Z, gv:globals, ls :
 Admitted.
 
 
-
+Lemma body_client11_pipealloc: semax_body Vprog Gprog f_client_11_pipealloc client_11_pipealloc_spec.
+Proof.
+    start_function.
+    forward.
+    forward_call (sh, original_freelist_pointer, xx, ls, gv). (* call kalloc *)
+    destruct (eq_dec original_freelist_pointer nullval).
+    - forward_if.
+        + rewrite e in H0. auto_contradict.
+        + Intros. forward. entailer.
+    - Intros an. forward_if. 
+        destruct H as [H01 [[H011 H012] | [H021 H022]]]; auto_contradict.
+        + admit. (* pointer comparison *)
+        + admit. (* don't know why it is not casted .. *)
+        + forward. entailer.
+Admitted.
 
             
 Lemma body_freerange_while_loop_spec: semax_body Vprog Gprog f_freerange_while_loop freerange_while_loop_spec.
