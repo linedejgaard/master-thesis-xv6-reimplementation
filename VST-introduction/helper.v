@@ -18,6 +18,14 @@ Ltac simplify_signed_PGSIZE := rewrite Int.signed_repr; unfold PGSIZE; try rep_l
 Lemma S_pred : forall n, ((S n) - 1)%nat = n.
 Proof. lia. Qed.
 
+Lemma positive_product : forall i size,
+  0 < i -> 0 < size -> 0 < i * size.
+Proof.
+  intros i size H1 H2.
+  (* We are given i > 0 and PGSIZE > 0, so their product is positive *)
+  apply Z.mul_pos_pos; assumption.
+Qed.
+
 Lemma PGSIZE_gt_0: 0 < PGSIZE.
 Proof.
     unfold PGSIZE; rep_lia.
