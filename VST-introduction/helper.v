@@ -216,24 +216,32 @@ Qed.
 
 
 (* add offset *)
+Ltac unfold_size size ename :=
+  destruct (Z.leb 0 size) eqn:ename;
+  try rep_lia.
 
 Definition add_offset (p: val) (ofs: Z) : val := 
    match p with
-   | Vptr b1 p1 => Vptr b1 (Ptrofs.add p1 (Ptrofs.repr ofs))
+   | Vptr b1 p1 => 
+      if (Z.leb 0 ofs) then
+         Vptr b1 (Ptrofs.add p1 (Ptrofs.repr ofs)) 
+      else
+         nullval
    | _ => nullval
    end.
 
 Lemma add_offset_correct:
    forall b p size,
+      0 <= size ->
      add_offset (Vptr b p) size = Vptr b (Ptrofs.add p (Ptrofs.repr size)).
 Proof.
-   intros. unfold add_offset. reflexivity.
+   intros. unfold add_offset. destruct (0 <=? size) eqn:es; try rep_lia. reflexivity.
 Qed.
 
 Lemma add_offset_0:
    forall p,
     isptr p ->
-     add_offset p 0 = p.
+    add_offset p 0 = p.
 Proof.
    intros. destruct p; auto_contradict. unfold add_offset. rewrite ptrofs_add_repr_0_r; auto.
 Qed.
@@ -261,6 +269,7 @@ Lemma sub_add_offset_correct:
 Proof.
 intros; destruct p; auto_contradict.
   unfold add_offset, sub_offset.
+  destruct (0 <=? size) eqn:es; try rep_lia.
   rewrite Ptrofs.sub_add_opp.
   rewrite Ptrofs.add_assoc.
   rewrite Ptrofs.add_neg_zero. 
@@ -276,19 +285,28 @@ Lemma sub_add_offset_n:
 Proof.
 intros; destruct p; auto_contradict.
   unfold add_offset, sub_offset.
-  rewrite Ptrofs.sub_add_opp.
-  rewrite Ptrofs.add_assoc.
-  (*destruct n; try rep_lia.
-  replace (S n - 1)%nat with n; try rep_lia.
-  replace (Z.of_nat (S n)) with (1 + Z.of_nat n); try rep_lia.
-  rewrite<- ptrofs_mul_repr.
-  rewrite <- ptrofs_add_repr.
-  rewrite Ptrofs.mul_add_distr_l.
-  rewrite <- ptrofs_mul_repr.
-  replace (Ptrofs.repr 1) with Ptrofs.one; auto.
-  rewrite Ptrofs.mul_commut. rewrite Ptrofs.mul_one.
-  rewrite Ptrofs.add_assoc.*)
-  Admitted.
+  unfold_size (n * size)%Z e1.
+  unfold_size ((n -1)* size)%Z e2.
+  -rewrite Ptrofs.sub_add_opp.
+   rewrite Ptrofs.add_assoc.
+   rewrite<- ptrofs_mul_repr.
+   rewrite<- ptrofs_mul_repr.
+   rewrite <- ptrofs_sub_repr.
+   assert (Ptrofs.mul (Ptrofs.neg (Ptrofs.repr 1)) (Ptrofs.repr size) = Ptrofs.neg (Ptrofs.repr size)). {
+      rewrite <- Ptrofs.neg_mul_distr_l.
+      replace (Ptrofs.repr 1) with Ptrofs.one; auto.
+      rewrite Ptrofs.mul_commut.
+      rewrite Ptrofs.mul_one; auto.
+   }
+   rewrite Ptrofs.sub_add_opp.
+   rewrite Ptrofs.mul_add_distr_l.
+   rewrite <- H2. auto.
+  -rewrite Z.leb_gt in e2.
+  destruct n; try rep_lia.
+  assert ((Z.pos p - 1) >= 0)%Z by lia.
+  assert ((Z.pos p - 1) * size >= 0)%Z by nia.
+  try rep_lia.
+Qed.
 
 Lemma add_sub_offset_correct:
    forall p size,
@@ -303,10 +321,12 @@ rewrite Ptrofs.sub_add_opp.
 rewrite Ptrofs.add_assoc.
 rewrite Ptrofs.add_neg_zero. 
 rewrite Ptrofs.add_zero; auto.
+unfold_size size e; auto.
 Qed.
 
 Lemma add_offset_eq_offset_val:
   forall pa1 size,
+    0 < size ->
     isptr pa1 ->
     add_offset pa1 size = offset_val size pa1.
 Proof.
@@ -314,7 +334,7 @@ Proof.
   destruct pa1; try contradiction.
   (* pa1 is a Vptr *)
   unfold add_offset, offset_val.
-  simpl.
+  simpl. unfold_size size e.
   reflexivity.
 Qed.
 
@@ -327,23 +347,28 @@ Proof.
    intros.
    unfold add_offset; destruct p; auto_contradict.
    auto.
+   unfold_size size e; auto.
 Qed.
 
 Lemma add_offset_add:
   forall (pa1:val) (i size : Z),
+    0 < size->
     isptr pa1 ->
+    0 <= i ->
     add_offset (add_offset pa1 (i * size)) size =
     add_offset pa1 ((i + 1) * size).
 Proof.
    intros pa1 i size H.
    unfold add_offset. destruct pa1; auto_contradict.
    f_equal.
+   unfold_size (i * size)%Z e.
+   unfold_size size e1.
+   unfold_size ((i + 1) * size)%Z e2.
    rewrite Ptrofs.add_assoc.
    rewrite ptrofs_add_repr.
    assert (i * size + size = ((i + 1) * size)%Z); try rep_lia.
    rewrite H0; auto.
 Qed.
-
 
 (** is pointers *)
 Fixpoint isptr_lst (n: nat) (p: val) (size: Z) : Prop :=
@@ -372,16 +397,18 @@ Proof.
 Qed.
 
 Lemma add_to_pointers:
-   forall n p size,
-   isptr p ->
-   add_offset p (Z.of_nat n * size) :: pointers_acc n p size [] =
-   pointers_acc n (add_offset p size) size [p].
+  forall n p size,
+    isptr p ->
+    (0 <= n)%nat ->
+    add_offset p (Z.of_nat n * size) :: pointers_acc n p size [] =
+    pointers_acc n (add_offset p size) size [p].
 Proof.
-   intros.
-   induction n; unfold pointers_acc.
-   - rewrite add_offset_0; auto.
-   - fold pointers_acc. rewrite <- pointers_acc_correct with (q:=(add_offset p size)); auto.
-   rewrite <- pointers_acc_correct with (q:=p); auto.
+  intros n. induction n as [|n IH]; intros.
+  - (* base case *)
+    simpl. rewrite add_offset_0 by auto. reflexivity.
+  - (* inductive case *)
+   unfold pointers_acc.
+    rewrite <- IH.
 Admitted.
 
 Definition pointers_with_original_head (n: nat) (p: val) (size: Z) (head:val): list val :=
@@ -390,7 +417,61 @@ Definition pointers_with_original_head (n: nat) (p: val) (size: Z) (head:val): l
    | S O => [head]
    | S n' => pointers_acc n' p size [head]
    end.
-   
+
+Definition get_curr_head (n: nat) (p: val) (size: Z) (head:val): val :=
+   match n with
+   | O => nullval
+   | S O => head
+   | S n' => add_offset p (Z.of_nat n' * size)
+   end.
+
+(*Lemma get_head_correct:
+   forall n p size head,
+   isptr p ->
+   hd nullval (pointers_with_original_head n p size head) = get_curr_head n p size head.
+Proof.
+intros.
+induction n.
+- simpl. auto.
+- unfold get_curr_head. destruct n eqn:en.
++ simpl. auto.
++ unfold pointers_with_original_head. unfold pointers_acc. unfold add_offset. simpl.
+Admitted.*)
+
+Lemma get_head_ls_correct:
+   forall n p size head ls,
+   (0 < n)%nat ->
+   isptr p ->
+   hd nullval (pointers_with_original_head n p size head ++ ls) = get_curr_head n p size head.
+Proof.
+intros.
+induction n.
+- rep_lia.
+- unfold get_curr_head. destruct n eqn:en.
++ simpl. auto.
++ unfold pointers_with_original_head. unfold pointers_acc. unfold add_offset. simpl.
+Admitted.
+
+Lemma hd_add_offset_ls:
+   forall n p size original_head ls,
+   0 < n ->
+   isptr p ->
+      add_offset p (n * size) = hd nullval
+      (pointers_with_original_head (Z.to_nat n + 1) p size
+      original_head ++ ls).
+Proof.
+   intros n.
+   induction n; unfold pointers_acc; intros; try rep_lia.
+   rewrite get_head_ls_correct; auto; try rep_lia.
+   unfold get_curr_head.
+   destruct ((Z.to_nat (Z.pos p) + 1)%nat) eqn:e; try rep_lia.
+   destruct n; try rep_lia.
+   assert ((Z.to_nat (Z.pos p))%nat = (S n)); try rep_lia.
+   rewrite <- H1.
+   replace (Z.of_nat (Z.to_nat (Z.pos p))) with ( (Z.pos p)); try rep_lia; auto.
+Qed.
+
+
 Lemma add_to_pointers_with_head: (* TODO: I think n should be greater than 0.. *)
    forall n p size head,
    isptr p ->
