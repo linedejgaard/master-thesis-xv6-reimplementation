@@ -18,6 +18,11 @@ Ltac simplify_signed_PGSIZE := rewrite Int.signed_repr; unfold PGSIZE; try rep_l
 Lemma S_pred : forall n, ((S n) - 1)%nat = n.
 Proof. lia. Qed.
 
+Lemma PGSIZE_gt_0: 0 < PGSIZE.
+Proof.
+    unfold PGSIZE; rep_lia.
+Qed.
+
 Lemma cmp_le_is_either_0_or_1 : forall p q i,
    sem_cmp_pp Cle p q = Some (Vint i) ->
    (i = Int.zero) \/ (i = Int.one).

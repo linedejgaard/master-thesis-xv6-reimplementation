@@ -643,28 +643,30 @@ Proof.
         +forward_call (sh, p_tmp, curr_head, xx, gv, (tmp_added_elem ++ ls), PGSIZE). (* call kfree1 *)
             * Intros v. Exists v. entailer!.
             * destruct H as [H1 [H2 [[[H311 H312] | [H321 H322]] H4]]]; destruct H0 as [H01 [[[H0211 H0212] | [H0221 H0222]] [H031 [H0321 H0322]]]]; split; auto; split; try (subst; simpl; auto);  unfold isptr_lst in H2; destruct H2; try (rewrite add_offset_0; auto);
-                  try (destruct i; auto_contradict;
+                  try (unfold add_offset; unfold sub_offset; unfold_size (i * PGSIZE)%Z e0; destruct i; auto_contradict;
                   destruct pa1; auto_contradict;
-                  unfold add_offset; unfold sub_offset; unfold is_pointer_or_null; auto).
+                  unfold sub_offset; unfold is_pointer_or_null; auto; simpl; auto); repeat (destruct H01; try rep_lia).
             *Intros. forward. forward. Exists ((((i+1)%Z, (add_offset p_tmp PGSIZE):val), p_tmp:val), (curr_head::(pointers_with_original_head(Z.to_nat (i)) pa1 PGSIZE)original_freelist_pointer):list val).
                 entailer!.
                 destruct H as [HH1 [HH2 [[[H311 H312] | [H321 H322]] HH4]]]; destruct H0 as [H01 [[[H0211 H0212] | [H0221 H0222]] [H031 [H0321 H0322]]]]; 
                 repeat split; try rep_lia; auto; auto_contradict; try (subst; simpl; try rep_lia); try ( unfold isptr_lst in HH2; destruct HH2; auto);
                 try (rewrite add_offset_0; auto); try (apply add_offset_eq_offset_val); auto.
                 ++ right; split; try rep_lia. rewrite sub_add_offset_correct; auto.
-                ++ right; split; try rep_lia. rewrite sub_add_offset_correct; auto; unfold PGSIZE; try rep_lia.
+                ++ right; split; try rep_lia. rewrite sub_add_offset_correct; auto; apply PGSIZE_gt_0.
                 ++ replace (Z.to_nat (i + 1)) with (S (Z.to_nat (i))); try rep_lia. unfold pointers_with_original_head at 2; fold pointers_with_original_head.
                 destruct (Z.to_nat i) eqn:ei.
                     ** assert (i = 0); try rep_lia.
                     ** unfold pointers_acc; fold pointers_acc. simpl. induction n0; assert (i = 1); try rep_lia.
-                    simpl. rewrite H13; rewrite sub_add_offset_correct; auto. unfold PGSIZE; try rep_lia.
-                ++ rewrite add_offset_add; auto.
+                    simpl. rewrite H13; rewrite sub_add_offset_correct; auto. apply PGSIZE_gt_0.
+                ++ rewrite add_offset_add; auto; try apply PGSIZE_gt_0; rep_lia.
+                ++ try rep_lia.
                 ++ right. rewrite sub_add_offset_correct; auto. split; auto; unfold not; intros; auto_contradict.
                 ++ assert (i = 1); try rep_lia. right; rewrite H13. unfold not; intros; split; try rep_lia.
-                    rewrite sub_add_offset_correct; auto. unfold PGSIZE; rep_lia. rewrite Z.mul_1_l; destruct H0; auto.
-                ++ replace (Z.to_nat (i + 1)) with (S (Z.to_nat (i))); try rep_lia.  assert (i = 1); try rep_lia. rewrite H13; rewrite Z.mul_1_l. simpl. rewrite sub_add_offset_correct; auto; unfold PGSIZE; try rep_lia.
-                ++assert (i = 1); try rep_lia. rewrite H13. rewrite add_offset_add; auto.
-                ++ simpl. destruct H0 as [H01 [[[H0211 H0212] | [H0221 H0222]] [H031 [H0321 H0322]]]].
+                    rewrite sub_add_offset_correct; auto. apply PGSIZE_gt_0. rewrite Z.mul_1_l; destruct H0; auto.
+                ++ replace (Z.to_nat (i + 1)) with (S (Z.to_nat (i))); try rep_lia.  assert (i = 1); try rep_lia. rewrite H13; rewrite Z.mul_1_l. simpl. rewrite sub_add_offset_correct; auto; apply PGSIZE_gt_0.
+                ++assert (i = 1); try rep_lia. rewrite H13. rewrite add_offset_add; auto; try apply PGSIZE_gt_0; try rep_lia.
+                ++ try rep_lia.
+                ++ destruct H0 as [H01 [[[H0211 H0212] | [H0221 H0222]] [H031 [H0321 H0322]]]].
                     ** rewrite H031.  rewrite H0212. unfold pointers_with_original_head. destruct (Z.to_nat 0) eqn:e0; try rep_lia.
                     simpl. refold_freelistrep. assert (n = S O); try rep_lia. rewrite H0. unfold available. entailer.
                     **assert (i = 1); try rep_lia. rewrite H031.  rewrite H0. simpl. refold_freelistrep. assert (n = O); try rep_lia. rewrite H13. unfold available. entailer!.
@@ -674,7 +676,7 @@ Proof.
         * unfold pointers_with_original_head. assert (i = 2); try rep_lia. rewrite H7. destruct (0 <? Z.to_nat 2)%nat eqn:ei; try rep_lia.
             -- assert (sub_offset (add_offset pa1 (2 * PGSIZE)) PGSIZE = (add_offset pa1 (1 * PGSIZE))). {
             rewrite sub_add_offset_n with (p := pa1) (size := PGSIZE) (n :=2); try rep_lia; auto.
-            unfold PGSIZE; rep_lia.
+            apply PGSIZE_gt_0.
             unfold isptr_lst in HH2; destruct HH2; auto.
             }
             rewrite H8. simpl. refold_freelistrep. entailer!.
@@ -683,7 +685,7 @@ Proof.
             unfold pointers_with_original_head; fold pointers_with_original_head.
             assert (sub_offset (add_offset pa1 (2 * PGSIZE)) PGSIZE = (add_offset pa1 (1 * PGSIZE))). {
             rewrite sub_add_offset_n with (p := pa1) (size := PGSIZE) (n :=2); try rep_lia; auto.
-            unfold PGSIZE; rep_lia.
+            apply PGSIZE_gt_0.
             unfold isptr_lst in HH2; destruct HH2; auto.
             } rewrite H8. unfold pointers_acc. simpl. refold_freelistrep. entailer!.
     + destruct H as [HH1 [HH2 [[[H311 H312] | [H321 H322]] HH4]]]; split; auto.
@@ -693,7 +695,7 @@ Proof.
         * destruct (eq_dec (add_offset pa1 PGSIZE) nullval) eqn:ee; auto_contradict.
             destruct H as [HH1 [HH2 [[[H311 H312] | [H321 H322]] HH4]]]; unfold isptr_lst in HH2; destruct HH2 as [HH21 [HH22 HH23]]; rewrite e in HH22; auto_contradict.
             Intros ab. inversion H2. entailer!.
-Qed.  
+Qed. 
 
 Lemma body_client7: semax_body Vprog Gprog f_client7 client7_spec.
 Proof.
@@ -739,7 +741,7 @@ start_function.
             * destruct H as [HH1 [H2 [[[H311 H312] | [H321 H322]] H4]]]; destruct H1 as [H01 [[[H0211 H0212] | [H0221 H0222]] [H031 [H0321 H0322]]]]; split; auto; split; try (subst; simpl; auto).
                 ++ destruct (Z.to_nat n) eqn:en; auto_contradict; try rep_lia. rewrite add_offset_0; auto;
                 unfold isptr_lst in H2; fold isptr_lst in H2; destruct H2; auto.
-                ++ rewrite sub_add_offset_n. unfold add_offset. destruct pa1; try (unfold nullval; simpl; auto). unfold_size ((i - 1) * PGSIZE)%Z e2; try simpl; auto. unfold PGSIZE; try rep_lia.
+                ++ rewrite sub_add_offset_n. unfold add_offset. destruct pa1; try (unfold nullval; simpl; auto). unfold_size ((i - 1) * PGSIZE)%Z e2; try simpl; auto. apply PGSIZE_gt_0.
                 destruct i eqn:ei; auto_contradict; try rep_lia. destruct (Z.to_nat n) eqn:en; try rep_lia.
                 unfold isptr_lst in H2; fold isptr_lst in H2; destruct H2; auto.
                 ++ destruct (Z.to_nat n) eqn:en; auto_contradict; try rep_lia. unfold isptr_lst in H2; fold isptr_lst in H2; destruct H2.
@@ -748,7 +750,7 @@ start_function.
                 unfold add_offset; destruct pa1; auto_contradict; auto.
                 ++ rewrite sub_add_offset_n. unfold add_offset. destruct pa1; auto_contradict; try (unfold nullval; simpl; auto).
                     ** unfold_size ((i - 1) * PGSIZE)%Z e2; try simpl; auto.
-                    **  unfold PGSIZE; try rep_lia.
+                    **  apply PGSIZE_gt_0.
                     ** try rep_lia.
                     ** destruct (Z.to_nat n) eqn:en; auto_contradict; try rep_lia; unfold isptr_lst in H2; fold isptr_lst in H2; destruct H2;
                     unfold add_offset; destruct pa1; auto_contradict; auto.
@@ -760,66 +762,20 @@ start_function.
                 destruct H as [HH1 [HH2 [[[H311 H312] | [H321 H322]] HH4]]]; destruct H1 as [H01 [[[H0211 H0212] | [H0221 H0222]] [H031 [H0321 H0322]]]].
                 ++ repeat split; try rep_lia; auto; auto_contradict; try (subst; simpl; try rep_lia); try ( unfold isptr_lst in HH2; destruct HH2; auto);
                 try (rewrite add_offset_0; auto); try (apply add_offset_eq_offset_val); auto; try rep_lia.
-                right; split; try rep_lia. rewrite sub_add_offset_correct; auto. unfold PGSIZE; rep_lia.
-                    (*** 
-                    ** right; split; try rep_lia. rewrite sub_add_offset_correct; auto. unfold PGSIZE; rep_lia.
-                    (*destruct (Z.to_nat n) eqn:en; auto_contradict; try rep_lia; unfold isptr_lst in HH2; fold isptr_lst in HH2; destruct HH2;
-                    unfold add_offset; destruct pa1; auto_contradict; auto.*)
-                    ** destruct (Z.to_nat n) eqn:en; auto_contradict; try rep_lia; unfold isptr_lst in HH2; fold isptr_lst in HH2; destruct HH2;
-                    unfold add_offset; destruct pa1; auto_contradict; auto.
-                    ** destruct (Z.to_nat n) eqn:en; auto_contradict; try rep_lia; unfold isptr_lst in HH2; fold isptr_lst in HH2; destruct HH2;
-                    unfold add_offset; destruct pa1; auto_contradict; auto.
-                    ** (* TOOD: this line is repeated many times through out the proof.. **) 
-                    destruct (Z.to_nat n) eqn:en; auto_contradict; try rep_lia; unfold isptr_lst in HH2; fold isptr_lst in HH2; destruct HH2;
-                    unfold add_offset; destruct pa1; auto_contradict; auto.
-                    ** destruct (Z.to_nat n) eqn:en; auto_contradict; try rep_lia; unfold isptr_lst in HH2; fold isptr_lst in HH2; destruct HH2;
-                    unfold add_offset; destruct pa1; auto_contradict; auto.
-                    **assert (isptr pa1). {
-                            destruct (Z.to_nat n) eqn:en; auto_contradict; try rep_lia; unfold isptr_lst in HH2; fold isptr_lst in HH2; destruct HH2;
-                            unfold add_offset; destruct pa1; auto_contradict; auto.
-                        } auto.*)
+                right; split; try rep_lia. rewrite sub_add_offset_correct; auto. apply PGSIZE_gt_0.
                 ++ repeat split; try rep_lia; auto; auto_contradict; try (subst; simpl; try rep_lia); try ( unfold isptr_lst in HH2; destruct HH2; auto);
                 try (rewrite add_offset_0; auto); try (apply add_offset_eq_offset_val); auto.
-                    **right; split; try rep_lia. rewrite sub_add_offset_correct; auto. unfold PGSIZE; rep_lia.
-                    **replace (Z.to_nat (i + 1)) with (S (Z.to_nat (i))); try rep_lia. apply add_offset_add; auto; try rep_lia; unfold PGSIZE; try rep_lia. 
-                    (*unfold pointers_with_original_head at 2; fold pointers_with_original_head.
-                    destruct (Z.to_nat i) eqn:ei.
-                        --- assert (i = 0); try rep_lia.
-                        --- unfold pointers_acc; fold pointers_acc. simpl. induction n1.
-                            +++assert (i = 1); try rep_lia. rewrite H. rewrite Z.mul_1_l. rewrite sub_add_offset_correct; auto. unfold PGSIZE; rep_lia.
-                                destruct (Z.to_nat n) eqn:en; auto_contradict; try rep_lia; unfold isptr_lst in HH2; fold isptr_lst in HH2; destruct HH2;
-                                unfold add_offset; destruct pa1; auto_contradict; auto.
-                            +++  rewrite sub_add_offset_n.
-                            *** assert ((i - 1) = (1 + (Z.of_nat n1))); try rep_lia. rewrite H.
-                            assert (1 + Z.of_nat n1 = Z.of_nat (S n1)); try rep_lia. rewrite H0. apply add_to_pointers_with_head.
-                            destruct (Z.to_nat n) eqn:en; auto_contradict; try rep_lia; unfold isptr_lst in HH2; fold isptr_lst in HH2; destruct HH2;
-                            unfold add_offset; destruct pa1; auto_contradict; auto.
-                            (*rewrite pointers_acc ;rewrite add_to_pointers. rewrite Z.mul_comm. rewrite <- Zred_factor2. 
-                            apply add_to_pointers. Zred_factor2.*)
-                            ***unfold PGSIZE; rep_lia.
-                            ***rep_lia.
-                            *** destruct (Z.to_nat n) eqn:en; auto_contradict; try rep_lia; unfold isptr_lst in HH2; fold isptr_lst in HH2; destruct HH2;
-                                unfold add_offset; destruct pa1; auto_contradict; auto.*)
-                    (*** apply add_offset_add. destruct (Z.to_nat n) eqn:en; auto_contradict; try rep_lia; unfold isptr_lst in HH2; fold isptr_lst in HH2; destruct HH2;
-                    unfold add_offset; destruct pa1; auto_contradict; auto.*)
+                    **right; split; try rep_lia. rewrite sub_add_offset_correct; auto. apply PGSIZE_gt_0.
+                    **replace (Z.to_nat (i + 1)) with (S (Z.to_nat (i))); try rep_lia. apply add_offset_add; auto; try rep_lia; apply PGSIZE_gt_0. 
                     ** destruct HH4. destruct H.
                     assert (n + 1 <= Int.max_signed); try rep_lia.
                     rewrite Int.signed_repr in H14; try rep_lia. rewrite Int.signed_repr in H14; try rep_lia.
                     ** try rep_lia.
                 ++ split; try rep_lia. split. split. 
-                    ** right. split; try rep_lia. rewrite sub_add_offset_correct; auto. unfold PGSIZE; rep_lia.
+                    ** right. split; try rep_lia. rewrite sub_add_offset_correct; auto. apply PGSIZE_gt_0.
                     ** split. 
                         --- rewrite H0321. 
-                        (*assert (isptr pa1). {
-                                destruct (Z.to_nat n) eqn:en; auto_contradict; try rep_lia; unfold isptr_lst in HH2; fold isptr_lst in HH2; destruct HH2;
-                                unfold add_offset; destruct pa1; auto_contradict; auto.
-                            } *)apply add_offset_add; auto; try rep_lia; unfold PGSIZE; try rep_lia. 
-                        (*--- subst. simpl; auto.*)
-                        (*--- split.
-                            +++ rewrite H0321. apply add_offset_add.
-                            destruct (Z.to_nat n) eqn:en; auto_contradict; try rep_lia; unfold isptr_lst in HH2; fold isptr_lst in HH2; destruct HH2;
-                            unfold add_offset; destruct pa1; auto_contradict; auto.
-                            +++ rewrite H0212; try rep_lia.*)
+                        apply add_offset_add; auto; try rep_lia; apply PGSIZE_gt_0. 
                         --- split; try rep_lia; rewrite H0212; try rep_lia.
                     ** unfold PGSIZE; apply add_offset_eq_offset_val; try rep_lia. rewrite H0321.
                     rewrite H0212. simpl. rewrite add_offset_0;
@@ -827,20 +783,11 @@ start_function.
                     unfold add_offset; destruct pa1; auto_contradict; auto.
                 ++ split; try rep_lia. split. 
                     **split.
-                        --- right. split; try rep_lia. rewrite sub_add_offset_correct; auto; unfold PGSIZE; rep_lia.
+                        --- right. split; try rep_lia. rewrite sub_add_offset_correct; auto; apply PGSIZE_gt_0.
                         --- split.
-                            +++ assert (isptr pa1). {
-                                    destruct (Z.to_nat n) eqn:en; auto_contradict; try rep_lia; unfold isptr_lst in HH2; fold isptr_lst in HH2; destruct HH2;
-                                    unfold add_offset; destruct pa1; auto_contradict; auto.
-                                } rewrite H0321. apply add_offset_add; auto; try rep_lia; unfold PGSIZE; try rep_lia.  (* rewrite H0221. rewrite H0321. 
-                            assert (isptr pa1). {
-                                destruct (Z.to_nat n) eqn:en; auto_contradict; try rep_lia; unfold isptr_lst in HH2; fold isptr_lst in HH2; destruct HH2;
-                                unfold add_offset; destruct pa1; auto_contradict; auto.
-                            } rewrite sub_add_offset_n; try rep_lia.*)
+                            +++ rewrite H0321. apply add_offset_add; auto; try rep_lia; apply PGSIZE_gt_0. 
                             +++ split; try rep_lia.
-                                (****rewrite H0321. apply add_offset_add. destruct (Z.to_nat n) eqn:en; auto_contradict; try rep_lia; unfold isptr_lst in HH2; fold isptr_lst in HH2; destruct HH2;
-                                unfold add_offset; destruct pa1; auto_contradict; auto.
-                                *** split; try rep_lia. *) destruct HH4. destruct H. rewrite Int.signed_repr in H14; try rep_lia. rewrite Int.signed_repr in H14; try rep_lia.
+                                destruct HH4. destruct H. rewrite Int.signed_repr in H14; try rep_lia. rewrite Int.signed_repr in H14; try rep_lia.
                     ** apply add_offset_eq_offset_val; try rep_lia. rewrite H0321.
                         unfold add_offset. destruct pa1 eqn:ep; auto_contradict. unfold_size (i * PGSIZE)%Z e; auto. admit.
                 ++ destruct H as [HH1 [HH2 [[[H311 H312] | [H321 H322]] HH4]]]; destruct H1 as [H01 [[[H0211 H0212] | [H0221 H0222]] [H031 [H0321 H0322]]]].
@@ -856,10 +803,7 @@ start_function.
                             +++ rewrite app_nil_r in elst. 
                             assert (pointers_with_original_head (S n0) pa1 PGSIZE nullval <> []). { 
                             apply pointers_with_head_non_empty.
-                            (*assert (isptr pa1). {
-                                destruct (Z.to_nat n) eqn:en; auto_contradict; try rep_lia; unfold isptr_lst in HH2; fold isptr_lst in HH2; destruct HH2;
-                                unfold add_offset; destruct pa1; auto_contradict; auto.
-                            }*) auto. rep_lia.
+                            auto. rep_lia.
                             }
                             auto_contradict.
                             +++ refold_freelistrep. entailer. rewrite app_nil_r in *. 
@@ -871,10 +815,6 @@ start_function.
                                 assert ((add_offset pa1 ((i-1) * PGSIZE))::(pointers_with_original_head (Z.to_nat i) pa1 PGSIZE nullval) = pointers_acc (S n1) pa1 PGSIZE [nullval]). {
                                     replace (Z.to_nat i) with (S n1); try rep_lia.
                                     replace (i-1) with (Z.of_nat (n1)); try rep_lia.
-                                    (*assert (isptr pa1). {
-                                            destruct (Z.to_nat n) eqn:en'; auto_contradict; try rep_lia; unfold isptr_lst in HH2; fold isptr_lst in HH2; destruct HH2;
-                                            unfold add_offset; destruct pa1; auto_contradict; auto.
-                                        }**)
                                     unfold pointers_with_original_head. destruct n1 eqn:en1.
                                     ---- unfold pointers_acc. simpl. rewrite add_offset_0; auto. 
                                     ---- rewrite add_to_pointers_with_head; auto.
@@ -882,16 +822,9 @@ start_function.
                                 rewrite <- H20 in en.
                                 inversion en. 
                                 entailer!.
-                        --- unfold PGSIZE; rep_lia.
-                        --- (*assert (isptr pa1). {
-                                destruct (Z.to_nat n) eqn:en'; auto_contradict; try rep_lia; unfold isptr_lst in HH2; fold isptr_lst in HH2; destruct HH2;
-                                unfold add_offset; destruct pa1; auto_contradict; auto.
-                            }*) auto.
-                    ** (*assert (isptr pa1). {
-                            destruct (Z.to_nat n) eqn:en'; auto_contradict; try rep_lia; unfold isptr_lst in HH2; fold isptr_lst in HH2; destruct HH2;
-                            unfold add_offset; destruct pa1; auto_contradict; auto.
-                        } *)
-                        assert (Z.to_nat (n - (i + 1)) = n0); try rep_lia. rewrite H.
+                        --- apply PGSIZE_gt_0.
+                        --- auto.
+                    **  assert (Z.to_nat (n - (i + 1)) = n0); try rep_lia. rewrite H.
                         rewrite H031. 
                         rewrite H0212. simpl. refold_freelistrep. entailer.
                     **  assert (Z.to_nat (n - (i + 1)) = n0); try rep_lia. rewrite H.
@@ -901,22 +834,18 @@ start_function.
                             original_freelist_pointer ++ ls). {
                             destruct (Z.to_nat i) eqn:ei; try rep_lia.
                             replace (Z.to_nat (i + 1)) with (S (S n1)); try rep_lia.
-                            (*assert (isptr pa1). {
-                                    destruct (Z.to_nat n) eqn:en'; auto_contradict; try rep_lia; unfold isptr_lst in HH2; fold isptr_lst in HH2; destruct HH2;
-                                    unfold add_offset; destruct pa1; auto_contradict; auto.
-                                }*)
                             unfold pointers_with_original_head. destruct (n1) eqn:esn1.
                             ---- unfold pointers_acc. simpl. rewrite H0221. rewrite H0321. rewrite sub_add_offset_n; auto; try rep_lia. 
                                 unfold add_offset. destruct pa1; auto_contradict. 
                                 assert (i - 1 = 0); try rep_lia.
                                 rewrite H1. simpl.
                                 replace (Ptrofs.repr 0) with Ptrofs.zero; auto. rewrite Ptrofs.add_zero. auto.
-                                unfold PGSIZE; try rep_lia.
+                                apply PGSIZE_gt_0.
                             ---- rewrite H0221. rewrite H0321. rewrite sub_add_offset_n; auto; try rep_lia.
                             assert (Z.of_nat (S n2) = (i-1)); try rep_lia.
                             rewrite <- H1.
                             rewrite app_comm_cons. rewrite add_to_pointers_with_head; auto.
-                            unfold PGSIZE; rep_lia. 
+                            apply PGSIZE_gt_0. 
                             }
                             rewrite <- H1. refold_freelistrep. entailer.
 - forward_call (sh, curr_head, xx, (tmp_added_elem++ls), gv). (* call kalloc *)
@@ -925,33 +854,23 @@ start_function.
             -- assert (n = 0); try rep_lia. 
             assert (add_offset pa1 (0 * PGSIZE) = nullval). { rewrite <- H4; try rep_lia. }
             simpl in H9.
-            (*assert (isptr pa1). {
-                destruct (Z.to_nat n) eqn:en; auto_contradict; try rep_lia; unfold isptr_lst in HH2; fold isptr_lst in HH2.
-                auto.
-            }*)
             rewrite add_offset_0 in H9; auto.
             rewrite H9 in H0; auto_contradict.
             -- destruct (Z.to_nat n) eqn:en; auto_contradict; try rep_lia; unfold isptr_lst in HH2; fold isptr_lst in HH2. auto.
         * destruct (Z.to_nat (n - i)) eqn:en; try rep_lia. refold_available.
             entailer. rewrite sub_add_offset_n; try rep_lia.
-            -- (*assert (isptr pa1). {
-                    destruct (Z.to_nat n) eqn:en'; auto_contradict; try rep_lia; unfold isptr_lst in HH2; fold isptr_lst in HH2; destruct HH2;
-                    unfold add_offset; destruct pa1; auto_contradict; auto.
-                }*)
-                assert (isptr (add_offset pa1 (i * PGSIZE))). {
+            -- assert (isptr (add_offset pa1 (i * PGSIZE))). {
                     unfold add_offset. destruct pa1; auto_contradict.
                     unfold_size (i * PGSIZE)%Z e1; auto. admit.
                 }
                 assert (0 > 0)%nat. { rewrite H5. auto. }
                 try rep_lia.
-            -- unfold PGSIZE; rep_lia.
+            -- apply PGSIZE_gt_0.
             -- destruct (Z.to_nat n) eqn:en1; auto_contradict; try rep_lia; unfold isptr_lst in HH2; fold isptr_lst in HH2; destruct HH2; auto.
         * entailer. simpl. destruct ls; auto_contradict. refold_freelistrep. entailer!.
         * assert (Z.to_nat (n - i) = 0%nat); try rep_lia. rewrite H8. refold_available.
         assert (add_offset pa1 (i * PGSIZE) = nullval). { rewrite <- H4; auto. }
-        unfold add_offset in H9. (*assert (isptr pa1). {
-            destruct (Z.to_nat n) eqn:en; auto_contradict; try rep_lia; unfold isptr_lst in HH2. fold isptr_lst in HH2. destruct HH2. auto.
-        }*)
+        unfold add_offset in H9. 
         unfold_size (i * PGSIZE)%Z e. destruct pa1 eqn:epa1; auto_contradict. admit.
     + destruct H as [HH1 [HH2 [[[H311 H312] | [H321 H322]] HH4]]]; split; auto; destruct H1 as [H01 [[[H0211 H0212] | [H0221 H0222]] [H031 [H0321 H0322]]]].
             * left. subst; split; auto.
@@ -959,25 +878,17 @@ start_function.
                 -- destruct ((Z.to_nat i)) eqn:ei; try rep_lia. unfold not; intro.
                 destruct tmp_added_elem; auto_contradict.
                 unfold pointers_with_original_head in H031. destruct n0. discriminate H031. (*discriminate H031.*)
-                (*assert (isptr pa1). {
-                    destruct (Z.to_nat n) eqn:en'; auto_contradict; try rep_lia; unfold isptr_lst in HH2; fold isptr_lst in HH2; destruct HH2;
-                    unfold add_offset; destruct pa1; auto_contradict; auto.
-                }*)
                 assert (pointers_with_original_head (S (S n0)) pa1 PGSIZE original_freelist_pointer <> []). {
                     apply pointers_with_head_non_empty; auto; try rep_lia.
                 }
                 unfold pointers_with_original_head in H1. rewrite <- H031 in H1. auto_contradict.
                 -- rewrite H0221. rewrite H0321. rewrite sub_add_offset_n.
                 unfold_size (i * PGSIZE)%Z e.
-                ++(*destruct i; try rep_lia.*) unfold add_offset. unfold_size ((i-1) * PGSIZE)%Z e1.
-                (*assert (isptr pa1). {
-                    destruct (Z.to_nat n) eqn:en; auto_contradict; try rep_lia; unfold isptr_lst in HH2; fold isptr_lst in HH2; destruct HH2;
-                    unfold add_offset; destruct pa1; auto_contradict; auto.
-                }*)
+                ++ unfold add_offset. unfold_size ((i-1) * PGSIZE)%Z e1.
                 destruct pa1; auto_contradict. auto.
                 admit.
                 ++ admit.
-                ++ unfold PGSIZE; try rep_lia.
+                ++ apply PGSIZE_gt_0.
                 ++ try rep_lia.
                 ++ destruct (Z.to_nat n) eqn:en; auto_contradict; try rep_lia; unfold isptr_lst in HH2; fold isptr_lst in HH2; destruct HH2;
                     unfold add_offset; destruct pa1; auto_contradict; auto.
@@ -987,51 +898,26 @@ start_function.
             * right. split.
                 -- rewrite H031. unfold not; intros.
                     apply app_eq_nil in H. destruct H. auto_contradict.
-                    (*unfold pointers_with_original_head in H. destruct (Z.to_nat i) eqn:ei; try rep_lia.
-                    destruct n0 eqn:en0; auto_contradict. 
-                    assert (isptr pa1). {
-                        destruct (Z.to_nat n) eqn:en; auto_contradict; try rep_lia; unfold isptr_lst in HH2; fold isptr_lst in HH2; destruct HH2;
-                        unfold add_offset; destruct pa1; auto_contradict; auto.
-                    }
-                    assert (pointers_with_original_head (S (S n1)) pa1 PGSIZE original_freelist_pointer <> []). {
-                        apply pointers_with_head_non_empty. auto.
-                        rep_lia.
-                    }
-                    Search (_ ++ _ = []).
-                    unfold pointers_with_original_head in H1. rewrite <- H in H1. apply H1. 
-                 admit.*)
                 -- rewrite H0221. rewrite H0321.
-                (*assert (isptr pa1). {
-                    destruct (Z.to_nat n) eqn:en; auto_contradict; try rep_lia; unfold isptr_lst in HH2; fold isptr_lst in HH2; destruct HH2;
-                    unfold add_offset; destruct pa1; auto_contradict; auto.
-                }*)
                 rewrite sub_add_offset_n; try rep_lia; auto.
                 unfold add_offset. destruct pa1; auto_contradict. unfold_size ((i - 1) * PGSIZE)%Z e1. auto. admit.
-                unfold PGSIZE; rep_lia.
+                apply PGSIZE_gt_0.
     + forward. destruct (eq_dec curr_head nullval) eqn:ee; auto_contradict.
         *destruct H as [HH1 [HH2 [[[H311 H312] | [H321 H322]] HH4]]]; destruct H1 as [H01 [[[H0211 H0212] | [H0221 H0222]] [H031 [H0321 H0322]]]].
             -- assert (n = 0); try rep_lia. rewrite H. Exists original_freelist_pointer (tmp_added_elem++ls). destruct (eq_dec original_freelist_pointer nullval); auto_contradict.
             simpl. entailer.
             -- assert (isptr (sub_offset p_tmp PGSIZE)). {
-                (*assert (isptr pa1). {
-                    destruct (Z.to_nat n) eqn:en; auto_contradict; try rep_lia; unfold isptr_lst in HH2; fold isptr_lst in HH2; destruct HH2;
-                    unfold add_offset; destruct pa1; auto_contradict; auto.
-                }*)
                 rewrite H0321. rewrite sub_add_offset_n; auto; try rep_lia.
                 unfold add_offset; destruct pa1; auto_contradict; auto.  unfold_size ((i - 1) * PGSIZE)%Z e1. auto. admit.
-                unfold PGSIZE; rep_lia.
+                apply PGSIZE_gt_0.
             }
             rewrite <- H0221 in H; rewrite e in H; auto_contradict.
             -- subst. inversion H322.
             -- rewrite H031. Exists curr_head (tmp_added_elem ++ls). assert (i = n); try rep_lia. rewrite H. 
-            assert (isptr (sub_offset p_tmp PGSIZE)). {
-                (*assert (isptr pa1). {
-                        destruct (Z.to_nat n) eqn:en; auto_contradict; try rep_lia; unfold isptr_lst in HH2; fold isptr_lst in HH2; destruct HH2;
-                        unfold add_offset; destruct pa1; auto_contradict; auto.
-                } *)
-                rewrite H0321. rewrite sub_add_offset_n; auto; try rep_lia.
-                unfold add_offset.  unfold_size ((i - 1) * PGSIZE)%Z e1. destruct pa1; auto_contradict. auto. admit. destruct pa1; auto_contradict. auto. unfold PGSIZE; rep_lia.
-            }
+                assert (isptr (sub_offset p_tmp PGSIZE)). {
+                    rewrite H0321. rewrite sub_add_offset_n; auto; try rep_lia.
+                    unfold add_offset.  unfold_size ((i - 1) * PGSIZE)%Z e1. destruct pa1; auto_contradict. auto. admit. destruct pa1; auto_contradict. auto. apply PGSIZE_gt_0.
+                }
             rewrite e in H0221. rewrite <- H0221 in H1. auto_contradict.
         * Intros ab. destruct H as [HH1 [HH2 [[[H311 H312] | [H321 H322]] HH4]]]; destruct H1 as [H01 [[[H0211 H0212] | [H0221 H0222]] [H031 [H0321 H0322]]]].
             -- subst. auto_contradict.
@@ -1041,38 +927,12 @@ start_function.
                 assert (tl (pointers_with_original_head (Z.to_nat n) pa1 PGSIZE nullval) = snd ab). { inversion H4. simpl; auto. }
                 assert ((hd nullval (pointers_with_original_head (Z.to_nat n) pa1 PGSIZE nullval)) = fst ab). {inversion H4. simpl; auto. }
                 rewrite H16. rewrite H. entailer!.
-                ++ (*assert (isptr pa1). {
-                                    destruct (Z.to_nat n) eqn:en; auto_contradict; try rep_lia; unfold isptr_lst in HH2; fold isptr_lst in HH2; destruct HH2;
-                                    unfold add_offset; destruct pa1; auto_contradict; auto.
-                            }*) admit.
+                ++ admit.
                 ++ admit.
             -- Exists curr_head (tmp_added_elem ++ls). destruct (eq_dec curr_head nullval) eqn:ech; auto_contradict.
                entailer. simpl. assert (n = 0); try rep_lia. rewrite H12. simpl. entailer.
                destruct ls; auto_contradict. simpl in H4. simpl. unfold add_offset in H13. destruct pa1; auto_contradict; auto.
-                   (* split.
-                    ** rewrite sub_add_offset_n; try rep_lia.
-                       --- unfold pointers_with_original_head. 
-                            destruct ((Z.to_nat n + 1)%nat) eqn:enplus1; try rep_lia.
-                            destruct n2 eqn:en2.
-                            +++ unfold add_offset. admit. (* TODO: fejl i addoffset*)
-                            +++ unfold pointers_acc. fold pointers_acc. rewrite <- add_to_pointers_with_head. simpl.
-                            assert ((Z.of_nat n3 = (n-1))); try rep_lia.
-                            rewrite H17; auto. auto.
-                        --- unfold PGSIZE; try rep_lia.
-                        --- auto.
-                    ** rewrite sub_add_offset_n.
-                    assert (fst ab = hd nullval (pointers_with_original_head (Z.to_nat n) pa1 PGSIZE nullval)). { inversion H4. auto. }
-                    rewrite H17. rewrite get_head_correct. unfold get_curr_head. destruct ( Z.to_nat n) eqn:en; try rep_lia.
-                        --- destruct n2 eqn:en2; try rep_lia.
-                            +++ 
-                     destruct H4 eqn:e4. rewrite get_head_correct.
-                    unfold pointers_with_original_head in H4.
-               entailer.
-            Exists (curr_head) (fst ab) (fst ab :: snd ab). entailer. refold_freelistrep. entailer.
-                assert (i = n); try rep_lia.
-            
-            entailer!.  Exists (snd ab). (fst ab:: snd ab).  admit.*)
-            -- Exists p_tmp (tmp_added_elem ++ls). destruct (eq_dec curr_head nullval) eqn:ech; auto_contradict. subst. simpl in H4. assert (n = i); try rep_lia. rewrite H. 
+            -- Exists curr_head (tmp_added_elem ++ls). destruct (eq_dec curr_head nullval) eqn:ech; auto_contradict. subst. simpl in H4. assert (n = i); try rep_lia. rewrite H. 
             entailer.
             assert (hd nullval (pointers_with_original_head (Z.to_nat i) pa1 PGSIZE
                 original_freelist_pointer ++ ls) = fst ab). { inversion H5. simpl; auto. }
@@ -1080,38 +940,10 @@ start_function.
                 original_freelist_pointer ++ ls) = snd ab). { inversion H5. simpl; auto. }
                 rewrite H. rewrite H15. entailer!. 
                 ++split.
-                    ** apply hd_add_offset_ls; try rep_lia. assert (isptr pa1). {
-                                destruct (Z.to_nat i) eqn:en; auto_contradict; try rep_lia; unfold isptr_lst in HH2; fold isptr_lst in HH2; destruct HH2;
-                                unfold add_offset; destruct pa1; auto_contradict; auto.
-                        } auto. 
-                    ** assert (isptr pa1). {
-                            destruct (Z.to_nat i) eqn:en; auto_contradict; try rep_lia; unfold isptr_lst in HH2; fold isptr_lst in HH2; destruct HH2;
-                            unfold add_offset; destruct pa1; auto_contradict; auto.
-                    } rewrite sub_add_offset_n; try rep_lia; auto.
-                    --- destruct (Z.to_nat i) eqn:ei; try rep_lia.
-                    
-                    assert ((i-1) = Z.of_nat n); try rep_lia.
-                    assert (add_offset pa1 (Z.of_nat n * PGSIZE) = hd nullval
-                    (pointers_with_original_head (Z.to_nat (Z.of_nat n) + 1) pa1 PGSIZE
-                    original_freelist_pointer ++ ls)). {
-                        apply hd_add_offset_ls; auto. 
-                        destruct (Z.of_nat n) eqn:en1; try rep_lia. admit.
-                    }
-                    rewrite <- H17 in H18.
-                    simpl in H17.
-                    assert ((((Z.to_nat (i - 1)) + 1)%nat) = (S n)); try rep_lia.
-                    rewrite H19 in H18. rewrite H18. auto. 
-                    --- unfold PGSIZE; try rep_lia.
-                ++  (*assert (isptr pa1). {
-                        destruct (Z.to_nat i) eqn:en; auto_contradict; try rep_lia; unfold isptr_lst in HH2; fold isptr_lst in HH2.
-                        destruct HH2.
-                        auto.
-                    }*)
-                    destruct (eq_dec (add_offset pa1 (i * PGSIZE)) nullval) eqn:e; auto_contradict.
-                    --- assert (isptr (add_offset pa1 (i * PGSIZE))). {
-                        admit.
-                        } rewrite e0 in H16; auto_contradict.
-                    --- entailer. admit.
+                    ** (*apply hd_add_offset_ls; try rep_lia. auto. *) rewrite sub_add_offset_n; auto; try rep_lia. admit.
+                        apply PGSIZE_gt_0.
+                    ** rewrite sub_add_offset_n; try rep_lia; auto. 2: {apply PGSIZE_gt_0. } admit.
+                ++ admit.
 Admitted.            
  
             
@@ -1142,11 +974,11 @@ forward_while
   )%assert.
    - Exists 0 p_s_init original_freelist_pointer (pointers (Z.to_nat (compute_c (Vptr b_s_init p_s_init) (Vptr b_n_init p_s_init) PGSIZE)) ((Vptr b_s_init p_s_init)) PGSIZE). entailer!. 
    rewrite compute_c_equal.
-   2: { unfold PGSIZE; try rep_lia. }
+   2: { apply PGSIZE_gt_0. }
    2: { destruct H as [H1 [H2 [H3 [H4 [H5 [H6 [H7 H8]]]]]]]; subst; auto. }
    split; auto. rewrite compute_c_equal.
    rewrite <- pointers_empty. simpl; entailer!.
-   unfold PGSIZE; try rep_lia.
+   apply PGSIZE_gt_0.
    destruct H as [H1 [H2 [H3 [H4 [H5 [H6 [H7 H8]]]]]]]; subst; auto.
    - entailer. apply andp_left1. unfold ensure_comparable_range. 
      destruct (sameblock (Vptr b_s_init p_s_init) (Vptr b_n_init p_n_init)) eqn:esb; entailer; auto_contradict.
@@ -1160,7 +992,7 @@ forward_while
             unfold Ptrofs.ltu. destruct (zlt (Ptrofs.unsigned p_n_init)
                 (Ptrofs.unsigned (Ptrofs.add p_s_tmp (Ptrofs.repr PGSIZE)))) eqn:ez; try rep_lia.
             apply Z_div_pos.
-            - unfold PGSIZE; try rep_lia.
+            - apply PGSIZE_gt_0.
             - apply Zle_minus_le_0; try rep_lia.
             }
             unfold add_offset.
@@ -1194,7 +1026,7 @@ forward_while
                     unfold Ptrofs.ltu. destruct (zlt (Ptrofs.unsigned p_n_init)
                         (Ptrofs.unsigned (Ptrofs.add p_s_tmp (Ptrofs.repr PGSIZE)))) eqn:ez; try rep_lia.
                     apply Z_div_pos.
-                    - unfold PGSIZE; try rep_lia.
+                    - apply PGSIZE_gt_0.
                     - apply Zle_minus_le_0; try rep_lia.
                     }
                     rewrite H2. unfold ensure_comparable; fold ensure_comparable. apply andp_left2.
@@ -1212,7 +1044,7 @@ forward_while
         * destruct H0 as [H01 [H02 [H03 [H04 [[H051 | H052] H06]]]]].
             -- entailer. rewrite compute_c_equal. rewrite <- available_empty.
                 ++ entailer.  inversion H0.
-                ++ unfold PGSIZE; rep_lia.
+                ++ apply PGSIZE_gt_0.
                 ++ admit. (* should be provable from HRE *)
             -- admit. (* available*)
         * rewrite compute_c_not_equal with (pt_s := p_s_tmp) (pt_e :=p_n_init) (b :=b_s_init).
@@ -1220,7 +1052,7 @@ forward_while
                 ++ assert (Vptr b_s_init p_s_tmp = nullval). { rewrite <- H7. auto. }
                     inversion H9.
                 ++ unfold available; fold available. Intros v. entailer!. admit. (* available..*)
-            -- unfold PGSIZE; rep_lia.
+            -- apply PGSIZE_gt_0.
             -- admit. (* b_s_init and b_n_init should be equal to be able to compare. *)
             -- apply typed_true_offset_val_leq with (b_s_init:=b_s_init) (b_n_init :=b_n_init) in HRE; unfold PGSIZE; auto.
                 admit. (* should be provable from HRE*) 
@@ -1238,7 +1070,7 @@ forward_while
           apply Z.le_lt_trans with (m := Int.max_signed); try rep_lia.
           apply typed_true_offset_val_leq with (b_s_init:=b_s_init) (b_n_init :=b_n_init) in HRE; unfold PGSIZE; auto.
           apply Z.le_trans with (m := Ptrofs.unsigned p_n_init + PGSIZE); try rep_lia.
-          unfold PGSIZE; try rep_lia.
+          apply PGSIZE_gt_0.
        -- apply c_tmp_bounds_max with (p_s_init:=p_s_init) (p_s_tmp:=p_s_tmp) (p_n_init:=p_n_init); try rep_lia.
        -- rewrite ptrofs_add_simpl; try rep_lia.
           ++ apply typed_true_offset_val_leq with (b_s_init:=b_s_init) (b_n_init :=b_n_init) in HRE; unfold PGSIZE; auto.
@@ -1248,12 +1080,12 @@ forward_while
              apply Z.le_lt_trans with (m := Int.max_signed); try rep_lia.
              (*apply typed_true_offset_val_leq with (b_s_init:=b_s_init) (b_n_init :=b_n_init) in HRE; unfold PGSIZE; auto.*)
              apply Z.le_trans with (m := Ptrofs.unsigned p_n_init + PGSIZE); try rep_lia.
-             unfold PGSIZE; try rep_lia.
+             apply PGSIZE_gt_0.
           ++ split; try rep_lia. simplify_signed_PGSIZE.
           ++ (** this is the same as above*)simplify_signed_PGSIZE; split_lia. apply Z.le_lt_trans with (m := Int.max_signed); try rep_lia.
              (*apply typed_true_offset_val_leq with (b_s_init:=b_s_init) (b_n_init :=b_n_init) in HRE; unfold PGSIZE; auto.*)
              apply Z.le_trans with (m := Ptrofs.unsigned p_n_init + PGSIZE); try rep_lia.
-             unfold PGSIZE; try rep_lia.
+             apply PGSIZE_gt_0.
        -- destruct H0 as [H01 [H02 [H03 [H04 H05]]]].
           right.
           replace (Ptrofs.repr (Int.signed (Int.repr PGSIZE))) with (Ptrofs.repr PGSIZE) by auto.
@@ -1280,7 +1112,7 @@ forward_while
                 --- assert ((Ptrofs.unsigned p_n_init - (Ptrofs.unsigned p_s_tmp + PGSIZE)) / PGSIZE = 0). {
                    apply Zdiv_small; apply typed_true_offset_val_leq with (b_s_init:=b_s_init) (b_n_init :=b_n_init) in HRE. split.
                    +++ apply Zle_minus_le_0.
-                      rewrite <- ptrofs_add_simpl; auto; unfold PGSIZE; try rep_lia.
+                      rewrite <- ptrofs_add_simpl; auto; apply PGSIZE_gt_0.
                    +++ unfold PGSIZE in l. rep_lia. 
                    }
                    assert((Ptrofs.unsigned p_n_init - (Ptrofs.unsigned p_s_tmp + PGSIZE)) = PGSIZE * ((Ptrofs.unsigned p_n_init - (Ptrofs.unsigned p_s_tmp + PGSIZE))/PGSIZE) + ((Ptrofs.unsigned p_n_init - (Ptrofs.unsigned p_s_tmp + PGSIZE)) mod PGSIZE)). {
@@ -1308,7 +1140,7 @@ forward_while
           ++ apply sameblock_false in eb. apply typed_true_same_block in HRE; auto_contradict.*)
  - forward. Exists c_tmp p_s_tmp curr_head tmp_added_elem. entailer!. (* the loop invariant (and negation of the loop condition) is a strong enough precondition to prove the MORE-COMMANDS after the loop *)
           ++ split_lia. 
-             apply typed_false_offset_val_leq with (b_s_init:=b_s_init) (b_n_init:=b_n_init); try rep_lia; unfold PGSIZE; try rep_lia; auto.
+             apply typed_false_offset_val_leq with (b_s_init:=b_s_init) (b_n_init:=b_n_init); try rep_lia; apply PGSIZE_gt_0; auto.
              destruct H0 as [H01 [H02 [H03 [H04 [[[H051 H052] | H052] [H061 H062]]]]]]; split; auto.
           ++ apply andp_left2. destruct (0 <? c_tmp) eqn:ec.
           --- destruct H0 as [H01 [H02 [H03 [H04 H05]]]].
