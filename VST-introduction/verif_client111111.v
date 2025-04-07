@@ -416,14 +416,21 @@ Definition client9_spec :=
     POST [ tptr tvoid ]
         EX head, EX added_elem, (* TODO: fix top and next is the same?? *)
         PROP( 
-            added_elem = (pointers_with_original_head (Z.to_nat n) (pa1) PGSIZE original_freelist_pointer) /\
-            head = (hd nullval ((pointers_with_original_head (Z.to_nat n+1) (pa1) PGSIZE original_freelist_pointer)++ls))
+            added_elem = (pointers_with_original_head (Z.to_nat n-1) (pa1) PGSIZE original_freelist_pointer) /\
+            head = (hd nullval ((pointers_with_original_head (Z.to_nat n) (pa1) PGSIZE original_freelist_pointer)++ls))
             )
-            RETURN () (* we return the head like in the pop function*)
+            RETURN (add_offset head PGSIZE) (* we return the head like in the pop function*)
             SEP 
             (
-                freelistrep sh (added_elem++ls) head *
-                data_at sh t_struct_kmem (Vint (Int.repr xx), head) (gv _kmem)
+                if (Nat.ltb O ((length (added_elem++ls)) + 1)%nat) then
+                    (data_at sh t_run head (add_offset head PGSIZE) *
+                    freelistrep sh (added_elem++ls) (head) *
+                    data_at sh t_struct_kmem (Vint (Int.repr xx), head) (gv _kmem))
+                else 
+                    (
+                        freelistrep sh ls original_freelist_pointer *
+            data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem)
+                    )
                 ).
 (* added values: 
 (pointers_with_original_head (Z.to_nat (n-1)) (pa1) PGSIZE original_freelist_pointer)
@@ -1223,16 +1230,35 @@ forward_call (sh, pa1:val, original_freelist_pointer:val, xx:Z, gv:globals, ls :
         * destruct (Z.to_nat n).
             -- simpl in H1. left; subst. split; auto. unfold pointers_with_original_head in H1. rewrite H1. auto.
             -- right. split; auto. rewrite H311. rewrite app_nil_r. rewrite H1.
-                apply pointers_with_head_non_empty; auto; try rep_lia. admit.
+                apply pointers_with_head_non_empty; auto; try rep_lia. 
+                destruct (pointers_with_original_head (S n0 + 1) pa1 PGSIZE
+                original_freelist_pointer) eqn:e1. 
+                assert (pointers_with_original_head (S n0 + 1) pa1 PGSIZE
+                original_freelist_pointer <> []). { apply pointers_with_head_non_empty; auto; try rep_lia. }
+                rewrite e1 in H; auto_contradict.
+                simpl in H2. admit. (* it is a pointer because of e1 *)
         * right. split. destruct (snd vret).
             -- rewrite app_nil_l. auto.
             -- unfold not. intros; auto_contradict.
-            -- admit.
+            -- admit. (* it is a pointer becasue of H2*)
     + forward. destruct (eq_dec (fst vret) nullval).
-        * Exists (fst vret). Exists (nil:list val). destruct (eq_dec nullval nullval).
-            -- destruct (eq_dec (fst vret) nullval); auto_contradict. admit.
-            -- unfold not in n0. exfalso; apply n0; auto.
-        * admit.
+        * destruct H as [HH1 [HH2 [[[H311 H312] | [H321 H322]] HH4]]].
+            -- Exists (fst vret). Exists (snd vret). 
+            destruct ((0 <? Datatypes.length (snd vret ++ ls) + 1)%nat) eqn:e1; entailer.
+                ++ entailer. rewrite e in H2. rewrite app_nil_r in H2. admit. (* H2 should be false.. *) 
+                ++ rewrite Nat.ltb_ge in e1. rewrite app_nil_r in e1. try rep_lia.
+            -- Exists (fst vret). Exists (snd vret). destruct ((0 <? Datatypes.length (snd vret ++ ls) + 1)%nat) eqn:e1; entailer.
+                ++ admit. (* this is false becuase of H2 *)  
+                ++ rewrite Nat.ltb_ge in e1. try rep_lia.
+        * Intros ab. (* TODO: figure out if this specification make sense.. *)
+        Exists (fst ab) (snd ab). 
+            -- destruct H as [HH1 [HH2 [[[H311 H312] | [H321 H322]] HH4]]].
+                ++ destruct ((0 <? Datatypes.length (snd ab ++ ls) + 1)%nat) eqn:e1.
+                    ** entailer. rewrite app_nil_r in H4. rewrite app_nil_r.  rewrite app_nil_r.
+                    entailer!. admit. admit.
+                    ** rewrite Nat.ltb_ge in e1. try rep_lia.
+                ++ destruct ((0 <? Datatypes.length (snd ab ++ ls) + 1)%nat) eqn:e1; try (rewrite Nat.ltb_ge in e1; try rep_lia).
+                   entailer!. admit. admit.
 Admitted.
 
 
