@@ -13,8 +13,10 @@ void kfree1(void *pa)
 {
   struct run *r;
   r = (struct run*)pa;
+
   r->next = kmem.freelist;
   kmem.freelist = r;
+  
 }
 
 void *kalloc1(void) 

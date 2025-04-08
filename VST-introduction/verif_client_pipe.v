@@ -35,18 +35,40 @@ Definition client_11_pipealloc_spec : ident * funspec :=
  POST [ tvoid ] 
     EX p: val, 
     PROP ( ) RETURN () SEP (
-        if eq_dec p nullval then
+        (if eq_dec p nullval then
         emp
         else 
         kalloc_token' KF_APD Ews (sizeof t_struct_pipe) p *
-        pipe_rep Ews p * MF_globals gv).
+        pipe_rep Ews p) 
+        * MF_globals gv).
     
+Definition client1_spec := 
+    DECLARE _client1
+    WITH new_head:val, gv:globals
+    PRE [ tptr tvoid ]
+        PROP(is_pointer_or_null new_head) 
+        PARAMS (new_head) GLOBALS(gv)
+        SEP (
+            MF_globals gv *
+            if eq_dec new_head nullval then emp
+            else (kalloc_token' KF_APD Ews (sizeof t_run) new_head * data_at_ Ews t_run new_head)
+        )
+    POST [ tptr tvoid ]
+        PROP( )
+        RETURN (new_head) (* we return the head like in the pop function*)
+        SEP (
+            MF_globals gv *
+            if eq_dec new_head nullval then emp
+            else (kalloc_token' KF_APD Ews (sizeof t_run) new_head * data_at_ Ews t_run new_head) 
+            ).
 
-Lemma body_pop: semax_body MFVprog MFGprog f_client_11_pipealloc client_11_pipealloc_spec.
+(* TODO should maybe add things to MFGprog... *)
+
+Lemma body_client_11_pipealloc: semax_body MFVprog MFGprog f_client_11_pipealloc client_11_pipealloc_spec.
 Proof.
 start_function.
 forward.
-forward_call (t_struct_pipe, gv). 
+forward_call (t_struct_pipe, gv).  (* kalloc *)
 - unfold MF_globals. entailer!.
 - Intros vret. forward_if.
     + destruct (eq_dec vret nullval); entailer!. 
@@ -59,6 +81,19 @@ forward_call (t_struct_pipe, gv).
         unfold pipe_rep. entailer!.
         unfold MF_globals. rewrite mem_mgr_split. Exists sh ls xx original_freelist_pointer. entailer!.
         apply derives_refl.
-    + destruct (eq_dec vret nullval); auto_contradict.
-      forward. Exists vret. destruct (eq_dec vret nullval) eqn:e1; auto_contradict. entailer.
+    + forward. Exists vret. destruct (eq_dec vret nullval); auto_contradict. entailer.
 Qed.
+
+Lemma body_client1: semax_body MFVprog MFGprog f_client1 client1_spec.
+Proof.
+start_function. 
+forward_call (t_run, new_head , gv).  (* kfree *)
+- unfold MF_globals. entailer!. 
+destruct (eq_dec new_head nullval); entailer!. apply derives_refl.
+- forward_call (t_run, gv).  (* kalloc *)
+Intros vret. forward. (* same problem as before.. *)
+Admitted.
+
+
+
+

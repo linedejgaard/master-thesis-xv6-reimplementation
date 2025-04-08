@@ -23,7 +23,7 @@ Definition kfree1_spec :=
           PARAMS (new_head) GLOBALS(gv)
           SEP (
                 (EX v,
-                !! malloc_compatible (sizeof t_run) new_head &&
+                !! malloc_compatible (PGSIZE) new_head &&
                 data_at sh t_run v new_head) * freelistrep sh ls original_freelist_pointer *
                 (data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem) 
              )
@@ -32,7 +32,7 @@ Definition kfree1_spec :=
           PROP(isptr new_head)
           RETURN () 
           SEP (
-             !! malloc_compatible (sizeof t_run) new_head && 
+             !! malloc_compatible (PGSIZE) new_head && 
              data_at sh t_run original_freelist_pointer new_head * 
              freelistrep sh ls original_freelist_pointer *
              data_at sh t_struct_kmem (Vint (Int.repr xx), new_head) (gv _kmem)
@@ -51,7 +51,7 @@ PRE [ ]
             freelistrep sh ls original_freelist_pointer *
             data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem)
         else 
-            (!! malloc_compatible (sizeof t_run) original_freelist_pointer && 
+            (!! malloc_compatible (PGSIZE) original_freelist_pointer && 
             freelistrep sh ls original_freelist_pointer *
             data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem))
         )  
@@ -68,7 +68,7 @@ POST [ tptr tvoid ]
             (
                 EX next ls',
                 (!! (next :: ls' = ls) &&
-                !! malloc_compatible (sizeof t_run) original_freelist_pointer && 
+                !! malloc_compatible (PGSIZE) original_freelist_pointer && 
                 data_at sh t_run next original_freelist_pointer *
                 freelistrep sh ls' next *
                 data_at sh t_struct_kmem (Vint (Int.repr xx), next) (gv _kmem))
@@ -88,7 +88,7 @@ PRE [ tptr tvoid ]
     PARAMS (new_head) GLOBALS(gv)
     SEP (
         (EX v,
-            !! malloc_compatible (sizeof t_run) new_head &&
+            !! malloc_compatible (PGSIZE) new_head &&
             data_at sh t_run v new_head) *
         freelistrep sh ls original_freelist_pointer *
         data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem)
@@ -115,10 +115,10 @@ Definition client2_spec :=
         PARAMS (pa1; pa2) GLOBALS(gv)
         SEP (
             (EX v1,
-                !! malloc_compatible (sizeof t_run) pa1 &&
+                !! malloc_compatible (PGSIZE) pa1 &&
                 data_at sh t_run v1 pa1) *
             (EX v2,
-                !! malloc_compatible (sizeof t_run) pa2 &&
+                !! malloc_compatible (PGSIZE) pa2 &&
                 data_at sh t_run v2 pa2) *
             freelistrep sh ls original_freelist_pointer *
             data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem)
@@ -147,10 +147,10 @@ Definition client3_spec :=
         PARAMS (pa1; pa2) GLOBALS(gv)
         SEP (
             (EX v1,
-                !! malloc_compatible (sizeof t_run) pa1 &&
+                !! malloc_compatible (PGSIZE) pa1 &&
                 data_at sh t_run v1 pa1) *
             (EX v2,
-                !! malloc_compatible (sizeof t_run) pa2 &&
+                !! malloc_compatible (PGSIZE) pa2 &&
                 data_at sh t_run v2 pa2) *
             freelistrep sh ls original_freelist_pointer *
             data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem)
@@ -179,10 +179,10 @@ Definition client4_spec :=
         PARAMS (pa1; pa2) GLOBALS(gv)
         SEP (
             (EX v1,
-                !! malloc_compatible (sizeof t_run) pa1 &&
+                !! malloc_compatible (PGSIZE) pa1 &&
                 data_at sh t_run v1 pa1) *
             (EX v2,
-                !! malloc_compatible (sizeof t_run) pa2 &&
+                !! malloc_compatible (PGSIZE) pa2 &&
                 data_at sh t_run v2 pa2) *
             freelistrep sh ls original_freelist_pointer *
             data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem)
@@ -211,10 +211,10 @@ Definition client5_spec :=
         PARAMS (pa1; pa2) GLOBALS(gv)
         SEP (
             (EX v1,
-                !! malloc_compatible (sizeof t_run) pa1 &&
+                !! malloc_compatible (PGSIZE) pa1 &&
                 data_at sh t_run v1 pa1) *
             (EX v2,
-                !! malloc_compatible (sizeof t_run) pa2 &&
+                !! malloc_compatible (PGSIZE) pa2 &&
                 data_at sh t_run v2 pa2) *
             freelistrep sh ls original_freelist_pointer *
             data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem)
@@ -378,7 +378,7 @@ Definition client9_spec :=
                 freelistrep sh ls original_freelist_pointer *
                 data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem)
             else 
-                (!! malloc_compatible (sizeof t_run) original_freelist_pointer && 
+                (!! malloc_compatible (PGSIZE) original_freelist_pointer && 
                 freelistrep sh ls original_freelist_pointer *
                 data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem))
         )
@@ -397,7 +397,7 @@ Definition client9_spec :=
                 (
                     EX next ls',
                     (!! (next :: ls' = ls) &&
-                    !! malloc_compatible (sizeof t_run) original_freelist_pointer && 
+                    !! malloc_compatible (PGSIZE) original_freelist_pointer && 
                     pipe_rep original_freelist_pointer *
                     (*data_at sh t_run next  *)
                     freelistrep sh ls' next *
