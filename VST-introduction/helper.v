@@ -701,10 +701,11 @@ Definition ensure_comparable_range (sh: share) (p_start p_end: val) (size: Z) :=
 
 
 (************************ freelistrep *********************************)
+(* NOTE: assume PGSIZE is greater than sizeof t_run *)
 Fixpoint freelistrep (sh: share) (il: list val) (p: val) : mpred := (* the list contains the next*)
  match il with
  | next::il' =>
-        !! malloc_compatible (sizeof t_run) p &&  (* p is compatible with a memory block of size sizeof theader. *)
+        !! malloc_compatible (PGSIZE) p &&  (* p is compatible with a memory block of size sizeof theader. *)
         data_at sh t_run next p * (* at the location p, there is a t_run structure with the value next *)
         freelistrep sh il' next (* "*" ensures no loops... *)
  | nil => !! (p = nullval) && emp
@@ -758,7 +759,7 @@ Lemma freelistrep_nonnull: forall il sh x,
    x <> nullval ->
    freelistrep sh il x =
    EX head : val, EX tail:list val,
-          !! (il = head::tail) && !! malloc_compatible (sizeof t_run) x && data_at sh t_run head x * freelistrep sh tail head.
+          !! (il = head::tail) && !! malloc_compatible (PGSIZE) x && data_at sh t_run head x * freelistrep sh tail head.
 Proof.
    intros; apply pred_ext.
    - destruct il. 
@@ -769,3 +770,11 @@ Proof.
    - Intros m y. rewrite H0. unfold freelistrep at 2; fold freelistrep. entailer!.
 Qed.
 
+Lemma freelist_fold: forall sh original_freelist_pointer new_head il,
+writable_share sh ->
+(!! malloc_compatible (PGSIZE) new_head && data_at sh t_run original_freelist_pointer new_head * freelistrep sh il original_freelist_pointer) =
+freelistrep (sh) (original_freelist_pointer::il) (new_head) .
+Proof.
+  intros.
+  destruct il; refold_freelistrep; auto.
+Qed.

@@ -551,7 +551,7 @@ destruct (eq_dec original_freelist_pointer nullval) eqn:eofln.
         * forward. destruct (eq_dec original_freelist_pointer nullval) eqn:e1; auto_contradict.
         *forward. destruct (eq_dec original_freelist_pointer nullval) eqn:e1; auto_contradict. Intros next ls'. Exists next.
         Exists ls. simpl. entailer!.
-Qed.
+Qed. 
 
 Lemma body_client1: semax_body Vprog Gprog f_client1 client1_spec.
 Proof.
