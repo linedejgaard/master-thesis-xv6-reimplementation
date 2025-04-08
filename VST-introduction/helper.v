@@ -667,9 +667,10 @@ Definition list_repeat {A: Type} (n: nat) (x: A) : list A :=
       repeat x n.
 
 Definition pipe_rep sh (pi: val) : mpred :=
+   EX data,
   data_at sh t_struct_pipe
     ( (* data = uninitialized? depends on model *)
-      (list_repeat (Z.to_nat PIPESIZE) (Vundef)), (* array data[PIPESIZE] *)
+      (data), (* array data[PIPESIZE] *)
       (Vint (Int.repr 0), (* nread *)
       (Vint (Int.repr 0), (* nwrite *)
       (Vint (Int.repr 1), (* readopen *)
