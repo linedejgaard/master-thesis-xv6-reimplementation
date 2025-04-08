@@ -698,3 +698,74 @@ Definition ensure_comparable_range (sh: share) (p_start p_end: val) (size: Z) :=
 
 
 (* there are more lemmas in verif_simple kfree file v2*)
+
+
+(************************ freelistrep *********************************)
+Fixpoint freelistrep (sh: share) (il: list val) (p: val) : mpred := (* the list contains the next*)
+ match il with
+ | next::il' =>
+        !! malloc_compatible (sizeof t_run) p &&  (* p is compatible with a memory block of size sizeof theader. *)
+        data_at sh t_run next p * (* at the location p, there is a t_run structure with the value next *)
+        freelistrep sh il' next (* "*" ensures no loops... *)
+ | nil => !! (p = nullval) && emp
+ end.
+
+Arguments freelistrep sh il p : simpl never.
+
+Ltac refold_freelistrep :=
+  unfold freelistrep;
+  fold freelistrep.
+
+Lemma freelistrep_local_prop: forall sh n p, 
+   freelistrep sh n p |--  !! (is_pointer_or_null p /\ (n=nil<->p=nullval) /\ ((n <> nil)<->isptr p))%nat.
+Proof.
+  intros.
+  induction n as [| n' IH].
+  - unfold freelistrep. entailer!. split; auto.
+    + split; auto.
+    + split; try lia. intros. simpl in *. auto_contradict. intros; auto_contradict.
+  - unfold freelistrep. destruct p; entailer!. split.
+    + split; intros; inversion H2.
+    + split; intros; auto. unfold not; intros. auto_contradict.
+   Qed.
+#[export] Hint Resolve freelistrep_local_prop : saturate_local.
+
+Lemma freelistrep_valid_pointer:
+  forall sh n p, 
+  readable_share sh ->
+   freelistrep sh n p |-- valid_pointer p.
+Proof.
+  intros. destruct n.
+  - unfold freelistrep. entailer!.
+  - unfold freelistrep. entailer.
+Qed. 
+#[export] Hint Resolve freelistrep_valid_pointer : valid_pointer.
+
+
+Lemma freelistrep_null: forall sh n x,
+       x = nullval ->
+       freelistrep sh n x = !! (n = nil) && emp.
+Proof.
+   intros.
+   destruct n; refold_freelistrep.
+   autorewrite with norm. auto.
+   apply pred_ext.
+   entailer. 
+   destruct n; entailer!; try discriminate H0. 
+Qed.
+
+Lemma freelistrep_nonnull: forall il sh x,
+   x <> nullval ->
+   freelistrep sh il x =
+   EX head : val, EX tail:list val,
+          !! (il = head::tail) && !! malloc_compatible (sizeof t_run) x && data_at sh t_run head x * freelistrep sh tail head.
+Proof.
+   intros; apply pred_ext.
+   - destruct il. 
+         + unfold freelistrep. entailer!.
+         + refold_freelistrep. entailer!.
+         Exists v il. 
+         entailer!. 
+   - Intros m y. rewrite H0. unfold freelistrep at 2; fold freelistrep. entailer!.
+Qed.
+

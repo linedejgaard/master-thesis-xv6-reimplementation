@@ -235,35 +235,36 @@ Definition kfree1_spec :=
  DECLARE _kfree1
    WITH sh : share, new_head:val, original_freelist_pointer:val, xx:Z, gv:globals
    PRE [ tptr tvoid]
-      PROP(writable_share sh; is_pointer_or_null original_freelist_pointer) (* writable_share is necessary *)
+      PROP(writable_share sh; is_pointer_or_null original_freelist_pointer) 
       PARAMS (new_head) GLOBALS(gv)
-      SEP (data_at sh (t_run) nullval new_head; (* the input run struct should exists *)
-      data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem) (* the kmem freelist should exists, xx is a placeholder for the spinlock *)
+      SEP (data_at sh (t_run) nullval new_head; 
+      data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem) 
       )
    POST [ tvoid ]
       PROP()
-      RETURN () (* no return value *)
+      RETURN () 
       SEP (
-         data_at sh (t_run) (original_freelist_pointer) new_head; (* the new head should point to the original freelist pointer *)
-         data_at sh t_struct_kmem (Vint (Int.repr xx), new_head) (gv _kmem) (** the top of the freelist should point to the new head *)
+         data_at sh (t_run) (original_freelist_pointer) new_head; 
+         data_at sh t_struct_kmem (Vint (Int.repr xx), new_head) (gv _kmem)
          ).
+
 (* I THINK THIS IS WRONG, BECAUSE I DON'T THEY THEY ARE DISJOINT: *)
 Definition kfree1_1_spec := 
  DECLARE _kfree1
    WITH sh : share, new_head:val, original_freelist_pointer:val, xx:Z, gv:globals
    PRE [ tptr tvoid]
-      PROP(writable_share sh; is_pointer_or_null original_freelist_pointer) (* writable_share is necessary *)
+      PROP(writable_share sh; is_pointer_or_null original_freelist_pointer) 
       PARAMS (new_head) GLOBALS(gv)
-      SEP (data_at sh (t_run) nullval new_head * (* the input run struct should exists *)
-      data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem) (* the kmem freelist should exists, xx is a placeholder for the spinlock *)
+      SEP (data_at sh (t_run) nullval new_head * 
+      data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem) 
       )
    POST [ tvoid ]
       PROP()
-      RETURN () (* no return value *)
+      RETURN ()
       SEP (
          data_at sh (t_run) (original_freelist_pointer) new_head * (* the new head should point to the original freelist pointer *)
          data_at sh t_struct_kmem (Vint (Int.repr xx), new_head) (gv _kmem) (** the top of the freelist should point to the new head *)
-         ).   
+         ).
 
 
 
@@ -491,21 +492,21 @@ Definition call_kfree1_if_1_spec :=
    DECLARE _call_kfree1_if_1
       WITH sh : share, new_head:val, original_freelist_pointer:val, xx:Z, gv:globals
       PRE [ tptr tvoid]
-         PROP(writable_share sh; is_pointer_or_null original_freelist_pointer) (* writable_share is necessary *)
+         PROP(writable_share sh; is_pointer_or_null original_freelist_pointer) 
          PARAMS (new_head) GLOBALS(gv)
-         SEP (data_at sh (t_run) nullval new_head; (* the input run struct should exists *)
-         data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem) (* the kmem freelist should exists, xx is a placeholder for the spinlock *)
+         SEP (data_at sh (t_run) nullval new_head;
+         data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem) 
          )
       POST [ tvoid ]
          PROP()
-         RETURN () (* no return value *)
+         RETURN () 
          SEP (
             if (eq_dec new_head nullval) then
-            data_at sh (t_run) nullval new_head * (* the input run struct should exists *)
-            data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem) (* the kmem freelist should exists, xx is a placeholder for the spinlock *)
+            data_at sh (t_run) nullval new_head * 
+            data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem) 
             else 
-            data_at sh (t_run) (original_freelist_pointer) new_head *(* the new head should point to the original freelist pointer *)
-            data_at sh t_struct_kmem (Vint (Int.repr xx), new_head) (gv _kmem) (** the top of the freelist should point to the new head *)
+            data_at sh (t_run) (original_freelist_pointer) new_head *
+            data_at sh t_struct_kmem (Vint (Int.repr xx), new_head) (gv _kmem) 
             ).
 
 
@@ -513,7 +514,7 @@ Definition call_kfree1_if_1_spec :=
 Definition freerange_no_loop_no_add_spec' :=
    DECLARE _freerange_no_loop_no_add
       WITH sh : share, new_head : val, pa_end : val, 
-           original_freelist_pointer : val, xx : Z, gv : globals, yy:Z, zz:Z (*TODO: delete yy, and zz*)
+           original_freelist_pointer : val, xx : Z, gv : globals
       PRE [ tptr tvoid, tptr tvoid ]
          PROP (
             writable_share sh;
@@ -528,20 +529,17 @@ Definition freerange_no_loop_no_add_spec' :=
          )
       POST [ tvoid ]
          PROP ()
-         RETURN () (* no return value *)
+         RETURN ()
          SEP (
             (*denote_tc_test_order new_head pa_end &&*)
             if pointer_le_bool new_head pa_end then
                data_at sh (t_run) original_freelist_pointer new_head &&
-               (* the new head should point to the original freelist pointer *)
                data_at sh t_struct_kmem 
                   (Vint (Int.repr xx), new_head) (gv _kmem) 
             else
-               data_at sh (t_run) nullval new_head * (* the input run struct should exist *)
+               data_at sh (t_run) nullval new_head * 
                   data_at sh t_struct_kmem 
                      (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem) 
-               
-               (* the top of the freelist should point to the new head *)
          ).
 
 Definition freerange_no_loop_no_add_spec :=
