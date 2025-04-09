@@ -4,6 +4,7 @@ Require Import VC.ASI_kalloc.
 Require Import VC.kalloc_kfree_definitions.
 Require Import VC.Spec_kalloc.
 Require Import VC.kallocfun.
+Require Import VC.clientsfun.
 Require Import VC.tactics.
 
 Require Import VC.kalloc.
@@ -19,14 +20,6 @@ Definition KFVprog : varspecs. mk_varspecs kalloc.prog. Defined.
 Definition KFGprog: funspecs := KF_imported_specs ++ KF_internal_specs.
 
 Local Open Scope logic.
-
-(*Require Import malloc.
-Require Import malloc_lemmas.
-Require Import malloc_sep.*)
-(*Require Import VC.VSU_kalloc_kfree_definitions.*)
-
-(*Definition Vprog : varspecs. mk_varspecs prog. Defined.*)
-
 
 Definition kalloc_write_pipe_spec : ident * funspec :=
  DECLARE _kalloc_write_pipe
