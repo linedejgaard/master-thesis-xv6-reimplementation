@@ -2,18 +2,18 @@
 // kernel stacks, page-table pages,
 // and pipe buffers. Allocates whole 4096-byte pages.
 
-void freerange(void *pa_start, void *pa_end);
+//void freerange(void *pa_start, void *pa_end);
 
-extern char end[]; // first address after kernel.
+//extern char end[]; // first address after kernel.
                    // defined by kernel.ld.
 
 struct run {
   struct run *next;
 };
 
-struct {
-  int xx;
-  struct run *freelist;
+struct struct_kmem { // Rocq wants it to be named
+  int xx; 
+  struct run *freelist; 
 } kmem;
 
 /* void

@@ -1,12 +1,13 @@
 Require Import VST.floyd.proofauto.
 Require Import VC.ASI_kalloc.
+Require Import VC.kalloc.
 Require Import VC.clients.
-Require Import VC.helper.
-Require Import VC.VSU_kalloc_kfree_definitions.
+Require Import VC.clientsfun.
+Require Import VC.kalloc_kfree_definitions.
 Require Import VC.Spec_kalloc.
 
 
-#[export] Instance CompSpecs : compspecs. make_compspecs prog. Defined.
+#[export] Instance CompSpecs : compspecs. make_compspecs prog. Defined. (* this is my problem.. *)
 (*Definition Vprog : varspecs. mk_varspecs prog. Defined.*)
 
 Definition MF_ASI: funspecs := Kalloc_ASI KF_APD _kalloc _kfree.
@@ -16,7 +17,7 @@ Definition MF_globals gv  sh ls xx original_freelist_pointer: mpred:= ASI_kalloc
 Definition MFVprog : varspecs. mk_varspecs clients.prog. Defined.
 Definition MFGprog: funspecs := MF_imported_specs ++ MF_internal_specs.
 
-Local Open Scope logic.
+(*Local Open Scope logic.*)
 
 (*Require Import malloc.
 Require Import malloc_lemmas.

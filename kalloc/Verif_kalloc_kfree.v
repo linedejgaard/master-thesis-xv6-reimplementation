@@ -1,18 +1,20 @@
 Require Import VST.floyd.proofauto.
 Require Import VC.ASI_kalloc.
+Require Import VC.kalloc.
 Require Import VC.clients.
-Require Import VC.helper.
+Require Import VC.kallocfun.
+Require Import VC.tactics.
 Require Import VC.Spec_kalloc.
 
 (*#[export] Instance CompSpecs : compspecs. make_compspecs prog. Defined.
 Definition Vprog : varspecs. mk_varspecs prog. Defined.*)
 
-Local Open Scope logic.
+(*Local Open Scope logic.*)
 
 (*Require Import malloc.
 Require Import malloc_lemmas.
 Require Import malloc_sep.*)
-Require Import VC.VSU_kalloc_kfree_definitions.
+Require Import VC.kalloc_kfree_definitions.
 
 Lemma body_kfree: semax_body MF_Vprog MF_Gprog f_kfree (kfree_spec KF_APD t_run).
 Proof. start_function. Intros.

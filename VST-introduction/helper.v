@@ -14,7 +14,7 @@ Definition PIPESIZE : Z := 512.
 
 (************************ Helper functions and tactics  *************************)
 
-Ltac auto_contradict := try discriminate; try contradiction.
+(*Ltac auto_contradict := try discriminate; try contradiction.*)
 Ltac split_lia := split; try rep_lia.
 Ltac simplify_signed_PGSIZE := rewrite Int.signed_repr; unfold PGSIZE; try rep_lia.
 
@@ -663,7 +663,7 @@ Ltac refold_available :=
     !! (Zlength data = PIPESIZE) &&
     data_at Tsh t_struct_pipe (data, 0%Z, 0%Z, 1%Z, 1%Z) pi.*)
 
-Definition list_repeat {A: Type} (n: nat) (x: A) : list A :=
+(*Definition list_repeat {A: Type} (n: nat) (x: A) : list A :=
       repeat x n.
 
 Definition pipe_rep sh (pi: val) : mpred :=
@@ -675,7 +675,7 @@ Definition pipe_rep sh (pi: val) : mpred :=
       (Vint (Int.repr 0), (* nwrite *)
       (Vint (Int.repr 1), (* readopen *)
        Vint (Int.repr 1)  (* writeopen *))))
-    ) pi.
+    ) pi.*)
 
 
 (****************** compare pointers range *********************)
@@ -703,7 +703,7 @@ Definition ensure_comparable_range (sh: share) (p_start p_end: val) (size: Z) :=
 
 (************************ freelistrep *********************************)
 (* NOTE: assume PGSIZE is greater than sizeof t_run *)
-Fixpoint freelistrep (sh: share) (il: list val) (p: val) : mpred := (* the list contains the next*)
+(*Fixpoint freelistrep (sh: share) (il: list val) (p: val) : mpred := (* the list contains the next*)
  match il with
  | next::il' =>
         !! malloc_compatible (PGSIZE) p &&  (* p is compatible with a memory block of size sizeof theader. *)
@@ -741,7 +741,7 @@ Proof.
   - unfold freelistrep. entailer!.
   - unfold freelistrep. entailer.
 Qed. 
-#[export] Hint Resolve freelistrep_valid_pointer : valid_pointer.
+#[export] Hint Resolve freelistrep_valid_pointer : valid_pointer.*)
 
 
 Lemma freelistrep_null: forall sh n x,

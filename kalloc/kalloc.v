@@ -19,7 +19,6 @@ Module Info.
   Definition normalized := true.
 End Info.
 
-Definition __96 : ident := $"_96".
 Definition ___builtin_annot : ident := $"__builtin_annot".
 Definition ___builtin_annot_intval : ident := $"__builtin_annot_intval".
 Definition ___builtin_bswap : ident := $"__builtin_bswap".
@@ -84,11 +83,12 @@ Definition _next : ident := $"next".
 Definition _pa : ident := $"pa".
 Definition _r : ident := $"r".
 Definition _run : ident := $"run".
+Definition _struct_kmem : ident := $"struct_kmem".
 Definition _xx : ident := $"xx".
 Definition _t'1 : ident := 128%positive.
 
 Definition v_kmem := {|
-  gvar_info := (Tstruct __96 noattr);
+  gvar_info := (Tstruct _struct_kmem noattr);
   gvar_init := (Init_space 16 :: nil);
   gvar_readonly := false;
   gvar_volatile := false
@@ -108,7 +108,7 @@ Definition f_kfree := {|
     (Ssequence
       (Ssequence
         (Sset _t'1
-          (Efield (Evar _kmem (Tstruct __96 noattr)) _freelist
+          (Efield (Evar _kmem (Tstruct _struct_kmem noattr)) _freelist
             (tptr (Tstruct _run noattr))))
         (Sassign
           (Efield
@@ -116,7 +116,7 @@ Definition f_kfree := {|
               (Tstruct _run noattr)) _next (tptr (Tstruct _run noattr)))
           (Etempvar _t'1 (tptr (Tstruct _run noattr)))))
       (Sassign
-        (Efield (Evar _kmem (Tstruct __96 noattr)) _freelist
+        (Efield (Evar _kmem (Tstruct _struct_kmem noattr)) _freelist
           (tptr (Tstruct _run noattr)))
         (Etempvar _r (tptr (Tstruct _run noattr)))))
     Sskip))
@@ -132,7 +132,7 @@ Definition f_kalloc := {|
   fn_body :=
 (Ssequence
   (Sset _r
-    (Efield (Evar _kmem (Tstruct __96 noattr)) _freelist
+    (Efield (Evar _kmem (Tstruct _struct_kmem noattr)) _freelist
       (tptr (Tstruct _run noattr))))
   (Ssequence
     (Sifthenelse (Etempvar _r (tptr (Tstruct _run noattr)))
@@ -142,7 +142,7 @@ Definition f_kalloc := {|
             (Ederef (Etempvar _r (tptr (Tstruct _run noattr)))
               (Tstruct _run noattr)) _next (tptr (Tstruct _run noattr))))
         (Sassign
-          (Efield (Evar _kmem (Tstruct __96 noattr)) _freelist
+          (Efield (Evar _kmem (Tstruct _struct_kmem noattr)) _freelist
             (tptr (Tstruct _run noattr)))
           (Etempvar _t'1 (tptr (Tstruct _run noattr)))))
       Sskip)
@@ -154,7 +154,7 @@ Definition composites : list composite_definition :=
 (Composite _run Struct
    (Member_plain _next (tptr (Tstruct _run noattr)) :: nil)
    noattr ::
- Composite __96 Struct
+ Composite _struct_kmem Struct
    (Member_plain _xx tint ::
     Member_plain _freelist (tptr (Tstruct _run noattr)) :: nil)
    noattr :: nil).

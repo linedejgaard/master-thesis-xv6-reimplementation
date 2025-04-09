@@ -1,9 +1,12 @@
 Require Import VST.floyd.proofauto.
+
+Require Import VC.tactics.
 Require Import VC.ASI_kalloc.
-Require Import VC.clients.
-Require Import VC.helper.
-(*Require Import malloc_lemmas.
-Require Import malloc_sep.*)
+(*Require Import VC.clients.*)
+Require Import VC.kalloc.
+Require Import VC.kallocfun.
+
+
 
 (* THIS SHOULD CONTAIN ANY INTERNAL FUNCTIONS... I DON'T HAVE ANY *)
 
@@ -52,7 +55,6 @@ Qed.
 
 Definition Tok_APD := Build_KallocTokenAPD kalloc_token_sz kalloc_token_sz_valid_pointer
   kalloc_token_sz_local_facts.
-
 
 Definition mem_mgr (gv: globals) (sh : share) (ls: list val) (xx:Z) (original_freelist_pointer:val): mpred := (* I am unsure how to access all these elements.. *)
     !! (writable_share sh /\

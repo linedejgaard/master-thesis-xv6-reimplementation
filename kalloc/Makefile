@@ -1,7 +1,7 @@
 COQMFFLAGS := -Q . VC \
 			-Q /Users/linemeitongmaodejgaard/.opam/coq-8.17.1/lib/coq/user-contrib/iris iris 
 
-ALLVFILES := hints.v Preface.v clients.v helper.v ASI_kalloc.v Spec_kalloc.v VSU_kalloc_kfree_definitions.v Verif_kalloc_kfree.v
+ALLVFILES := constantsfun.v kalloc.v clients.v kallocfun.v clientsfun.v tactics.v ASI_kalloc.v Spec_kalloc.v kalloc_kfree_definitions.v Verif_kalloc_kfree.v
 build: Makefile.coq
 	$(MAKE) -f Makefile.coq
 

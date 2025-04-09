@@ -190,11 +190,11 @@ Abort.
 Require Import ZArith.
 Local Open Scope Z_scope.
 
-Require VC.clients.  (* If this line fails, do 'make kalloc.vo' *)
-Goal VC.clients.Info.bitsize = VST.veric.version.bitsize.
+Require VC.kalloc.  (* If this line fails, do 'make kalloc.vo' *)
+Goal VC.kalloc.Info.bitsize = VST.veric.version.bitsize.
 reflexivity ||
 let b1 := constr:(VST.veric.version.bitsize) in let b1 := eval compute in b1 in
-let b2 := constr:(VC.clients.Info.bitsize) in let b2 := eval compute in b2 in
+let b2 := constr:(VC.kalloc.Info.bitsize) in let b2 := eval compute in b2 in
 fail "Your installed VST is configured to verify C programs compiled with"
   b1 "bit pointers,"
  "but the .c files in the local directory have been clightgen'ed as if compiled with"
