@@ -87,7 +87,7 @@ Lemma body_client_11_pipealloc: semax_body MFVprog MFGprog f_client_11_pipealloc
 Proof.
 start_function.
 forward.
-forward_call (kalloc1_spec_sub KF_APD t_struct_pipe) (sizeof t_struct_pipe, gv, sh , ls, xx, original_freelist_pointer ). (* kalloc *)
+forward_call (kalloc1_spec_sub KF_APD t_struct_pipe) (gv, sh , ls, xx, original_freelist_pointer ). (* kalloc *)
 (*forward_call ((sizeof t_struct_pipe), gv,  sh,  ls , xx,  original_freelist_pointer).*)
 - unfold MF_globals. entailer!. 
 - destruct (eq_dec original_freelist_pointer nullval) eqn:e0.
@@ -95,9 +95,9 @@ forward_call (kalloc1_spec_sub KF_APD t_struct_pipe) (sizeof t_struct_pipe, gv, 
         * rewrite e in H; auto_contradict.
         * forward. entailer.
     + Intros ab. forward_if.
-        *
+       (* *
         rewrite mem_mgr_split. rewrite my_kalloc_token_split. Intros. rewrite kalloc_token_sz_split.
-        Intros. entailer!.
+        Intros. entailer!.*)
         *
         rewrite mem_mgr_split. rewrite my_kalloc_token_split. Intros. rewrite kalloc_token_sz_split.
         Intros. 
@@ -113,16 +113,13 @@ Qed.
 Lemma body_client1: semax_body MFVprog MFGprog f_client1 client1_spec.
 Proof.
 start_function.
-forward_call (kfree1_spec_sub KF_APD t_run) (new_head, gv, sh , ls, xx, original_freelist_pointer).
-(*forward_call (kfree1_spec_sub t_run) (sizeof t_struct_pipe, gv, sh , ls, xx, original_freelist_pointer ). (* kalloc *)*)
-
-(*forward_call (t_run, new_head, gv, sh, ls, xx:Z, original_freelist_pointer).  (* kfree *)*)
+forward_call (kfree1_spec_sub KF_APD t_run) (new_head, gv, sh , ls, xx, original_freelist_pointer). (* call kfree *)
     + destruct (eq_dec new_head nullval).
         *unfold MF_globals. entailer!.
         * unfold MF_globals. entailer!. 
             simplify_kalloc_token. 
     + destruct (eq_dec new_head nullval).
-        *forward_call (kalloc1_spec_sub KF_APD t_run) (sizeof t_run, gv, sh , ls, xx, original_freelist_pointer ). (* kalloc *)
+        *forward_call (kalloc1_spec_sub KF_APD t_run) (gv, sh , ls, xx, original_freelist_pointer ). (* kalloc *)
         (*forward_call (t_run, gv, sh, ls, xx, original_freelist_pointer).  (* kalloc *)*)
         destruct (eq_dec original_freelist_pointer nullval).
             -- forward. Exists nullval. unfold MF_globals. entailer!.
@@ -131,7 +128,7 @@ forward_call (kfree1_spec_sub KF_APD t_run) (new_head, gv, sh , ls, xx, original
                 ++ forward. Exists original_freelist_pointer. entailer. Exists v. entailer.
                     Exists ls. entailer. unfold MF_globals. entailer!. inversion H0; subst. entailer!.
                     simplify_kalloc_token. 
-        *forward_call (kalloc1_spec_sub KF_APD t_run) (sizeof t_run,  gv, sh, original_freelist_pointer::ls, xx, new_head ). (* kalloc *)
+        *forward_call (kalloc1_spec_sub KF_APD t_run) (gv, sh, original_freelist_pointer::ls, xx, new_head ). (* kalloc *)
         (*forward_call (t_run, gv, sh, original_freelist_pointer::ls, xx, new_head).  (* kalloc *)*)
         destruct (eq_dec new_head nullval).
             -- forward.
