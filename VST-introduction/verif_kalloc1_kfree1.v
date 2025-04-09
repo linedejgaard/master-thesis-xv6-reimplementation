@@ -2,6 +2,7 @@ Require Import VST.floyd.proofauto.
 Require Import VC.ASI_kalloc.
 Require Import VC.client1.
 Require Import VC.helper.
+Require Import VC.Spec_kalloc.
 
 (*#[export] Instance CompSpecs : compspecs. make_compspecs prog. Defined.
 Definition Vprog : varspecs. mk_varspecs prog. Defined.*)
@@ -13,45 +14,39 @@ Require Import malloc_lemmas.
 Require Import malloc_sep.*)
 Require Import VC.VSU_kalloc_kfree_definitions.
 
-Lemma body_kfree1 i: semax_body MF_Vprog MF_Gprog f_kfree1 (kfree1_spec KF_APD i).
-Proof. start_function.
+Lemma body_kfree1 i: semax_body MF_Vprog MF_Gprog f_kfree1 (kfree1_spec_sz KF_APD i).
+Proof. start_function. Intros.
 forward.
-rewrite mem_mgr_split.
-Intros sh ls xx original_freelist_pointer.
+rewrite mem_mgr_split. Intros.
 destruct (eq_dec new_head nullval).
 - forward_if.
-    + rewrite e in H2; auto_contradict.
-    + forward. entailer.
-    rewrite mem_mgr_split. Exists sh ls xx original_freelist_pointer.
-    entailer!.
+    * rewrite e in H2; auto_contradict.
+    * forward. entailer. rewrite mem_mgr_split. entailer.
 - forward_if.
-    + Intros. forward. rewrite kalloc_token'_split. Intros v. forward. forward. entailer.
-    rewrite mem_mgr_split. Exists sh (original_freelist_pointer::ls) xx new_head. entailer!. 
-        * right; split; auto. unfold not; intros; auto_contradict.
-        * refold_freelistrep. entailer. admit.
-    + forward. entailer.
+    * Intros. forward. intros. rewrite kalloc_token_sz_split. Intros.
+    rewrite memory_block_data_at_.
+     forward.
+    * forward. entailer.
 Admitted.
 
 
 Lemma body_kalloc1 i: semax_body MF_Vprog MF_Gprog f_kalloc1 (kalloc1_spec (KF_APD) i).
 Proof. start_function.
-rewrite mem_mgr_split. Intros sh ls xx original_freelist_pointer.
-unfold abbreviate in POSTCONDITION.
-forward; forward_if (
+rewrite mem_mgr_split. Intros. forward.  unfold abbreviate in POSTCONDITION.
+forward_if (
     PROP  ( )
     LOCAL (
         temp _r original_freelist_pointer; 
         gvars gv
         )
     SEP (
-        ASI_kalloc.mem_mgr KF_APD gv;
-                   if eq_dec original_freelist_pointer nullval
+        ASI_kalloc.mem_mgr KF_APD gv sh ls xx original_freelist_pointer*
+                   (if eq_dec original_freelist_pointer nullval
                    then emp
-                   else kalloc_token' KF_APD Ews PGSIZE original_freelist_pointer
+                   else kalloc_token' KF_APD sh PGSIZE original_freelist_pointer)
     )
-)%assert; 
-try (rewrite H012 in H; auto_contradict).
-+ destruct H0 as [[H0011 H0012] | [H0021 H0022]].
+)%assert.
++forward. destruct H0 as [[H0011 H0012] | [H0021 H0022]].
     - rewrite H0012 in H1; auto_contradict.
     - destruct ls; auto_contradict.
     refold_freelistrep. Intros.
