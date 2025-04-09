@@ -23,7 +23,6 @@ Require Import malloc_lemmas.
 Require Import malloc_sep.*)
 (*Require Import VC.VSU_kalloc_kfree_definitions.*)
 
-
 (*Definition Vprog : varspecs. mk_varspecs prog. Defined.*)
 
 
@@ -120,7 +119,6 @@ forward_call (kfree1_spec_sub KF_APD t_run) (new_head, gv, sh , ls, xx, original
             simplify_kalloc_token. 
     + destruct (eq_dec new_head nullval).
         *forward_call (kalloc1_spec_sub KF_APD t_run) (gv, sh , ls, xx, original_freelist_pointer ). (* kalloc *)
-        (*forward_call (t_run, gv, sh, ls, xx, original_freelist_pointer).  (* kalloc *)*)
         destruct (eq_dec original_freelist_pointer nullval).
             -- forward. Exists nullval. unfold MF_globals. entailer!.
             -- destruct ls.
@@ -129,7 +127,6 @@ forward_call (kfree1_spec_sub KF_APD t_run) (new_head, gv, sh , ls, xx, original
                     Exists ls. entailer. unfold MF_globals. entailer!. inversion H0; subst. entailer!.
                     simplify_kalloc_token. 
         *forward_call (kalloc1_spec_sub KF_APD t_run) (gv, sh, original_freelist_pointer::ls, xx, new_head ). (* kalloc *)
-        (*forward_call (t_run, gv, sh, original_freelist_pointer::ls, xx, new_head).  (* kalloc *)*)
         destruct (eq_dec new_head nullval).
             -- forward.
             -- forward. Exists new_head. entailer. inversion H0; subst; entailer. unfold MF_globals. entailer!. simplify_kalloc_token.
