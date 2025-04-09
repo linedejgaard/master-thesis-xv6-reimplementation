@@ -11,8 +11,8 @@ Local Open Scope logic.
 
 
 (************************ specs *********************************)
-Definition kfree1_spec := 
-    DECLARE _kfree1
+Definition kfree_spec := 
+    DECLARE _kfree
        WITH sh : share, new_head:val, original_freelist_pointer:val, xx:Z, gv:globals, ls : list val, size:Z
        PRE [ tptr tvoid]
           PROP(
@@ -38,8 +38,8 @@ Definition kfree1_spec :=
              data_at sh t_struct_kmem (Vint (Int.repr xx), new_head) (gv _kmem)
              ).
 
-Definition kalloc1_spec :=
-DECLARE _kalloc1
+Definition kalloc_spec :=
+DECLARE _kalloc
 WITH sh : share, original_freelist_pointer:val, xx:Z, ls:list val, gv:globals
 PRE [ ]
     PROP(writable_share sh /\ 
@@ -459,8 +459,8 @@ Definition client9_spec :=
 (************************ Gprog  *************************)
 
 Definition Gprog : funspecs := [
-    kfree1_spec; 
-    kalloc1_spec; 
+    kfree_spec; 
+    kalloc_spec; 
     client1_spec;
     client2_spec;
     client3_spec;
@@ -474,7 +474,7 @@ Definition Gprog : funspecs := [
 ].
 
 (************************ Proofs  *************************)
-Lemma body_kfree1: semax_body Vprog Gprog f_kfree1 kfree1_spec.
+Lemma body_kfree: semax_body Vprog Gprog f_kfree kfree_spec.
 Proof. start_function. Intros. (*destruct number_structs_available eqn:en; try rep_lia. destruct H.*) 
 Intros v. forward. destruct H as [H [H1 H2]]. repeat forward. 
     entailer. 
@@ -488,7 +488,7 @@ Intros v. forward. destruct H as [H [H1 H2]]. repeat forward.
    - (*rewrite S_pred.*) entailer!. 
 Qed.
 
-Lemma body_kalloc1: semax_body Vprog Gprog f_kalloc1 kalloc1_spec.
+Lemma body_kalloc: semax_body Vprog Gprog f_kalloc kalloc_spec.
 Proof. start_function. 
 destruct (eq_dec original_freelist_pointer nullval) eqn:eofln.
 -destruct H as [H0 [[H011 H012] | [H021 H022]]];
@@ -557,7 +557,7 @@ Lemma body_client1: semax_body Vprog Gprog f_client1 client1_spec.
 Proof.
 start_function.
 (*Intros v.*)
-forward_call (sh, new_head, original_freelist_pointer, xx, gv, ls, PGSIZE). (* call kfree1 *)
+forward_call (sh, new_head, original_freelist_pointer, xx, gv, ls, PGSIZE). (* call kfree *)
 - destruct H as [HH1 [HH2 [[H411 H412] | [H421 H422]]]]; split; auto; split; auto. rewrite H412; unfold is_pointer_or_null; unfold nullval; simpl; auto.
 - forward_call (sh, new_head, xx, original_freelist_pointer::ls, gv). (* call kalloc *)
     + refold_freelistrep. destruct (eq_dec new_head nullval); try (rewrite e in H0; auto_contradict). entailer!. 
@@ -572,10 +572,10 @@ Lemma body_client2: semax_body Vprog Gprog f_client2 client2_spec.
 Proof.
 start_function.
 Intros v1 v2.
-forward_call (sh, pa1, original_freelist_pointer, xx, gv, ls, PGSIZE). (* call kfree1 *)
+forward_call (sh, pa1, original_freelist_pointer, xx, gv, ls, PGSIZE). (* call kfree *)
 - Exists v1. entailer!.
 - destruct H as [HH1 [H2 [H3 H4]]]. destruct H4; split; auto; split; auto; destruct H; auto; subst; simpl; auto.
-- forward_call (sh, pa2, pa1, xx, gv, (original_freelist_pointer::ls), PGSIZE). (* call kfree1 *)
+- forward_call (sh, pa2, pa1, xx, gv, (original_freelist_pointer::ls), PGSIZE). (* call kfree *)
     + Exists v2. entailer. refold_freelistrep. entailer!. 
     + destruct H as [HH1 [HH2 [H3 H4]]]; split; auto.
     + forward_call (sh, pa2, xx, (pa1::original_freelist_pointer::ls), gv). (* call kalloc *)
@@ -600,10 +600,10 @@ Lemma body_client3: semax_body Vprog Gprog f_client3 client3_spec.
 Proof.
     start_function.
     Intros v1 v2.
-    forward_call (sh, pa1, original_freelist_pointer, xx, gv, ls, PGSIZE). (* call kfree1 *)
+    forward_call (sh, pa1, original_freelist_pointer, xx, gv, ls, PGSIZE). (* call kfree *)
     - Exists v1. entailer!.
     - destruct H as [HH1 [H2 [H3 H4]]]. destruct H4; split; auto; split; auto; destruct H; auto; subst; simpl; auto.
-    - forward_call (sh, pa2, pa1, xx, gv, (original_freelist_pointer::ls), PGSIZE). (* call kfree1 *)
+    - forward_call (sh, pa2, pa1, xx, gv, (original_freelist_pointer::ls), PGSIZE). (* call kfree *)
         + Exists v2. entailer. refold_freelistrep. entailer!. 
         + destruct H as [HH1 [HH2 [H3 H4]]]; split; auto.
         + forward_call (sh, pa2, xx, (pa1::original_freelist_pointer::ls), gv). (* call kalloc *)
@@ -635,7 +635,7 @@ Lemma body_client5: semax_body Vprog Gprog f_client5 client5_spec.
 Proof.
 start_function.
 Intros v1 v2.
-forward_call (sh, pa1, original_freelist_pointer, xx, gv, ls, PGSIZE). (* call kfree1 *)
+forward_call (sh, pa1, original_freelist_pointer, xx, gv, ls, PGSIZE). (* call kfree *)
 -  Exists v1. entailer!.
 - destruct H as [HH1 [HH2 [H3 [[H411 H412] | [H421 H422]]]]]; split; auto; split; auto. rewrite H412; unfold is_pointer_or_null; unfold nullval; simpl; auto.
 - forward_call (sh, pa1, xx, original_freelist_pointer::ls, gv). (* call kalloc *)
@@ -644,7 +644,7 @@ forward_call (sh, pa1, original_freelist_pointer, xx, gv, ls, PGSIZE). (* call k
     + destruct (eq_dec pa1 nullval) eqn:enh.
         * rewrite e in H0; auto_contradict.
         * Intros ab. inversion H3. rewrite H5; rewrite H6.
-          forward_call (sh, pa2, original_freelist_pointer, xx, gv, ls, PGSIZE).  (* call kfree1 *)
+          forward_call (sh, pa2, original_freelist_pointer, xx, gv, ls, PGSIZE).  (* call kfree *)
           -- Exists v2. entailer!.
           -- destruct H as [HH1 [HH2 [HH3 [[H411 H412] | [H421 H422]]]]]; split; auto; split; auto. rewrite H412; unfold is_pointer_or_null; unfold nullval; simpl; auto.
           -- forward_call (sh, pa2, xx, original_freelist_pointer::ls, gv). (* call kalloc *)
@@ -687,7 +687,7 @@ Proof.
     - entailer.
     - Intros. destruct (Z.to_nat (2 - i)) eqn:e1; refold_available.
         +assert (i = 2); try rep_lia.
-        +forward_call (sh, p_tmp, curr_head, xx, gv, (tmp_added_elem ++ ls), PGSIZE). (* call kfree1 *)
+        +forward_call (sh, p_tmp, curr_head, xx, gv, (tmp_added_elem ++ ls), PGSIZE). (* call kfree *)
             * Intros v. Exists v. entailer!.
             * destruct H as [H1 [H2 [[[H311 H312] | [H321 H322]] H4]]]; destruct H0 as [H01 [[[H0211 H0212] | [H0221 H0222]] [H031 [H0321 H0322]]]]; split; auto; split; try (subst; simpl; auto);  unfold isptr_lst in H2; destruct H2; try (rewrite add_offset_0; auto);
                   try (unfold add_offset; unfold sub_offset; unfold_size (i * PGSIZE)%Z e0; destruct i; auto_contradict;
@@ -783,7 +783,7 @@ start_function.
     - entailer.
     - Intros. destruct (Z.to_nat (n - i)) eqn:e1; refold_available.
         + try rep_lia.
-        +forward_call (sh, p_tmp, curr_head, xx, gv, (tmp_added_elem ++ ls), PGSIZE). (* call kfree1 *)
+        +forward_call (sh, p_tmp, curr_head, xx, gv, (tmp_added_elem ++ ls), PGSIZE). (* call kfree *)
             * Intros v. Exists v. entailer!.
             * destruct H as [HH1 [H2 [[[H311 H312] | [H321 H322]] H4]]]; destruct H1 as [H01 [[[H0211 H0212] | [H0221 H0222]] [H031 [H0321 H0322]]]]; split; auto; split; try (subst; simpl; auto).
                 ++ destruct (Z.to_nat n) eqn:en; auto_contradict; try rep_lia. rewrite add_offset_0; auto;
@@ -1033,7 +1033,7 @@ start_function.
     - entailer.
     - Intros. destruct (Z.to_nat (n - i)) eqn:e1; refold_available.
         + try rep_lia.
-        +forward_call (sh, p_tmp, curr_head, xx, gv, (tmp_added_elem ++ ls), PGSIZE). (* call kfree1 *)
+        +forward_call (sh, p_tmp, curr_head, xx, gv, (tmp_added_elem ++ ls), PGSIZE). (* call kfree *)
             * Intros v. Exists v. entailer!.
             * destruct H as [HH1 [H2 [[[H311 H312] | [H321 H322]] H4]]]; destruct H1 as [H01 [[[H0211 H0212] | [H0221 H0222]] [H031 [H0321 H0322]]]]; split; auto; split; try (subst; simpl; auto).
                 ++ destruct (Z.to_nat n) eqn:en; auto_contradict; try rep_lia. rewrite add_offset_0; auto;
@@ -1343,7 +1343,7 @@ forward_while
                     }
                     rewrite H2. entailer!.
     + unfold add_offset. apply sameblock_false in esb.  destruct H as [H1 [H2 [H3 [H4 [H5 [H6 [H7 H8]]]]]]]; subst; auto_contradict.
-   - forward_call (sh, (Vptr b_s_init p_s_tmp), curr_head, xx, gv, (tmp_added_elem ++ ls), PGSIZE). (* call kfree1 *)
+   - forward_call (sh, (Vptr b_s_init p_s_tmp), curr_head, xx, gv, (tmp_added_elem ++ ls), PGSIZE). (* call kfree *)
    (*- forward_call (sh, (Vptr b_s_init p_s_tmp), curr_head, xx, gv, (Nat.add (Z.to_nat c_tmp) n), PGSIZE, (Z.to_nat (compute_c (Vptr b_s_init p_s_tmp) (Vptr b_n_init p_n_init) PGSIZE))).*)
       + apply andp_left2. sep_apply available_range_correct. EExists. entailer. destruct c_tmp; try rep_lia.
         * destruct H0 as [H01 [H02 [H03 [H04 [[H051 | H052] H06]]]]].

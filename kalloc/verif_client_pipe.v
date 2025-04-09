@@ -9,11 +9,11 @@ Require Import VC.Spec_kalloc.
 #[export] Instance CompSpecs : compspecs. make_compspecs prog. Defined.
 (*Definition Vprog : varspecs. mk_varspecs prog. Defined.*)
 
-Definition MF_ASI: funspecs := Kalloc_ASI KF_APD _kalloc1 _kfree1.
+Definition MF_ASI: funspecs := Kalloc_ASI KF_APD _kalloc _kfree.
 Definition MF_imported_specs:funspecs := nil.
 Definition MF_internal_specs: funspecs := MF_ASI.
 Definition MF_globals gv  sh ls xx original_freelist_pointer: mpred:= ASI_kalloc.mem_mgr KF_APD gv sh ls xx original_freelist_pointer.
-Definition MFVprog : varspecs. mk_varspecs client1.prog. Defined.
+Definition MFVprog : varspecs. mk_varspecs clients.prog. Defined.
 Definition MFGprog: funspecs := MF_imported_specs ++ MF_internal_specs.
 
 Local Open Scope logic.
@@ -126,7 +126,7 @@ Lemma body_client_11_pipealloc: semax_body MFVprog MFGprog f_client_11_pipealloc
 Proof.
 start_function.
 forward.
-forward_call (kalloc1_spec_sub KF_APD t_struct_pipe) (gv, sh , ls, xx, original_freelist_pointer ). (* kalloc *)
+forward_call (kalloc_spec_sub KF_APD t_struct_pipe) (gv, sh , ls, xx, original_freelist_pointer ). (* kalloc *)
 (*forward_call ((sizeof t_struct_pipe), gv,  sh,  ls , xx,  original_freelist_pointer).*)
 - unfold MF_globals. entailer!. 
 - if_tac. (*destruct (eq_dec original_freelist_pointer nullval) eqn:e0.*)
@@ -152,13 +152,13 @@ Qed.
 Lemma body_client1: semax_body MFVprog MFGprog f_client1 client1_spec.
 Proof.
 start_function.
-forward_call (kfree1_spec_sub KF_APD t_run) (new_head, gv, sh , ls, xx, original_freelist_pointer). (* call kfree *)
+forward_call (kfree_spec_sub KF_APD t_run) (new_head, gv, sh , ls, xx, original_freelist_pointer). (* call kfree *)
     + destruct (eq_dec new_head nullval).
         *unfold MF_globals. entailer!.
         * unfold MF_globals. entailer!. 
             simplify_kalloc_token. 
     + destruct (eq_dec new_head nullval).
-        *forward_call (kalloc1_spec_sub KF_APD t_run) (gv, sh , ls, xx, original_freelist_pointer ). (* kalloc *)
+        *forward_call (kalloc_spec_sub KF_APD t_run) (gv, sh , ls, xx, original_freelist_pointer ). (* kalloc *)
         destruct (eq_dec original_freelist_pointer nullval).
             -- forward. Exists nullval. unfold MF_globals. entailer!.
             -- destruct ls.
@@ -166,7 +166,7 @@ forward_call (kfree1_spec_sub KF_APD t_run) (new_head, gv, sh , ls, xx, original
                 ++ forward. Exists original_freelist_pointer. entailer. Exists v. entailer.
                     Exists ls. entailer. unfold MF_globals. entailer!. inversion H0; subst. entailer!.
                     simplify_kalloc_token. 
-        *forward_call (kalloc1_spec_sub KF_APD t_run) (gv, sh, original_freelist_pointer::ls, xx, new_head ). (* kalloc *)
+        *forward_call (kalloc_spec_sub KF_APD t_run) (gv, sh, original_freelist_pointer::ls, xx, new_head ). (* kalloc *)
         destruct (eq_dec new_head nullval).
             -- forward.
             -- forward. Exists new_head. entailer. inversion H0; subst; entailer. unfold MF_globals. entailer!. simplify_kalloc_token.
@@ -177,7 +177,7 @@ Lemma body_client12_42: semax_body MFVprog MFGprog f_client12_42 client12_42_spe
 Proof.
 start_function.
 forward. 
-forward_call (kalloc1_spec_sub KF_APD tint) (gv, sh , ls, xx, original_freelist_pointer ). (* kalloc *)
+forward_call (kalloc_spec_sub KF_APD tint) (gv, sh , ls, xx, original_freelist_pointer ). (* kalloc *)
 - unfold MF_globals. entailer!.
 - if_tac.
     + forward_if.
@@ -197,7 +197,7 @@ Lemma body_client12_42_include_free: semax_body MFVprog MFGprog f_client12_42_in
 Proof.
     start_function.
     forward. 
-    forward_call (kalloc1_spec_sub KF_APD tint) (gv, sh , ls, xx, original_freelist_pointer ). (* kalloc *)
+    forward_call (kalloc_spec_sub KF_APD tint) (gv, sh , ls, xx, original_freelist_pointer ). (* kalloc *)
     - unfold MF_globals. entailer!.
     - if_tac.
     + forward_if.
@@ -209,7 +209,7 @@ Proof.
         * unfold my_kalloc_token. rewrite kalloc_token_sz_split. Intros.
         rewrite memory_block_data_at_; auto. rewrite data_at__eq. Intros. forward.
         forward. 
-        forward_call (kfree1_spec_sub KF_APD tint) (original_freelist_pointer, gv, sh , snd ab, xx, (fst ab)). (* call kfree *)
+        forward_call (kfree_spec_sub KF_APD tint) (original_freelist_pointer, gv, sh , snd ab, xx, (fst ab)). (* call kfree *)
         -- if_tac; auto_contradict.
             unfold my_kalloc_token. rewrite kalloc_token_sz_split. entailer!.
             sep_apply data_at_memory_block. entailer!.

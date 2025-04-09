@@ -14,7 +14,7 @@ Require Import malloc_lemmas.
 Require Import malloc_sep.*)
 Require Import VC.VSU_kalloc_kfree_definitions.
 
-Lemma body_kfree1: semax_body MF_Vprog MF_Gprog f_kfree1 (kfree1_spec KF_APD t_run).
+Lemma body_kfree: semax_body MF_Vprog MF_Gprog f_kfree (kfree_spec KF_APD t_run).
 Proof. start_function. Intros.
 forward.
 rewrite mem_mgr_split. Intros.
@@ -33,7 +33,7 @@ destruct (eq_dec new_head nullval).
 Qed.
 
 
-Lemma body_kalloc1: semax_body MF_Vprog MF_Gprog f_kalloc1 (kalloc1_spec (KF_APD) t_run).
+Lemma body_kalloc: semax_body MF_Vprog MF_Gprog f_kalloc (kalloc_spec (KF_APD) t_run).
 Proof. start_function.
 rewrite mem_mgr_split. Intros. forward.  (*unfold abbreviate in POSTCONDITION.*)
 forward_if (

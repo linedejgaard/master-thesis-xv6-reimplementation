@@ -69,8 +69,8 @@ Proof.
 Qed.
 
 
-Definition kfree1_spec (K:KallocFreeAPD) {cs: compspecs} (t: type) := 
-  DECLARE _kfree1
+Definition kfree_spec (K:KallocFreeAPD) {cs: compspecs} (t: type) := 
+  DECLARE _kfree
       WITH new_head:val, gv:globals, sh:share, ls: list val, xx:Z, original_freelist_pointer:val
       PRE [ tptr tvoid]
         PROP(
@@ -92,8 +92,8 @@ Definition kfree1_spec (K:KallocFreeAPD) {cs: compspecs} (t: type) :=
           ASI_kalloc.mem_mgr K gv sh (original_freelist_pointer::ls) xx new_head
             ).
 
-Definition kalloc1_spec (K:KallocFreeAPD) {cs: compspecs} (t: type) :=
-DECLARE _kalloc1
+Definition kalloc_spec (K:KallocFreeAPD) {cs: compspecs} (t: type) :=
+DECLARE _kalloc
 WITH gv:globals, sh:share, ls: list val, xx:Z, original_freelist_pointer:val
 PRE [ ]
     PROP(0 <= (sizeof t) <= PGSIZE;
@@ -119,9 +119,9 @@ POST [ tptr tvoid ]
 
 
 
-Lemma kalloc1_spec_sub:
+Lemma kalloc_spec_sub:
   forall  (K:KallocFreeAPD) {cs: compspecs} (t: type), 
-    funspec_sub (snd (kalloc1_spec' K _kalloc1)) (snd (kalloc1_spec K t)).
+    funspec_sub (snd (kalloc_spec' K _kalloc)) (snd (kalloc_spec K t)).
   Proof.
     do_funspec_sub. 
     entailer.
@@ -142,9 +142,9 @@ Lemma kalloc1_spec_sub:
       entailer.
 Qed.
 
-Lemma kfree1_spec_sub:
+Lemma kfree_spec_sub:
 forall  (K:KallocFreeAPD) {cs: compspecs} (t: type), 
-  funspec_sub (snd (kfree1_spec' K _kfree1)) (snd (kfree1_spec K t)).
+  funspec_sub (snd (kfree_spec' K _kfree)) (snd (kfree_spec K t)).
 Proof.
   do_funspec_sub. 
   destruct w.

@@ -22,11 +22,11 @@ Record KallocFreeAPD := {
 
 Section Kalloc_ASI.
 Variable K: KallocFreeAPD.
-Variable kalloc1ID: ident.
-Variable kfree1ID: ident.
+Variable kallocID: ident.
+Variable kfreeID: ident.
 
-Definition kfree1_spec' := 
-  DECLARE kfree1ID
+Definition kfree_spec' := 
+  DECLARE kfreeID
       WITH n:Z, new_head:val, gv:globals, sh:share, ls: list val, xx:Z, original_freelist_pointer:val
       PRE [ tptr tvoid]
         PROP(
@@ -49,8 +49,8 @@ Definition kfree1_spec' :=
             ).
 
 
-Definition kalloc1_spec' :=
-DECLARE kalloc1ID
+Definition kalloc_spec' :=
+DECLARE kallocID
 WITH n:Z, gv:globals, sh:share, ls: list val, xx:Z, original_freelist_pointer:val
 PRE [ ]
     PROP(0 <= n <= PGSIZE) 
@@ -72,7 +72,7 @@ POST [ tptr tvoid ]
         )
     ).
 
-Definition Kalloc_ASI:funspecs := [kalloc1_spec'; kfree1_spec'].
+Definition Kalloc_ASI:funspecs := [kalloc_spec'; kfree_spec'].
 
 End Kalloc_ASI.
 

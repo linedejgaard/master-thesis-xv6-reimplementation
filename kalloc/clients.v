@@ -92,8 +92,8 @@ Definition _data : ident := $"data".
 Definition _freelist : ident := $"freelist".
 Definition _freerange_while_loop : ident := $"freerange_while_loop".
 Definition _i : ident := $"i".
-Definition _kalloc1 : ident := $"kalloc1".
-Definition _kfree1 : ident := $"kfree1".
+Definition _kalloc : ident := $"kalloc".
+Definition _kfree : ident := $"kfree".
 Definition _kmem : ident := $"kmem".
 Definition _main : ident := $"main".
 Definition _n : ident := $"n".
@@ -122,7 +122,7 @@ Definition v_kmem := {|
   gvar_volatile := false
 |}.
 
-Definition f_kfree1 := {|
+Definition f_kfree := {|
   fn_return := tvoid;
   fn_callconv := cc_default;
   fn_params := ((_pa, (tptr tvoid)) :: nil);
@@ -150,7 +150,7 @@ Definition f_kfree1 := {|
     Sskip))
 |}.
 
-Definition f_kalloc1 := {|
+Definition f_kalloc := {|
   fn_return := (tptr tvoid);
   fn_callconv := cc_default;
   fn_params := nil;
@@ -192,7 +192,7 @@ Definition f_freerange_while_loop := {|
     (Ecast (Etempvar _pa_end (tptr tvoid)) (tptr tschar)) tint)
   (Ssequence
     (Scall None
-      (Evar _kfree1 (Tfunction ((tptr tvoid) :: nil) tvoid cc_default))
+      (Evar _kfree (Tfunction ((tptr tvoid) :: nil) tvoid cc_default))
       ((Etempvar _pa_start (tptr tvoid)) :: nil))
     (Sset _pa_start
       (Ebinop Oadd (Ecast (Etempvar _pa_start (tptr tvoid)) (tptr tschar))
@@ -208,11 +208,11 @@ Definition f_client1 := {|
   fn_body :=
 (Ssequence
   (Scall None
-    (Evar _kfree1 (Tfunction ((tptr tvoid) :: nil) tvoid cc_default))
+    (Evar _kfree (Tfunction ((tptr tvoid) :: nil) tvoid cc_default))
     ((Etempvar _pa (tptr tvoid)) :: nil))
   (Ssequence
     (Scall (Some _t'1)
-      (Evar _kalloc1 (Tfunction nil (tptr tvoid) cc_default)) nil)
+      (Evar _kalloc (Tfunction nil (tptr tvoid) cc_default)) nil)
     (Sreturn (Some (Etempvar _t'1 (tptr tvoid))))))
 |}.
 
@@ -225,18 +225,18 @@ Definition f_client2 := {|
   fn_body :=
 (Ssequence
   (Scall None
-    (Evar _kfree1 (Tfunction ((tptr tvoid) :: nil) tvoid cc_default))
+    (Evar _kfree (Tfunction ((tptr tvoid) :: nil) tvoid cc_default))
     ((Etempvar _pa1 (tptr tvoid)) :: nil))
   (Ssequence
     (Scall None
-      (Evar _kfree1 (Tfunction ((tptr tvoid) :: nil) tvoid cc_default))
+      (Evar _kfree (Tfunction ((tptr tvoid) :: nil) tvoid cc_default))
       ((Etempvar _pa2 (tptr tvoid)) :: nil))
     (Ssequence
-      (Scall None (Evar _kalloc1 (Tfunction nil (tptr tvoid) cc_default))
+      (Scall None (Evar _kalloc (Tfunction nil (tptr tvoid) cc_default))
         nil)
       (Ssequence
         (Scall (Some _t'1)
-          (Evar _kalloc1 (Tfunction nil (tptr tvoid) cc_default)) nil)
+          (Evar _kalloc (Tfunction nil (tptr tvoid) cc_default)) nil)
         (Sreturn (Some (Etempvar _t'1 (tptr tvoid))))))))
 |}.
 
@@ -249,15 +249,15 @@ Definition f_client3 := {|
   fn_body :=
 (Ssequence
   (Scall None
-    (Evar _kfree1 (Tfunction ((tptr tvoid) :: nil) tvoid cc_default))
+    (Evar _kfree (Tfunction ((tptr tvoid) :: nil) tvoid cc_default))
     ((Etempvar _pa1 (tptr tvoid)) :: nil))
   (Ssequence
     (Scall None
-      (Evar _kfree1 (Tfunction ((tptr tvoid) :: nil) tvoid cc_default))
+      (Evar _kfree (Tfunction ((tptr tvoid) :: nil) tvoid cc_default))
       ((Etempvar _pa2 (tptr tvoid)) :: nil))
     (Ssequence
       (Scall (Some _t'1)
-        (Evar _kalloc1 (Tfunction nil (tptr tvoid) cc_default)) nil)
+        (Evar _kalloc (Tfunction nil (tptr tvoid) cc_default)) nil)
       (Sreturn (Some (Etempvar _t'1 (tptr tvoid)))))))
 |}.
 
@@ -288,17 +288,17 @@ Definition f_client5 := {|
   fn_body :=
 (Ssequence
   (Scall None
-    (Evar _kfree1 (Tfunction ((tptr tvoid) :: nil) tvoid cc_default))
+    (Evar _kfree (Tfunction ((tptr tvoid) :: nil) tvoid cc_default))
     ((Etempvar _pa1 (tptr tvoid)) :: nil))
   (Ssequence
-    (Scall None (Evar _kalloc1 (Tfunction nil (tptr tvoid) cc_default)) nil)
+    (Scall None (Evar _kalloc (Tfunction nil (tptr tvoid) cc_default)) nil)
     (Ssequence
       (Scall None
-        (Evar _kfree1 (Tfunction ((tptr tvoid) :: nil) tvoid cc_default))
+        (Evar _kfree (Tfunction ((tptr tvoid) :: nil) tvoid cc_default))
         ((Etempvar _pa2 (tptr tvoid)) :: nil))
       (Ssequence
         (Scall (Some _t'1)
-          (Evar _kalloc1 (Tfunction nil (tptr tvoid) cc_default)) nil)
+          (Evar _kalloc (Tfunction nil (tptr tvoid) cc_default)) nil)
         (Sreturn (Some (Etempvar _t'1 (tptr tvoid))))))))
 |}.
 
@@ -316,7 +316,7 @@ Definition f_client6 := {|
       (Ebinop Olt (Etempvar _i tint) (Econst_int (Int.repr 2) tint) tint)
       (Ssequence
         (Scall None
-          (Evar _kfree1 (Tfunction ((tptr tvoid) :: nil) tvoid cc_default))
+          (Evar _kfree (Tfunction ((tptr tvoid) :: nil) tvoid cc_default))
           ((Etempvar _pa_start (tptr tvoid)) :: nil))
         (Ssequence
           (Sset _pa_start
@@ -328,7 +328,7 @@ Definition f_client6 := {|
               tint)))))
     (Ssequence
       (Scall (Some _t'1)
-        (Evar _kalloc1 (Tfunction nil (tptr tvoid) cc_default)) nil)
+        (Evar _kalloc (Tfunction nil (tptr tvoid) cc_default)) nil)
       (Sreturn (Some (Etempvar _t'1 (tptr tvoid)))))))
 |}.
 
@@ -346,7 +346,7 @@ Definition f_client7 := {|
       (Ebinop Olt (Etempvar _i tint) (Etempvar _n tint) tint)
       (Ssequence
         (Scall None
-          (Evar _kfree1 (Tfunction ((tptr tvoid) :: nil) tvoid cc_default))
+          (Evar _kfree (Tfunction ((tptr tvoid) :: nil) tvoid cc_default))
           ((Etempvar _pa_start (tptr tvoid)) :: nil))
         (Ssequence
           (Sset _pa_start
@@ -358,7 +358,7 @@ Definition f_client7 := {|
               tint)))))
     (Ssequence
       (Scall (Some _t'1)
-        (Evar _kalloc1 (Tfunction nil (tptr tvoid) cc_default)) nil)
+        (Evar _kalloc (Tfunction nil (tptr tvoid) cc_default)) nil)
       (Sreturn (Some (Etempvar _t'1 (tptr tvoid)))))))
 |}.
 
@@ -375,7 +375,7 @@ Definition f_client8 := {|
     (Ebinop Olt (Etempvar _i tint) (Etempvar _n tint) tint)
     (Ssequence
       (Scall None
-        (Evar _kfree1 (Tfunction ((tptr tvoid) :: nil) tvoid cc_default))
+        (Evar _kfree (Tfunction ((tptr tvoid) :: nil) tvoid cc_default))
         ((Etempvar _pa_start (tptr tvoid)) :: nil))
       (Ssequence
         (Sset _pa_start
@@ -400,7 +400,7 @@ Definition f_client9 := {|
     ((Etempvar _pa_start (tptr tvoid)) :: (Etempvar _n tint) :: nil))
   (Ssequence
     (Scall (Some _t'1)
-      (Evar _kalloc1 (Tfunction nil (tptr tvoid) cc_default)) nil)
+      (Evar _kalloc (Tfunction nil (tptr tvoid) cc_default)) nil)
     (Sreturn (Some (Etempvar _t'1 (tptr tvoid))))))
 |}.
 
@@ -413,10 +413,10 @@ Definition f_client10 := {|
   fn_body :=
 (Ssequence
   (Scall None
-    (Evar _kfree1 (Tfunction ((tptr tvoid) :: nil) tvoid cc_default))
+    (Evar _kfree (Tfunction ((tptr tvoid) :: nil) tvoid cc_default))
     ((Etempvar _pa_start (tptr tvoid)) :: nil))
   (Scall None
-    (Evar _kfree1 (Tfunction ((tptr tvoid) :: nil) tvoid cc_default))
+    (Evar _kfree (Tfunction ((tptr tvoid) :: nil) tvoid cc_default))
     ((Etempvar _pa_start (tptr tvoid)) :: nil)))
 |}.
 
@@ -434,7 +434,7 @@ Definition f_client_11_pipealloc := {|
   (Ssequence
     (Ssequence
       (Scall (Some _t'1)
-        (Evar _kalloc1 (Tfunction nil (tptr tvoid) cc_default)) nil)
+        (Evar _kalloc (Tfunction nil (tptr tvoid) cc_default)) nil)
       (Sset _pi
         (Ecast (Etempvar _t'1 (tptr tvoid)) (tptr (Tstruct _pipe noattr)))))
     (Sifthenelse (Etempvar _pi (tptr (Tstruct _pipe noattr)))
@@ -477,7 +477,7 @@ Definition f_client12_42 := {|
   (Ssequence
     (Ssequence
       (Scall (Some _t'1)
-        (Evar _kalloc1 (Tfunction nil (tptr tvoid) cc_default)) nil)
+        (Evar _kalloc (Tfunction nil (tptr tvoid) cc_default)) nil)
       (Sset _pa (Ecast (Etempvar _t'1 (tptr tvoid)) (tptr tint))))
     (Ssequence
       (Sifthenelse (Etempvar _pa (tptr tint))
@@ -504,7 +504,7 @@ Definition f_client12_42_include_free := {|
   (Ssequence
     (Ssequence
       (Scall (Some _t'1)
-        (Evar _kalloc1 (Tfunction nil (tptr tvoid) cc_default)) nil)
+        (Evar _kalloc (Tfunction nil (tptr tvoid) cc_default)) nil)
       (Sset _pa (Ecast (Etempvar _t'1 (tptr tvoid)) (tptr tint))))
     (Ssequence
       (Sifthenelse (Etempvar _pa (tptr tint))
@@ -515,7 +515,7 @@ Definition f_client12_42_include_free := {|
             (Sset _X (Ederef (Etempvar _pa (tptr tint)) tint))
             (Ssequence
               (Scall None
-                (Evar _kfree1 (Tfunction ((tptr tvoid) :: nil) tvoid
+                (Evar _kfree (Tfunction ((tptr tvoid) :: nil) tvoid
                                 cc_default))
                 ((Etempvar _pa (tptr tint)) :: nil))
               (Sreturn (Some (Etempvar _X tint))))))
@@ -788,8 +788,8 @@ Definition global_definitions : list (ident * globdef fundef type) :=
                      {|cc_vararg:=(Some 1); cc_unproto:=false; cc_structret:=false|}))
      (tint :: nil) tvoid
      {|cc_vararg:=(Some 1); cc_unproto:=false; cc_structret:=false|})) ::
- (_kmem, Gvar v_kmem) :: (_kfree1, Gfun(Internal f_kfree1)) ::
- (_kalloc1, Gfun(Internal f_kalloc1)) ::
+ (_kmem, Gvar v_kmem) :: (_kfree, Gfun(Internal f_kfree)) ::
+ (_kalloc, Gfun(Internal f_kalloc)) ::
  (_freerange_while_loop, Gfun(Internal f_freerange_while_loop)) ::
  (_client1, Gfun(Internal f_client1)) ::
  (_client2, Gfun(Internal f_client2)) ::
@@ -810,7 +810,7 @@ Definition public_idents : list ident :=
 (_client12_42_include_free :: _client12_42 :: _client_11_pipealloc ::
  _client10 :: _client9 :: _client8 :: _client7 :: _client6 :: _client5 ::
  _client4 :: _client3 :: _client2 :: _client1 :: _freerange_while_loop ::
- _kalloc1 :: _kfree1 :: _kmem :: ___builtin_debug ::
+ _kalloc :: _kfree :: _kmem :: ___builtin_debug ::
  ___builtin_write32_reversed :: ___builtin_write16_reversed ::
  ___builtin_read32_reversed :: ___builtin_read16_reversed ::
  ___builtin_fnmsub :: ___builtin_fnmadd :: ___builtin_fmsub ::
