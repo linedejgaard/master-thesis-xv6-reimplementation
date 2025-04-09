@@ -25,7 +25,7 @@ Variable K: KallocFreeAPD.
 Variable kalloc1ID: ident.
 Variable kfree1ID: ident.
 
-Definition kfree1_spec_sz := 
+Definition kfree1_spec' := 
   DECLARE kfree1ID
       WITH n:Z, new_head:val, gv:globals, sh:share, ls: list val, xx:Z, original_freelist_pointer:val
       PRE [ tptr tvoid]
@@ -49,7 +49,7 @@ Definition kfree1_spec_sz :=
             ).
 
 
-Definition kalloc1_spec_sz :=
+Definition kalloc1_spec' :=
 DECLARE kalloc1ID
 WITH n:Z, gv:globals, sh:share, ls: list val, xx:Z, original_freelist_pointer:val
 PRE [ ]
@@ -61,18 +61,18 @@ POST [ tptr tvoid ]
     RETURN (original_freelist_pointer) 
     SEP (
       if (eq_dec original_freelist_pointer nullval) then
-      mem_mgr K gv sh ls xx original_freelist_pointer * emp
+        (mem_mgr K gv sh ls xx original_freelist_pointer * emp)
       else 
         (
           EX next ls',
           (!! (next :: ls' = ls) &&
               kalloc_token' K sh n original_freelist_pointer *
               mem_mgr K gv sh ls' xx next
-        )
+          )
         )
     ).
 
-Definition Kalloc_ASI:funspecs := [kalloc1_spec_sz; kfree1_spec_sz].
+Definition Kalloc_ASI:funspecs := [kalloc1_spec'; kfree1_spec'].
 
 End Kalloc_ASI.
 
