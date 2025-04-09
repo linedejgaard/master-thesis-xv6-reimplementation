@@ -13,9 +13,10 @@ void kfree1(void *pa)
 {
   struct run *r;
   r = (struct run*)pa;
-
-  r->next = kmem.freelist;
-  kmem.freelist = r;
+  if (r) { // this line is not working for client11111
+    r->next = kmem.freelist;
+    kmem.freelist = r;
+  }
   
 }
 
