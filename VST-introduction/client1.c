@@ -73,6 +73,7 @@ void *client5(void *pa1, void *pa2) {
   return kalloc1();
 }
 
+
 void *client6(void *pa_start) {
   int i = 0;
   while (i < 2) {
@@ -135,13 +136,41 @@ void client_11_pipealloc()
   struct pipe *pi;
 
   pi = 0;
-  pi = (struct pipe*)kalloc1();
+  pi = (struct pipe*)kalloc1(); 
   if(pi) {
     pi->readopen = 1;
     pi->writeopen = 1;
     pi->nwrite = 0;
     pi->nread = 0;
   }
+}
+
+int client12_42(void) {
+
+  int *pa;
+  pa = 0;
+  pa = (int*)kalloc1();           // cast to int pointer
+  if (pa) {
+    *pa = 42;
+    int X = *pa;
+    return X;
+  }
+  return 0;
+}
+
+
+int client12_42_include_free(void) {
+
+  int *pa;
+  pa = 0;
+  pa = (int*)kalloc1();           // cast to int pointer
+  if (pa) {
+    *pa = 42;
+    int X = *pa;
+    kfree1(pa);
+    return X;
+  }
+  return 0;
 }
 
 
