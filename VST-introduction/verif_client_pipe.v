@@ -27,7 +27,6 @@ Require Import malloc_sep.*)
 (*Definition Vprog : varspecs. mk_varspecs prog. Defined.*)
 
 
-
 Definition client_11_pipealloc_spec : ident * funspec :=
  DECLARE _client_11_pipealloc
  WITH sh : share, original_freelist_pointer:val, xx:Z, ls:list val, gv:globals
@@ -120,7 +119,8 @@ forward_call (kfree1_spec_sub KF_APD t_run) (new_head, gv, sh , ls, xx, original
 (*forward_call (t_run, new_head, gv, sh, ls, xx:Z, original_freelist_pointer).  (* kfree *)*)
     + destruct (eq_dec new_head nullval).
         *unfold MF_globals. entailer!.
-        * unfold MF_globals. entailer!. admit. (*apply derives_refl.*)
+        * unfold MF_globals. entailer!. 
+            simplify_kalloc_token. 
     + destruct (eq_dec new_head nullval).
         *forward_call (kalloc1_spec_sub KF_APD t_run) (sizeof t_run, gv, sh , ls, xx, original_freelist_pointer ). (* kalloc *)
         (*forward_call (t_run, gv, sh, ls, xx, original_freelist_pointer).  (* kalloc *)*)
@@ -129,10 +129,11 @@ forward_call (kfree1_spec_sub KF_APD t_run) (new_head, gv, sh , ls, xx, original
             -- destruct ls.
                 ++ forward. auto_contradict.
                 ++ forward. Exists original_freelist_pointer. entailer. Exists v. entailer.
-                    Exists ls. entailer. unfold MF_globals. entailer!. inversion H0; subst. entailer!. admit. (* should be equal.. *)
+                    Exists ls. entailer. unfold MF_globals. entailer!. inversion H0; subst. entailer!.
+                    simplify_kalloc_token. 
         *forward_call (kalloc1_spec_sub KF_APD t_run) (sizeof t_run,  gv, sh, original_freelist_pointer::ls, xx, new_head ). (* kalloc *)
         (*forward_call (t_run, gv, sh, original_freelist_pointer::ls, xx, new_head).  (* kalloc *)*)
         destruct (eq_dec new_head nullval).
             -- forward.
-            -- forward. Exists new_head. entailer. inversion H0; subst; entailer. unfold MF_globals. entailer!.
-Admitted.
+            -- forward. Exists new_head. entailer. inversion H0; subst; entailer. unfold MF_globals. entailer!. simplify_kalloc_token.
+Qed.

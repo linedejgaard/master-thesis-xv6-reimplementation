@@ -7,6 +7,68 @@ Require Import VC.VSU_kalloc_kfree_definitions.
 
 Global Open Scope funspec_scope.
 
+
+(******************************)
+
+(*** kalloc token type... *)
+Definition my_kalloc_token {cs: compspecs} sh t p :=
+  !! field_compatible t [] p && (* this shoudl work because of memory_block_data_at_*)
+  (kalloc_token_sz sh (sizeof t) p).
+
+Lemma my_kalloc_token_valid_pointer:
+  forall (sh : share) (t : type) (p : val),
+  my_kalloc_token sh t p |-- valid_pointer p.
+Proof.
+  intros. 
+  unfold my_kalloc_token. unfold kalloc_token_sz. entailer!.
+Qed.
+
+Ltac kalloc_token_data_at_valid_pointer :=
+  match goal with |- ?A |-- valid_pointer ?p =>
+   match A with
+   | context [my_kalloc_token _ _ ?t p] =>
+         try (assert (sizeof t <= 0)
+	  by (simpl sizeof in *; rep_lia); fail 1);
+         try (assert (sizeof t > 0)
+	  by (simpl sizeof in *; rep_lia); fail 1);
+         destruct (zlt 0 (sizeof t));
+         auto with valid_pointer
+   | context [kalloc_token_sz _ _ ?n p] =>
+         try (assert (n <= 0) by rep_lia; fail 1);
+         try (assert (n > 0) by rep_lia; fail 1);
+         destruct (zlt 0 n);
+         auto with valid_pointer
+   end
+ end.
+
+#[export] Hint Extern 1 (my_kalloc_token _ _ _ _ |-- valid_pointer _) =>
+  (simple apply my_kalloc_token_valid_pointer; data_at_valid_aux) : valid_pointer.
+#[export] Hint Extern 4 (_ |-- valid_pointer _) => kalloc_token_data_at_valid_pointer : valid_pointer.
+
+Lemma my_kalloc_token_local_facts:  forall {cs: compspecs} sh t p,
+      my_kalloc_token sh t p |-- !! (field_compatible t [] p /\ malloc_compatible (sizeof t) p).
+Proof. intros.
+ unfold my_kalloc_token.
+ normalize. rewrite prop_and.
+ apply andp_right. apply prop_right; auto.
+ apply kalloc_token_sz_local_facts.
+Qed.
+#[export] Hint Resolve my_kalloc_token_local_facts : saturate_local.
+
+
+Lemma my_kalloc_token_split: 
+ forall (sh: share) (t: type) (p: val),
+ my_kalloc_token (sh) (t) (p)
+  = 
+  !! field_compatible t [] p &&
+  (kalloc_token_sz sh (sizeof t) p).
+Proof.
+  intros. apply pred_ext.
+  - unfold my_kalloc_token. entailer.
+  - unfold my_kalloc_token. entailer!.
+Qed.
+
+
 Definition kfree1_spec (K:KallocFreeAPD) {cs: compspecs} (t: type) := 
   DECLARE _kfree1
       WITH new_head:val, gv:globals, sh:share, ls: list val, xx:Z, original_freelist_pointer:val
@@ -84,3 +146,10 @@ Proof.
   destruct (EqDec_val v0 nullval) eqn:Heq; entailer.
   unfold my_kalloc_token. entailer.
 Qed.
+
+Ltac simplify_kalloc_token :=
+  repeat (
+    rewrite kalloc_token_sz_split;
+    unfold my_kalloc_token
+  );
+  entailer!.
