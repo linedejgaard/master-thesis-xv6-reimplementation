@@ -101,9 +101,9 @@ int for_1_4(int n, int s) {
 }
 
 
-// wokring in progress
 
-int while_1_5(void *pa_start, void *pa_end) { 
+
+int while_1_5(void *pa_start, void *pa_end) {  // admit on pointer
     int c = 0;
     while ((char*)pa_start + PGSIZE <= (char*)pa_end) { 
         pa_start = (char*)pa_start + PGSIZE;
@@ -112,15 +112,17 @@ int while_1_5(void *pa_start, void *pa_end) {
     return c;
 }
 
+// wokring in progress
+
 int while_1_6(void *pa_start, void *pa_end)
 {
-  char *p = (char*)pa_start;
-  int n = 0;
-  while (p + PGSIZE <= (char*)pa_end) {
-    n++;
-    p += PGSIZE;
-  }
-  return n;
+    char *p = (char*)pa_start;
+    int c = 0;
+    while (p + PGSIZE <= (char*)pa_end) { 
+        p = p + PGSIZE;
+        c++;
+    }
+    return c;
 }
 
 

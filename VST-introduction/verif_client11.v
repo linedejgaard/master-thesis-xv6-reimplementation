@@ -12,7 +12,7 @@ Local Open Scope logic.
 Fixpoint freelistrep (sh: share) (n: nat) (p: val) : mpred :=
  match n with
  | S n' => EX next: val, 
-        !! malloc_compatible (sizeof t_run) p &&  (* p is compatible with a memory block of size sizeof theader. *)
+        !! malloc_compatible (PGSIZE) p &&  (* p is compatible with a memory block of size sizeof theader. *)
         data_at sh t_run next p * (* at the location p, there is a t_run structure with the value next *)
         freelistrep sh n' next (* "*" ensures no loops... *)
  | O => !! (p = nullval) && emp
@@ -62,7 +62,7 @@ Lemma freelistrep_nonnull: forall n sh x,
    x <> nullval ->
    freelistrep sh n x =
    EX m : nat, EX next:val,
-          !! (n = S m) && !! malloc_compatible (sizeof t_run) x && data_at sh t_run next x * freelistrep sh m next.
+          !! (n = S m) && !! malloc_compatible (PGSIZE) x && data_at sh t_run next x * freelistrep sh m next.
 Proof.
    intros; apply pred_ext.
    - destruct n. 
@@ -93,7 +93,7 @@ Definition kfree1_spec :=
           PROP(isptr new_head)
           RETURN () 
           SEP (
-             !! malloc_compatible (sizeof t_run) new_head && 
+             !! malloc_compatible (PGSIZE) new_head && 
              data_at sh t_run original_freelist_pointer new_head * 
              freelistrep sh n original_freelist_pointer *
              available sh (Nat.sub number_structs_available (S O)) (add_offset new_head PGSIZE) PGSIZE *
@@ -116,7 +116,7 @@ PRE [ ]
             ) (* q can be nullval meaning that there is only one run *)
         else 
             (
-                !! malloc_compatible (sizeof t_run) original_freelist_pointer && 
+                !! malloc_compatible (PGSIZE) original_freelist_pointer && 
                 data_at sh t_run next original_freelist_pointer * 
                 freelistrep sh (Nat.sub n (S O)) next *
                 data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem)

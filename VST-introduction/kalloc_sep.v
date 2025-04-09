@@ -8,6 +8,37 @@ Require Import malloc_shares. (* for comp_Ews *)
 
 (*Ltac start_function_hint ::= idtac. (* no hint reminder *)*)
 
+
+Definition my_kalloc_token (sh: share) (sz: Z) (p: val) : mpred := (* my kalloc token is a block where we can have t_run struct in it, but also something else?*)
+  !! (field_compatible t_run [] p 
+      /\ malloc_compatible (sz) p
+      /\ 0 <= sizeof t_run <= sz
+      /\ writable_share sh) 
+ &&  memory_block sh (sz) (p). (* this is the rest of the page*)
+
+(** **** Exercise: 2 stars, standard (malloc_token_properties) *)
+Lemma my_kalloc_token_valid_pointer:
+    forall (sh : share) (sz : Z) (p : val),
+      my_kalloc_token sh sz p |-- valid_pointer p.
+Proof.
+  intros. 
+    induction sz.
+  - unfold my_kalloc_token. simpl. entailer!.
+  - unfold my_kalloc_token. simpl. entailer!.
+  - unfold my_kalloc_token. entailer!. 
+Qed.
+
+Lemma  my_kalloc_token_local_facts : 
+   forall (sh : share) (sz : Z) (p : val),
+     my_kalloc_token sh sz p |-- !! malloc_compatible sz p.
+Proof.
+  intros. 
+  unfold my_kalloc_token. simpl. entailer!.
+Qed.
+
+
+
+
 Require Import malloc. (* the program *)
 
 #[export] Instance CompSpecs : compspecs. make_compspecs prog. Defined. 

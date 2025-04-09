@@ -12,7 +12,7 @@ Local Open Scope logic.
 Fixpoint freelistrep (sh: share) (n: nat) (p: val) : mpred :=
  match n with
  | S n' => EX next: val, 
-        !! malloc_compatible (sizeof t_run) p &&  (* p is compatible with a memory block of size sizeof theader. *)
+        !! malloc_compatible (PGSIZE) p &&  (* p is compatible with a memory block of size sizeof theader. *)
         data_at sh t_run next p * (* at the location p, there is a t_run structure with the value next *)
         freelistrep sh n' next (* "*" ensures no loops... *)
  | O => !! (p = nullval) && emp
@@ -62,7 +62,7 @@ Lemma freelistrep_nonnull: forall n sh x,
    x <> nullval ->
    freelistrep sh n x =
    EX m : nat, EX next:val,
-          !! (n = S m) && !! malloc_compatible (sizeof t_run) x && data_at sh t_run next x * freelistrep sh m next.
+          !! (n = S m) && !! malloc_compatible (PGSIZE) x && data_at sh t_run next x * freelistrep sh m next.
 Proof.
    intros; apply pred_ext.
    - destruct n. 

@@ -12,7 +12,7 @@ Local Open Scope logic.
 Fixpoint freelistrep (sh: share) (il: list val) (p: val) : mpred := (* the list contains the next*)
  match il with
  | next::il' =>
-        !! malloc_compatible (sizeof t_run) p &&  (* p is compatible with a memory block of size sizeof theader. *)
+        !! malloc_compatible (PGSIZE) p &&  (* p is compatible with a memory block of size sizeof theader. *)
         data_at sh t_run next p * (* at the location p, there is a t_run structure with the value next *)
         freelistrep sh il' next (* "*" ensures no loops... *)
  | nil => !! (p = nullval) && emp
@@ -62,7 +62,7 @@ Qed.
    x <> nullval ->
    freelistrep sh n x =
    EX m : list val, EX next:val,
-          !! (n = i::il) && !! malloc_compatible (sizeof t_run) x && data_at sh t_run next x * freelistrep sh m next.
+          !! (n = i::il) && !! malloc_compatible (PGSIZE) x && data_at sh t_run next x * freelistrep sh m next.
 Proof.
    intros; apply pred_ext.
    - destruct n. 
@@ -87,7 +87,7 @@ Definition kfree1_spec :=
           PARAMS (new_head) GLOBALS(gv)
           SEP (
                 (EX v,
-                !! malloc_compatible (sizeof t_run) new_head &&
+                !! malloc_compatible (PGSIZE) new_head &&
                 data_at sh t_run v new_head) * freelistrep sh ls original_freelist_pointer *
                 (*available sh number_structs_available new_head PGSIZE **)
                 (data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem) 
@@ -97,7 +97,7 @@ Definition kfree1_spec :=
           PROP(isptr new_head)
           RETURN () 
           SEP (
-             !! malloc_compatible (sizeof t_run) new_head && 
+             !! malloc_compatible (PGSIZE) new_head && 
              data_at sh t_run original_freelist_pointer new_head * 
              freelistrep sh ls original_freelist_pointer *
              (*available sh (Nat.sub number_structs_available (S O)) (add_offset new_head PGSIZE) PGSIZE **)
@@ -120,7 +120,7 @@ PRE [ ]
             ) (* q can be nullval meaning that there is only one run *)
         else 
             (
-                !! malloc_compatible (sizeof t_run) original_freelist_pointer && 
+                !! malloc_compatible (PGSIZE) original_freelist_pointer && 
                 data_at sh t_run next original_freelist_pointer * 
                 freelistrep sh (tl ls) next *
                 data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem)
@@ -137,7 +137,7 @@ POST [ tptr tvoid ]
         )
         else 
             (
-                !! malloc_compatible (sizeof t_run) original_freelist_pointer && 
+                !! malloc_compatible (PGSIZE) original_freelist_pointer && 
                 data_at sh t_run next original_freelist_pointer * (* TODO: fix this.. *)
                 freelistrep sh (tl ls) next *
                 data_at sh t_struct_kmem (Vint (Int.repr xx), next) (gv _kmem)
@@ -158,7 +158,7 @@ PRE [ tptr tvoid ]
     PARAMS (new_head) GLOBALS(gv)
     SEP (
         (EX v,
-            !! malloc_compatible (sizeof t_run) new_head &&
+            !! malloc_compatible (PGSIZE) new_head &&
             data_at sh t_run v new_head) *
         freelistrep sh ls original_freelist_pointer *
         (*available sh number_structs_available new_head PGSIZE **)
@@ -188,10 +188,10 @@ Definition client2_spec :=
         PARAMS (pa1; pa2) GLOBALS(gv)
         SEP (
             (EX v1,
-                !! malloc_compatible (sizeof t_run) pa1 &&
+                !! malloc_compatible (PGSIZE) pa1 &&
                 data_at sh t_run v1 pa1) *
             (EX v2,
-                !! malloc_compatible (sizeof t_run) pa2 &&
+                !! malloc_compatible (PGSIZE) pa2 &&
                 data_at sh t_run v2 pa2) *
             freelistrep sh ls original_freelist_pointer *
             (*available sh number_structs_available pa1 PGSIZE **)
@@ -223,10 +223,10 @@ Definition client4_spec :=
         PARAMS (pa1; pa2) GLOBALS(gv)
         SEP (
             (EX v1,
-                !! malloc_compatible (sizeof t_run) pa1 &&
+                !! malloc_compatible (PGSIZE) pa1 &&
                 data_at sh t_run v1 pa1) *
             (EX v2,
-                !! malloc_compatible (sizeof t_run) pa2 &&
+                !! malloc_compatible (PGSIZE) pa2 &&
                 data_at sh t_run v2 pa2) *
             freelistrep sh ls original_freelist_pointer *
             (*available sh number_structs_available pa1 PGSIZE **)
@@ -258,10 +258,10 @@ Definition client5_spec :=
         PARAMS (pa1; pa2) GLOBALS(gv)
         SEP (
             (EX v1,
-                !! malloc_compatible (sizeof t_run) pa1 &&
+                !! malloc_compatible (PGSIZE) pa1 &&
                 data_at sh t_run v1 pa1) *
             (EX v2,
-                !! malloc_compatible (sizeof t_run) pa2 &&
+                !! malloc_compatible (PGSIZE) pa2 &&
                 data_at sh t_run v2 pa2) *
             freelistrep sh ls original_freelist_pointer *
             (*available sh number_structs_available pa1 PGSIZE **)

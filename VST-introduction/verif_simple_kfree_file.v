@@ -130,7 +130,7 @@ Definition freerange_no_loop_no_add_spec :=
 Fixpoint freelistrep (sh: share) (n: nat) (p: val) : mpred :=
  match n with
  | S n' => EX next: val, 
-        !! malloc_compatible (sizeof t_run) p &&  (* p is compatible with a memory block of size sizeof theader. *)
+        !! malloc_compatible (PGSIZE) p &&  (* p is compatible with a memory block of size sizeof theader. *)
         data_at sh t_run next p * (* at the location p, there is a t_run structure with the value next *)
         freelistrep sh n' next (* "*" ensures no loops... *)
  | O => !! (p = nullval) && emp
@@ -183,7 +183,7 @@ Lemma freelistrep_nonnull: forall n sh x,
    x <> nullval ->
    freelistrep sh n x =
    EX m : nat, EX next:val,
-          !! (n = S m) && !! malloc_compatible (sizeof t_run) x && data_at sh t_run next x * freelistrep sh m next.
+          !! (n = S m) && !! malloc_compatible (PGSIZE) x && data_at sh t_run next x * freelistrep sh m next.
 Proof.
    intros; apply pred_ext.
    - destruct n. 
@@ -220,7 +220,7 @@ Definition kfree1_freelist_spec' :=
          PARAMS (new_head) GLOBALS(gv)
          SEP (
             freelistrep sh n original_freelist_pointer *
-            (!! malloc_compatible (sizeof t_run) new_head &&
+            (!! malloc_compatible (PGSIZE) new_head &&
             data_at sh (t_run) nullval new_head *
             data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem) )
          )
@@ -247,7 +247,7 @@ Definition freerange_no_loop_no_add_spec' :=
          SEP (
             denote_tc_test_order new_head pa_end &&
             (freelistrep sh n original_freelist_pointer *
-            (!! malloc_compatible (sizeof t_run) new_head &&
+            (!! malloc_compatible (PGSIZE) new_head &&
             data_at sh (t_run) nullval new_head *
             data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem) ))
          )
@@ -261,7 +261,7 @@ Definition freerange_no_loop_no_add_spec' :=
                data_at sh t_struct_kmem (Vint (Int.repr xx), new_head) (gv _kmem)
             else
                freelistrep sh n original_freelist_pointer *
-               (!! malloc_compatible (sizeof t_run) new_head &&
+               (!! malloc_compatible (PGSIZE) new_head &&
                data_at sh (t_run) nullval new_head *
                data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem) )
          ).

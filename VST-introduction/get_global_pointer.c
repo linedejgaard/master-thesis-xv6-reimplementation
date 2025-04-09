@@ -125,6 +125,14 @@ int pointer_compare_6 (void *pa, void *end) {
 
 // working in progress
 
+void freerange_no_loop_no_add(void *pa_start, void *pa_end) {
+  if (pa_start <= pa_end)
+    kfree1(pa_start);
+}
+
+
+
+
 int pointer_compare_70 (void *pa, void *end) {
   if(pa)
     if (end)
@@ -132,10 +140,6 @@ int pointer_compare_70 (void *pa, void *end) {
   return 13;
 }
 
-void freerange_no_loop_no_add(void *pa_start, void *pa_end) {
-  if (pa_start <= pa_end)
-    kfree1(pa_start); // Free the first page if it's within the range
-}
 
 
 
