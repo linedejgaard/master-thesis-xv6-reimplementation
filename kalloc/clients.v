@@ -15,7 +15,7 @@ Module Info.
   Definition abi := "macos".
   Definition bitsize := 64.
   Definition big_endian := false.
-  Definition source_file := "client1.c".
+  Definition source_file := "clients.c".
   Definition normalized := true.
 End Info.
 

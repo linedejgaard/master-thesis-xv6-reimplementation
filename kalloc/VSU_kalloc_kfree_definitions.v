@@ -1,6 +1,6 @@
 Require Import VST.floyd.proofauto.
 Require Import VC.ASI_kalloc.
-Require Import VC.client1.
+Require Import VC.clients.
 Require Import VC.helper.
 (*Require Import malloc_lemmas.
 Require Import malloc_sep.*)

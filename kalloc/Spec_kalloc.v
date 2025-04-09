@@ -2,7 +2,7 @@
 Require Import VST.floyd.proofauto.
 Require Import VC.helper.
 Require Import VC.ASI_kalloc.
-Require Import VC.client1.
+Require Import VC.clients.
 Require Import VC.VSU_kalloc_kfree_definitions.
 
 Global Open Scope funspec_scope.

@@ -1,5 +1,5 @@
 Require Import VST.floyd.proofauto.
-Require Import VC.client1.
+Require Import VC.clients.
 Require Import VC.helper.
 
 
