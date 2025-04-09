@@ -7,8 +7,7 @@ Require Import VC.helper.
 #[export] Instance CompSpecs : compspecs. make_compspecs prog. Defined.
 Definition Vprog : varspecs. mk_varspecs prog. Defined.
 
-(*Local Open Scope logic.*)
-
+Local Open Scope logic.
 
 
 (************************ specs *********************************)

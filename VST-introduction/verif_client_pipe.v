@@ -6,7 +6,7 @@ Require Import VC.VSU_kalloc_kfree_definitions.
 Require Import VC.Spec_kalloc.
 
 
-#[export] Instance CompSpecs : compspecs. make_compspecs prog. Defined.
+#[export] Instance CompSpecs : compspecs. make_compspecs client1.prog. Defined.
 (*Definition Vprog : varspecs. mk_varspecs prog. Defined.*)
 
 Definition MF_ASI: funspecs := Kalloc_ASI KF_APD _kalloc1 _kfree1.

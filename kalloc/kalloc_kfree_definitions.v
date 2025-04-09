@@ -2,14 +2,11 @@ Require Import VST.floyd.proofauto.
 
 Require Import VC.tactics.
 Require Import VC.ASI_kalloc.
-(*Require Import VC.clients.*)
 Require Import VC.kalloc.
 Require Import VC.kallocfun.
 
 
-
 (* THIS SHOULD CONTAIN ANY INTERNAL FUNCTIONS... I DON'T HAVE ANY *)
-
 Definition kalloc_token_sz (sh: share) (n: Z) (p: val) : mpred :=
   !! ((*field_compatible t_run [] p /\*)
       0 < n <= PGSIZE

@@ -1,7 +1,6 @@
 (** abstract spec interface *)
 Require Import VST.floyd.proofauto.
 Require Import VC.tactics.
-Require Import VC.constantsfun. (* I am not a bit fan of this dependency*)
 
 (*Global Open Scope funspec_scope.*)
 
