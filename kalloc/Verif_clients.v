@@ -142,7 +142,7 @@ Definition kfree_kalloc_twice_spec:=
             ((pa1 = nullval) /\ (pa2 = nullval) /\ ( original_freelist_pointer = nullval) /\ r = nullval) \/
             ((pa1 <> nullval) /\  (pa2 <> nullval) /\ r = pa2) \/
             ((pa1 <> nullval) /\  (pa2 = nullval) /\ (original_freelist_pointer = nullval) /\ r = nullval) \/
-            ((pa1 <> nullval) /\  (pa2 = nullval) /\ (original_freelist_pointer <> nullval)) \/
+            ((pa1 <> nullval) /\  (pa2 = nullval) /\ (original_freelist_pointer <> nullval) /\ (r = original_freelist_pointer)) \/ (* then there is exists a value or null in ls that is returned *)
             ((pa1 = nullval) /\  (pa2 <> nullval) /\ r = pa2) \/
             ((pa1 = nullval) /\ (pa2 = nullval) /\ ( original_freelist_pointer <> nullval)) (* r is either nullval or next next*)
             ) 
@@ -222,7 +222,7 @@ Definition kfree_kalloc_kfree_kalloc_spec:=
             ((pa1 = nullval) /\ (pa2 = nullval) /\ ( original_freelist_pointer = nullval) /\ r = nullval) \/
             ((pa1 <> nullval) /\  (pa2 <> nullval) /\ r = pa2) \/
             ((pa1 <> nullval) /\  (pa2 = nullval) /\ (original_freelist_pointer = nullval) /\ r = nullval) \/
-            ((pa1 <> nullval) /\  (pa2 = nullval) /\ (original_freelist_pointer <> nullval)) \/
+            ((pa1 <> nullval) /\  (pa2 = nullval) /\ (original_freelist_pointer <> nullval) /\ (r = original_freelist_pointer)) \/ (* then there is exists a value or null in ls that is returned *)
             ((pa1 = nullval) /\  (pa2 <> nullval) /\ r = pa2) \/
             ((pa1 = nullval) /\ (pa2 = nullval) /\ ( original_freelist_pointer <> nullval)) (* r is either nullval or next next*)
             ) 
