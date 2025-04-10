@@ -76,7 +76,6 @@ Definition ___compcert_va_float64 : ident := $"__compcert_va_float64".
 Definition ___compcert_va_int32 : ident := $"__compcert_va_int32".
 Definition ___compcert_va_int64 : ident := $"__compcert_va_int64".
 Definition _client10 : ident := $"client10".
-Definition _client11 : ident := $"client11".
 Definition _client12 : ident := $"client12".
 Definition _client13 : ident := $"client13".
 Definition _client5 : ident := $"client5".
@@ -95,6 +94,7 @@ Definition _kfree_kalloc_kfree_kalloc : ident := $"kfree_kalloc_kfree_kalloc".
 Definition _kfree_kalloc_twice : ident := $"kfree_kalloc_twice".
 Definition _kfree_kfree_kalloc : ident := $"kfree_kfree_kalloc".
 Definition _kfree_kfree_kalloc_loop : ident := $"kfree_kfree_kalloc_loop".
+Definition _kfree_loop : ident := $"kfree_loop".
 Definition _kmem : ident := $"kmem".
 Definition _main : ident := $"main".
 Definition _n : ident := $"n".
@@ -428,6 +428,31 @@ Definition f_kfree_kfree_kalloc_loop := {|
       (Sreturn (Some (Etempvar _t'1 (tptr tvoid)))))))
 |}.
 
+Definition f_kfree_loop := {|
+  fn_return := tvoid;
+  fn_callconv := cc_default;
+  fn_params := ((_pa_start, (tptr tvoid)) :: (_n, tint) :: nil);
+  fn_vars := nil;
+  fn_temps := ((_i, tint) :: nil);
+  fn_body :=
+(Ssequence
+  (Sset _i (Econst_int (Int.repr 0) tint))
+  (Swhile
+    (Ebinop Olt (Etempvar _i tint) (Etempvar _n tint) tint)
+    (Ssequence
+      (Scall None
+        (Evar _kfree (Tfunction ((tptr tvoid) :: nil) tvoid cc_default))
+        ((Etempvar _pa_start (tptr tvoid)) :: nil))
+      (Ssequence
+        (Sset _pa_start
+          (Ebinop Oadd
+            (Ecast (Etempvar _pa_start (tptr tvoid)) (tptr tschar))
+            (Econst_int (Int.repr 4096) tint) (tptr tschar)))
+        (Sset _i
+          (Ebinop Oadd (Etempvar _i tint) (Econst_int (Int.repr 1) tint)
+            tint))))))
+|}.
+
 Definition f_freerange_while_loop := {|
   fn_return := tvoid;
   fn_callconv := cc_default;
@@ -502,31 +527,6 @@ Definition f_client10 := {|
       (Sreturn (Some (Etempvar _t'1 (tptr tvoid)))))))
 |}.
 
-Definition f_client11 := {|
-  fn_return := tvoid;
-  fn_callconv := cc_default;
-  fn_params := ((_pa_start, (tptr tvoid)) :: (_n, tint) :: nil);
-  fn_vars := nil;
-  fn_temps := ((_i, tint) :: nil);
-  fn_body :=
-(Ssequence
-  (Sset _i (Econst_int (Int.repr 0) tint))
-  (Swhile
-    (Ebinop Olt (Etempvar _i tint) (Etempvar _n tint) tint)
-    (Ssequence
-      (Scall None
-        (Evar _kfree (Tfunction ((tptr tvoid) :: nil) tvoid cc_default))
-        ((Etempvar _pa_start (tptr tvoid)) :: nil))
-      (Ssequence
-        (Sset _pa_start
-          (Ebinop Oadd
-            (Ecast (Etempvar _pa_start (tptr tvoid)) (tptr tschar))
-            (Econst_int (Int.repr 4096) tint) (tptr tschar)))
-        (Sset _i
-          (Ebinop Oadd (Etempvar _i tint) (Econst_int (Int.repr 1) tint)
-            tint))))))
-|}.
-
 Definition f_client12 := {|
   fn_return := (tptr tvoid);
   fn_callconv := cc_default;
@@ -536,8 +536,8 @@ Definition f_client12 := {|
   fn_body :=
 (Ssequence
   (Scall None
-    (Evar _client11 (Tfunction ((tptr tvoid) :: tint :: nil) tvoid
-                      cc_default))
+    (Evar _kfree_loop (Tfunction ((tptr tvoid) :: tint :: nil) tvoid
+                        cc_default))
     ((Etempvar _pa_start (tptr tvoid)) :: (Etempvar _n tint) :: nil))
   (Ssequence
     (Scall (Some _t'1) (Evar _kalloc (Tfunction nil (tptr tvoid) cc_default))
@@ -837,39 +837,38 @@ Definition global_definitions : list (ident * globdef fundef type) :=
  (_kfree_kfree_kalloc, Gfun(Internal f_kfree_kfree_kalloc)) ::
  (_kalloc_write_42_kfree_kfree, Gfun(Internal f_kalloc_write_42_kfree_kfree)) ::
  (_kfree_kfree_kalloc_loop, Gfun(Internal f_kfree_kfree_kalloc_loop)) ::
+ (_kfree_loop, Gfun(Internal f_kfree_loop)) ::
  (_freerange_while_loop, Gfun(Internal f_freerange_while_loop)) ::
  (_client5, Gfun(Internal f_client5)) ::
  (_client10, Gfun(Internal f_client10)) ::
- (_client11, Gfun(Internal f_client11)) ::
  (_client12, Gfun(Internal f_client12)) ::
  (_client13, Gfun(Internal f_client13)) :: nil).
 
 Definition public_idents : list ident :=
-(_client13 :: _client12 :: _client11 :: _client10 :: _client5 ::
- _freerange_while_loop :: _kfree_kfree_kalloc_loop ::
- _kalloc_write_42_kfree_kfree :: _kfree_kfree_kalloc ::
- _kfree_kalloc_kfree_kalloc :: _kfree_kalloc_twice :: _kalloc_write_pipe ::
- _kalloc_write_42_kfree :: _kalloc_write_42 :: _kfree_kalloc :: _kalloc ::
- _kfree :: _kmem :: ___builtin_debug :: ___builtin_write32_reversed ::
- ___builtin_write16_reversed :: ___builtin_read32_reversed ::
- ___builtin_read16_reversed :: ___builtin_fnmsub :: ___builtin_fnmadd ::
- ___builtin_fmsub :: ___builtin_fmadd :: ___builtin_fmin ::
- ___builtin_fmax :: ___builtin_expect :: ___builtin_unreachable ::
- ___builtin_va_end :: ___builtin_va_copy :: ___builtin_va_arg ::
- ___builtin_va_start :: ___builtin_membar :: ___builtin_annot_intval ::
- ___builtin_annot :: ___builtin_sel :: ___builtin_memcpy_aligned ::
- ___builtin_sqrt :: ___builtin_fsqrt :: ___builtin_fabsf ::
- ___builtin_fabs :: ___builtin_ctzll :: ___builtin_ctzl :: ___builtin_ctz ::
- ___builtin_clzll :: ___builtin_clzl :: ___builtin_clz ::
- ___builtin_bswap16 :: ___builtin_bswap32 :: ___builtin_bswap ::
- ___builtin_bswap64 :: ___compcert_i64_umulh :: ___compcert_i64_smulh ::
- ___compcert_i64_sar :: ___compcert_i64_shr :: ___compcert_i64_shl ::
- ___compcert_i64_umod :: ___compcert_i64_smod :: ___compcert_i64_udiv ::
- ___compcert_i64_sdiv :: ___compcert_i64_utof :: ___compcert_i64_stof ::
- ___compcert_i64_utod :: ___compcert_i64_stod :: ___compcert_i64_dtou ::
- ___compcert_i64_dtos :: ___compcert_va_composite ::
- ___compcert_va_float64 :: ___compcert_va_int64 :: ___compcert_va_int32 ::
- nil).
+(_client13 :: _client12 :: _client10 :: _client5 :: _freerange_while_loop ::
+ _kfree_loop :: _kfree_kfree_kalloc_loop :: _kalloc_write_42_kfree_kfree ::
+ _kfree_kfree_kalloc :: _kfree_kalloc_kfree_kalloc :: _kfree_kalloc_twice ::
+ _kalloc_write_pipe :: _kalloc_write_42_kfree :: _kalloc_write_42 ::
+ _kfree_kalloc :: _kalloc :: _kfree :: _kmem :: ___builtin_debug ::
+ ___builtin_write32_reversed :: ___builtin_write16_reversed ::
+ ___builtin_read32_reversed :: ___builtin_read16_reversed ::
+ ___builtin_fnmsub :: ___builtin_fnmadd :: ___builtin_fmsub ::
+ ___builtin_fmadd :: ___builtin_fmin :: ___builtin_fmax ::
+ ___builtin_expect :: ___builtin_unreachable :: ___builtin_va_end ::
+ ___builtin_va_copy :: ___builtin_va_arg :: ___builtin_va_start ::
+ ___builtin_membar :: ___builtin_annot_intval :: ___builtin_annot ::
+ ___builtin_sel :: ___builtin_memcpy_aligned :: ___builtin_sqrt ::
+ ___builtin_fsqrt :: ___builtin_fabsf :: ___builtin_fabs ::
+ ___builtin_ctzll :: ___builtin_ctzl :: ___builtin_ctz :: ___builtin_clzll ::
+ ___builtin_clzl :: ___builtin_clz :: ___builtin_bswap16 ::
+ ___builtin_bswap32 :: ___builtin_bswap :: ___builtin_bswap64 ::
+ ___compcert_i64_umulh :: ___compcert_i64_smulh :: ___compcert_i64_sar ::
+ ___compcert_i64_shr :: ___compcert_i64_shl :: ___compcert_i64_umod ::
+ ___compcert_i64_smod :: ___compcert_i64_udiv :: ___compcert_i64_sdiv ::
+ ___compcert_i64_utof :: ___compcert_i64_stof :: ___compcert_i64_utod ::
+ ___compcert_i64_stod :: ___compcert_i64_dtou :: ___compcert_i64_dtos ::
+ ___compcert_va_composite :: ___compcert_va_float64 ::
+ ___compcert_va_int64 :: ___compcert_va_int32 :: nil).
 
 Definition prog : Clight.program := 
   mkprogram composites global_definitions public_idents _main Logic.I.

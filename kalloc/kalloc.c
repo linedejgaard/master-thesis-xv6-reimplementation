@@ -169,15 +169,18 @@ void *kfree_kfree_kalloc_loop(void *pa_start) { // original 6
   return kalloc();
 }
 
-
-
-
-
+void kfree_loop(void *pa_start, int n) { // original 8
+  int i = 0;
+  while (i < n) {
+      kfree(pa_start);
+      pa_start = (char*)pa_start + PGSIZE;
+      i++;
+  }
+}
 
 
 
 // working in progress
-
 
 
 
@@ -201,13 +204,6 @@ void *client5(void *pa1, void *pa2) { // original 2
 
 
 
-
-
-
-
-
-
-
 void *client10(void *pa_start, int n) { // original 7
   int i = 0;
   while (i < n) {
@@ -218,18 +214,11 @@ void *client10(void *pa_start, int n) { // original 7
   return kalloc();
 }
 
-void client11(void *pa_start, int n) { // original 8
-  int i = 0;
-  while (i < n) {
-      kfree(pa_start);
-      pa_start = (char*)pa_start + PGSIZE;
-      i++;
-  }
-}
+
 
 // this is basicly doing the same as client original 7
-void* client12(void *pa_start, int n) { // original 7
-  client11(pa_start, n);
+void* kfree_loop_kalloc(void *pa_start, int n) { // original 7
+  kfree_loop(pa_start, n);
   return kalloc();
 }
 

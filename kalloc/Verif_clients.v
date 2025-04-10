@@ -380,6 +380,32 @@ Definition kfree_kfree_kalloc_loop_spec :=
                 KF_globals gv sh (original_freelist_pointer::ls) xx pa1
                 ).
 
+Definition kfree_loop_spec := 
+    DECLARE _kfree_loop
+    WITH sh : share, pa1:val, original_freelist_pointer:val, xx:Z, gv:globals, ls : list val, n:Z
+    PRE [ tptr tvoid, tint ]
+        PROP(
+            isptr pa1 /\
+            Int.min_signed <= Int.signed (Int.repr n) + Int.signed (Int.repr 1) <= Int.max_signed /\
+            0 <= n <= Int.max_signed
+        ) 
+        PARAMS (pa1; Vint (Int.repr n)) GLOBALS(gv)
+        SEP (
+            kalloc_tokens Tok_APD sh (Z.to_nat n)%nat pa1 PGSIZE t_run *
+            KF_globals gv sh ls xx original_freelist_pointer
+        )
+    POST [ tvoid ]
+        EX head, EX added_elem, (* TODO: fix top and next is the same?? *)
+        PROP( 
+            added_elem = (pointers_with_original_head (Z.to_nat n) (pa1) PGSIZE original_freelist_pointer) /\
+            head = (hd nullval ((pointers_with_original_head (Z.to_nat n+1) (pa1) PGSIZE original_freelist_pointer)++ls))
+            )
+            RETURN () (* we return the head like in the pop function*)
+            SEP 
+            (
+                KF_globals gv sh (added_elem++ls) xx head
+            ).
+
 Definition KFGprog_clients: funspecs := KFGprog ++ [kalloc_write_pipe_spec; kfree_kalloc_spec; kalloc_write_42_spec; kalloc_write_42_kfree_spec].
 
 
@@ -788,4 +814,106 @@ Proof.
         rewrite H1 in H2; auto_contradict.
         Intros ab. unfold my_kalloc_token, KF_globals. 
         inversion H2. entailer!.
+Qed.
+
+
+Lemma body_kfree_loop: semax_body KFVprog KFGprog f_kfree_loop kfree_loop_spec.
+Proof.
+start_function.
+Intros. forward. (*forward. unfold abb iate in POSTCONDITION.*)
+    forward_while 
+    (EX i:Z, EX p_tmp:val, EX curr_head:val, EX tmp_added_elem : list val,
+    PROP  (
+        0 <= i <= n /\
+        ((curr_head = original_freelist_pointer /\ i = 0) \/ (curr_head = (offset_val (-PGSIZE) (p_tmp))  /\ i <> 0)) /\
+        tmp_added_elem = (pointers_with_original_head (Z.to_nat i) (pa1) PGSIZE original_freelist_pointer) /\
+        p_tmp = offset_val (i * PGSIZE)%Z pa1 /\
+        Int.min_signed <=
+        Int.signed (Int.repr i) + Int.signed (Int.repr 1) <=
+        Int.max_signed 
+    )
+    LOCAL (
+        gvars gv;
+        temp _pa_start p_tmp;
+        temp _i (Vint (Int.repr i));
+        temp _n (Vint (Int.repr n))
+        ) 
+    SEP (
+        (
+            KF_globals gv sh (tmp_added_elem ++ ls) xx curr_head *
+            kalloc_tokens Tok_APD sh (Z.to_nat(n-i)) p_tmp (PGSIZE) t_run
+        )
+    ))%assert; destruct H as [H01 [H02 H03]].
+    - entailer. Exists 0 pa1 original_freelist_pointer (pointers_with_original_head (Z.to_nat 0) pa1 PGSIZE original_freelist_pointer). (*entailer. *)
+        rewrite <- pointers_with_head_empty. entailer. destruct (Z.to_nat n).
+            + rewrite <- H0 in H01. try rep_lia.
+            + rewrite app_nil_l. entailer!.
+    - entailer.
+    - Intros. destruct (Z.to_nat (n - i)) eqn:e1.
+        + try rep_lia.
+        + forward_call (kfree_spec_sub KF_APD t_run) (p_tmp, gv, sh , (tmp_added_elem ++ ls), xx,curr_head). (* call kfree*)
+        (*forward_call (sh, p_tmp, curr_head, xx, gv, (tmp_added_elem ++ ls), PGSIZE). (* call kfree1 *)*)
+            *if_tac; destruct H0 as [H001 [H002 [H003 [H04 H05]]]]. rewrite H04 in H.
+            -- unfold offset_val in H. destruct pa1; auto_contradict.
+            --unfold KF_globals. unfold my_kalloc_token. rewrite kalloc_token_sz_split. simpl. rewrite kalloc_token_sz_split. Intros.
+            entailer!.
+            * destruct H0 as [H001 [H002 [H003 [H04 H05]]]]. rewrite H04.
+                assert ( isptr (offset_val (i * PGSIZE) pa1)). {apply isptr_offset_val'. auto. }
+                auto.
+            * forward. 
+                --entailer!. destruct H0 as [H001 [H002 [H003 [H04 H05]]]]. rewrite H04.
+                assert ( isptr (offset_val (i * PGSIZE) pa1)). {apply isptr_offset_val'. auto. }
+                auto.
+                -- forward. if_tac_auto_contradict.
+                ++ destruct H0 as [H001 [H002 [H003 [H04 H05]]]]. rewrite H04.
+                assert ( isptr (p_tmp)). { rewrite H04. apply isptr_offset_val'. auto. }
+                rewrite H in H0; auto_contradict.
+                ++ Exists ((((i+1)%Z, (offset_val PGSIZE p_tmp):val), p_tmp:val), ((pointers_with_original_head(Z.to_nat (i+1)) pa1 PGSIZE)original_freelist_pointer):list val).
+                entailer!; destruct H0 as [H001 [H002 [H003 [H04 H05]]]].
+                    **simpl. do 2 split; try rep_lia. split. 
+                        --- right. split. rewrite isptr_offset_val_zero; auto.
+                        rewrite H04. apply isptr_offset_val'. auto.
+                        destruct H002 as [[H0021 H0022] | [H0021 H0022]]; try rep_lia.
+                        --- split.
+                        destruct (Z.to_nat i) eqn:ei.
+                        destruct H002 as [[H0021 H0022] | [H0021 H0022]]; try rep_lia.
+                        rewrite H04. rewrite H0022. unfold PGSIZE; auto. simpl. rewrite isptr_offset_val_zero; auto.
+                         rewrite <- add_add_offset_n; auto; try rep_lia.
+                         rewrite H04. auto.
+                         unfold PGSIZE; rep_lia.
+                        assert (n + 1 <= Int.max_signed); try rep_lia.
+                        rewrite Int.signed_repr in H02; try rep_lia. rewrite Int.signed_repr in H02; try rep_lia.
+                        --- rewrite sem_add_pi'; auto. rewrite H04. apply isptr_offset_val'. auto.
+                        try rep_lia.
+                    ** unfold KF_globals.
+                    
+
+                    assert (Z.to_nat (n - (i + 1)) = n0); try rep_lia.
+                    rewrite H0.
+                    assert (curr_head :: tmp_added_elem = pointers_with_original_head (Z.to_nat (i + 1)) pa1 PGSIZE original_freelist_pointer). {
+                        rewrite H003.
+                        destruct H002 as [[H0021 H0022] | [H0021 H0022]].
+                        - rewrite H0022. simpl. rewrite H0021. auto.
+                        - replace (Z.to_nat (i + 1)) with (((Z.to_nat i) + 1)%nat); try rep_lia.
+                        rewrite <- add_to_pointers_with_head; auto.
+                        rewrite H0021; rewrite H04.
+                        rewrite sub_add_offset_n; auto; try rep_lia.
+                        replace (Z.of_nat (Z.to_nat i - 1))%Z with ((i - 1))%Z; try rep_lia.
+                        auto.
+                        unfold PGSIZE; rep_lia.
+                        try rep_lia.
+                    }
+                    rewrite app_comm_cons.
+                    rewrite H5. entailer!.
+    - forward.  Exists curr_head tmp_added_elem. entailer.
+    destruct H0 as [H001 [H002 [H003 [H04 H05]]]].
+    destruct (Z.to_nat (n - i)) eqn:eni; try rep_lia.
+    simpl. entailer!.
+    split. assert (i = n); try rep_lia. rewrite H2. auto.
+    destruct (Z.to_nat n) eqn:en; destruct H002 as [[H0021 H0022] | [H0021 H0022]]; try rep_lia.
+    + simpl. auto.
+    + rewrite <- add_to_pointers_with_head; auto; try rep_lia. simpl.
+    rewrite H0021.  rewrite sub_add_offset_n; auto; try rep_lia.
+    replace (Z.of_nat (n0 - 0)) with (i -1); try rep_lia. auto.
+    unfold PGSIZE; rep_lia.
 Qed.

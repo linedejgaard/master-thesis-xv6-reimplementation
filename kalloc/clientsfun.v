@@ -159,6 +159,34 @@ simpl. f_equal.
   rewrite Ptrofs.add_zero; auto.
 Qed.
 
+Lemma add_add_offset_n:
+   forall p size n,
+   0 < size ->
+   (0 < n) ->
+   isptr p ->
+   offset_val size (offset_val (n * size) p) = offset_val ((n + 1) * size) p.
+Proof.
+intros; destruct p; auto_contradict.
+  - unfold offset_val.
+  simpl. f_equal.
+  rewrite Ptrofs.add_assoc.
+  f_equal.
+  rewrite<- ptrofs_mul_repr.
+  rewrite<- ptrofs_mul_repr.
+  rewrite <- ptrofs_add_repr.
+  (*rewrite <- ptrofs_sub_repr.*)
+  (*rewrite Ptrofs.sub_add_opp.*)
+  rewrite Ptrofs.mul_add_distr_l.
+  replace (Ptrofs.repr 1) with (Ptrofs.one); auto.
+  replace (Ptrofs.mul Ptrofs.one (Ptrofs.repr size)) with (Ptrofs.repr size). 
+  2: {
+  rewrite Ptrofs.mul_commut.
+  rewrite Ptrofs.mul_one with (x:=Ptrofs.repr size). auto.
+  }
+  auto.
+Qed.
+  
+
 Lemma sub_add_offset_n:
    forall p size n,
    0 < size ->
@@ -167,8 +195,6 @@ Lemma sub_add_offset_n:
    offset_val (-size) (offset_val (n*size) p) = offset_val ((n-1)*size) p.
 Proof.
 intros; destruct p; auto_contradict.
-  (*unfold_size (n * size)%Z e1.
-  unfold_size ((n -1)* size)%Z e2.*)
   - unfold offset_val.
   simpl. f_equal.
   rewrite Ptrofs.add_assoc.
