@@ -200,6 +200,86 @@ Definition kfree_kalloc_twice_spec:=
                     else both_pointers_case
 ).
 
+Definition kfree_kalloc_kfree_kalloc_spec:= 
+    DECLARE _kfree_kalloc_kfree_kalloc
+    WITH sh : share, pa1:val, pa2:val, original_freelist_pointer:val, xx:Z, gv:globals, ls:list val
+    PRE [ tptr tvoid, tptr tvoid ]
+        PROP(
+            is_pointer_or_null pa1 /\
+            is_pointer_or_null pa2
+        ) 
+        PARAMS (pa1; pa2) GLOBALS(gv)
+        SEP (
+            KF_globals gv  sh ls xx original_freelist_pointer *
+            (if eq_dec pa1 nullval then emp
+            else (kalloc_token' KF_APD sh (sizeof t_run) pa1)) *
+            (if eq_dec pa2 nullval then emp
+            else (kalloc_token' KF_APD sh (sizeof t_run) pa2))
+        )
+    POST [ tptr tvoid ]
+        EX r,
+        PROP(
+            ((pa1 = nullval) /\ (pa2 = nullval) /\ ( original_freelist_pointer = nullval) /\ r = nullval) \/
+            ((pa1 <> nullval) /\  (pa2 <> nullval) /\ r = pa2) \/
+            ((pa1 <> nullval) /\  (pa2 = nullval) /\ (original_freelist_pointer = nullval) /\ r = nullval) \/
+            ((pa1 <> nullval) /\  (pa2 = nullval) /\ (original_freelist_pointer <> nullval)) \/
+            ((pa1 = nullval) /\  (pa2 <> nullval) /\ r = pa2) \/
+            ((pa1 = nullval) /\ (pa2 = nullval) /\ ( original_freelist_pointer <> nullval)) (* r is either nullval or next next*)
+            ) 
+            RETURN (r) (* we return the head like in the pop function*)
+            SEP 
+            (
+                let freelist_only_pa1_null_case :=
+                kalloc_token' KF_APD sh (sizeof t_run) pa2 *
+                (if eq_dec original_freelist_pointer nullval then
+                    KF_globals gv sh ls xx original_freelist_pointer * emp
+                else
+                    EX next, EX ls',
+                    !! (next :: ls' = ls) &&
+                    KF_globals gv sh ls' xx next *
+                    kalloc_token' KF_APD sh (sizeof t_run) original_freelist_pointer)
+                in
+                let freelist_only_pa2_null_case :=
+                    kalloc_token' KF_APD sh (sizeof t_run) pa1 * 
+                    (if eq_dec original_freelist_pointer nullval then 
+                        KF_globals gv sh ls xx original_freelist_pointer * emp
+                    else 
+                        (EX next, EX ls',
+                        !! (next :: ls' = ls) &&
+                        KF_globals gv sh ls' xx next *
+                        kalloc_token' KF_APD sh (sizeof t_run) original_freelist_pointer) ) 
+                in
+                let freelist_both_null_case :=
+                    if eq_dec original_freelist_pointer nullval then
+                        emp * KF_globals gv sh ls xx original_freelist_pointer
+                    else
+                        (kalloc_token' KF_APD sh (sizeof t_run) original_freelist_pointer *
+                        (EX next1, EX ls1,
+                        !! (next1:: ls1 = ls) &&
+                        if eq_dec next1 nullval then
+                            KF_globals gv sh ls1 xx next1
+                        else (
+                        EX next2, EX ls2,
+                        !! (next2:: ls2 = ls1) &&
+                        KF_globals gv sh ls2 xx next2 * 
+                        kalloc_token' KF_APD sh (sizeof t_run) next1
+                        )))
+                in
+                let both_pointers_case :=
+                KF_globals gv sh ls xx original_freelist_pointer *
+                kalloc_token' KF_APD sh (sizeof t_run) pa1 *
+                kalloc_token' KF_APD sh (sizeof t_run) pa2
+                in
+                if eq_dec pa1 nullval then
+                    if eq_dec pa2 nullval then
+                        freelist_both_null_case
+                    else freelist_only_pa1_null_case
+                else 
+                    if eq_dec pa2 nullval then
+                        freelist_only_pa2_null_case
+                    else both_pointers_case
+).
+
 Definition KFGprog_clients: funspecs := KFGprog ++ [kalloc_write_pipe_spec; kfree_kalloc_spec; kalloc_write_42_spec; kalloc_write_42_kfree_spec].
 
 
@@ -209,7 +289,6 @@ Proof.
 start_function.
 forward.
 forward_call (kalloc_spec_sub KF_APD t_struct_pipe) (gv, sh , ls, xx, original_freelist_pointer ). (* kalloc *)
-(*forward_call ((sizeof t_struct_pipe), gv,  sh,  ls , xx,  original_freelist_pointer).*)
 - unfold KF_globals. entailer!. 
 - if_tac. (*destruct (eq_dec original_freelist_pointer nullval) eqn:e0.*)
     + forward_if.
@@ -372,3 +451,75 @@ forward_call (gv, sh, pa1, original_freelist_pointer, xx, ls).
 Qed.
 
 
+Lemma body_kfree_kalloc_kfree_kalloc: semax_body KFVprog KFGprog f_kfree_kalloc_kfree_kalloc kfree_kalloc_kfree_kalloc_spec.
+Proof.
+start_function. Intros.
+if_tac; if_tac; destruct H; 
+forward_call (kfree_spec_sub KF_APD t_run) (pa1, gv, sh , ls, xx, original_freelist_pointer). (* call kfree *)
+- if_tac; auto_contradict. unfold KF_globals. entailer!.
+- forward_call (kalloc_spec_sub KF_APD t_run) (gv, sh , ls, xx, original_freelist_pointer). (* kalloc *)
+    + if_tac; auto_contradict. entailer!.
+    + if_tac; auto_contradict. 
+        * forward_call (kfree_spec_sub KF_APD t_run) (pa2, gv, sh , ls, xx, original_freelist_pointer). (* call kfree *)
+            -- if_tac; auto_contradict. entailer!.
+            -- if_tac; auto_contradict. forward_call (kalloc_spec_sub KF_APD t_run) (gv, sh , ls, xx, original_freelist_pointer). (* kalloc *)
+                if_tac.
+                    ++ forward. Exists nullval; unfold KF_globals. entailer!.
+                    ++ Intros ab. destruct ls; auto_contradict.
+        * Intros ab. destruct ls; auto_contradict. 
+        forward_call (kfree_spec_sub KF_APD t_run) (pa2, gv, sh , snd ab, xx, fst ab). (* call kfree *)
+            -- entailer!.
+            -- if_tac; auto_contradict. forward_call (kalloc_spec_sub KF_APD t_run) (gv, sh , snd ab, xx, fst ab). (* kalloc *)
+                if_tac.
+                    ++ forward. Exists (fst ab) (fst ab) (snd ab). if_tac.
+                        ** unfold KF_globals. unfold my_kalloc_token. entailer!. repeat right. split; auto.
+                        ** entailer.
+                    ++ Intros ab0. forward. Exists (fst ab). unfold my_kalloc_token. rewrite mem_mgr_split. 
+                        Exists (fst ab) (snd ab). if_tac; auto_contradict. Exists (fst ab0) (snd ab0). rewrite mem_mgr_split; entailer!.
+                        repeat right; split; auto.
+-if_tac; auto_contradict. unfold KF_globals. entailer!.
+- forward_call (kalloc_spec_sub KF_APD t_run) (gv, sh , ls, xx, original_freelist_pointer). (* kalloc *)
++ if_tac; auto_contradict. entailer!.
++ if_tac; auto_contradict. 
+    * forward_call (kfree_spec_sub KF_APD t_run) (pa2, gv, sh , ls, xx, original_freelist_pointer). (* call kfree *)
+        -- if_tac; auto_contradict. unfold my_kalloc_token. entailer!.
+        -- if_tac; auto_contradict. forward_call (kalloc_spec_sub KF_APD t_run) (gv, sh , (original_freelist_pointer :: ls), xx, pa2). (* kalloc *)
+            if_tac.
+                ++ forward.
+                ++ Intros ab. destruct ls; auto_contradict;
+                    forward; unfold my_kalloc_token, KF_globals; inversion H6; rewrite H3; rewrite H9; Exists pa2; entailer!;
+                    do 4 right; left; split; auto.
+    * Intros ab. destruct ls; auto_contradict.  
+    forward_call (kfree_spec_sub KF_APD t_run) (pa2, gv, sh , snd ab, xx, fst ab). (* call kfree *)
+        -- if_tac; auto_contradict. unfold my_kalloc_token at 2. rewrite kalloc_token_sz_split. entailer!.
+        -- if_tac; auto_contradict. rewrite mem_mgr_split. Intros. forward_call (kalloc_spec_sub KF_APD t_run) (gv, sh , fst ab::snd ab, xx, pa2). (* kalloc *)
+            ++ unfold my_kalloc_token. rewrite mem_mgr_split.  entailer!.
+            ++ forward. if_tac; auto_contradict. Intros ab0. Exists pa2 (fst ab0) (snd ab0). rewrite mem_mgr_split. unfold KF_globals, my_kalloc_token. rewrite mem_mgr_split. entailer!.
+               do 4 right. left; split; auto.
+- if_tac; auto_contradict. unfold KF_globals. rewrite kalloc_token_sz_split. unfold my_kalloc_token. rewrite kalloc_token_sz_split. entailer!.
+- if_tac; auto_contradict.
+    forward_call (kalloc_spec_sub KF_APD t_run) (gv, sh , original_freelist_pointer::ls, xx, pa1). (* kalloc *)
+    if_tac; auto_contradict.
+    Intros ab.
+    forward_call (kfree_spec_sub KF_APD t_run) (pa2, gv, sh , snd ab, xx, fst ab). (* call kfree *)
+    ++ entailer!.
+    ++ if_tac; auto_contradict. forward_call (kalloc_spec_sub KF_APD t_run) (gv, sh , snd ab, xx, fst ab). (* kalloc *)
+        forward. if_tac; auto_contradict; inversion H5.
+        ** Exists (fst ab). if_tac; auto_contradict.
+        unfold my_kalloc_token, KF_globals. entailer!.
+        do 2 right; left; split; auto.
+        ** Intros ab0. Exists (fst ab). if_tac; auto_contradict.
+            Exists (fst ab0) (snd ab0). unfold my_kalloc_token, KF_globals. entailer!.
+            do 3 right; left; split; auto.
+- if_tac; auto_contradict. unfold KF_globals. unfold my_kalloc_token. entailer!.
+- if_tac; auto_contradict. forward_call (kalloc_spec_sub KF_APD t_run) (gv, sh , original_freelist_pointer::ls, xx, pa1). (* kalloc *)
+    if_tac; auto_contradict.
+    Intros ab.
+    forward_call (kfree_spec_sub KF_APD t_run) (pa2, gv, sh , snd ab, xx, fst ab). (* call kfree *)
+    + if_tac; auto_contradict. unfold my_kalloc_token at 2; entailer!.
+    + if_tac; auto_contradict.
+    forward_call (kalloc_spec_sub KF_APD t_run) (gv, sh , fst ab::snd ab, xx, pa2). (* kalloc *)
+    if_tac; auto_contradict.
+    Intros ab0. forward. Exists pa2. unfold KF_globals. unfold my_kalloc_token; entailer!.
+    inversion H8. rewrite H14, H15. inversion H5. rewrite H16, H17. entailer!.
+Qed. 

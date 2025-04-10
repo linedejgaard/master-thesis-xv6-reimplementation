@@ -121,6 +121,17 @@ void kalloc_write_pipe()
   }
 }
 
+void *kfree_kalloc_twice(void *pa1, void *pa2) {
+  kfree_kalloc(pa1);
+  return kfree_kalloc(pa2);
+}
+
+void *kfree_kalloc_kfree_kalloc(void *pa1, void *pa2) { // original 5
+  kfree(pa1);
+  kalloc();
+  kfree(pa2);
+  return kalloc();
+}
 
 
 
@@ -131,10 +142,7 @@ void kalloc_write_pipe()
 
 // working in progress
 
-void *kfree_kalloc_twice(void *pa1, void *pa2) { // original 4
-  kfree_kalloc(pa1);
-  return kfree_kalloc(pa2);
-}
+
 
 
 
@@ -164,12 +172,7 @@ void *client6(void *pa1, void *pa2) { // original 3
 
 
 
-void *client8(void *pa1, void *pa2) { // original 5
-  kfree(pa1);
-  kalloc();
-  kfree(pa2);
-  return kalloc();
-}
+
 
 
 void *client9(void *pa_start) { // original 6

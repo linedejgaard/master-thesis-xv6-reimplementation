@@ -78,9 +78,9 @@ Definition kfree_spec (K:KallocFreeAPD) {cs: compspecs} (t: type) :=
               ) 
         PARAMS (new_head) GLOBALS(gv)
         SEP (
-          ASI_kalloc.mem_mgr K gv sh ls xx original_freelist_pointer;
-          if eq_dec new_head nullval then emp
-          else (my_kalloc_token K sh (t) new_head (* data_at_ Ews t new_head*))
+          ASI_kalloc.mem_mgr K gv sh ls xx original_freelist_pointer *
+          (if eq_dec new_head nullval then emp
+          else (my_kalloc_token K sh (t) new_head (* data_at_ Ews t new_head*)))
         )
       POST [ tvoid ]
         PROP()
