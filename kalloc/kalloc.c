@@ -178,12 +178,14 @@ void kfree_loop(void *pa_start, int n) { // original 8
   }
 }
 
+void* kfree_loop_kalloc(void *pa_start, int n) { // original 7
+  kfree_loop(pa_start, n);
+  return kalloc();
+}
+
 
 
 // working in progress
-
-
-
 
 // not added to client 1 yet -- it is in simple-kfree
 void freerange_while_loop(void *pa_start, void *pa_end) {  // admit on pointer
@@ -217,10 +219,7 @@ void *client10(void *pa_start, int n) { // original 7
 
 
 // this is basicly doing the same as client original 7
-void* kfree_loop_kalloc(void *pa_start, int n) { // original 7
-  kfree_loop(pa_start, n);
-  return kalloc();
-}
+
 
 // this is allowed..
 void client13(void *pa_start) {
