@@ -12,14 +12,14 @@ Require Import VC.kalloc.
 
 #[export] Instance CompSpecs : compspecs. make_compspecs kalloc.prog. Defined. (* this is my problem.. *)
 
+Local Open Scope logic.
+
 Definition KF_ASI: funspecs := Kalloc_ASI KF_APD _kalloc _kfree.
 Definition KF_imported_specs:funspecs := nil.
 Definition KF_internal_specs: funspecs := KF_ASI.
 Definition KF_globals gv  sh ls xx original_freelist_pointer: mpred:= ASI_kalloc.mem_mgr KF_APD gv sh ls xx original_freelist_pointer.
 Definition KFVprog : varspecs. mk_varspecs kalloc.prog. Defined.
 Definition KFGprog: funspecs := KF_imported_specs ++ KF_internal_specs.
-
-Local Open Scope logic.
 
 Definition kalloc_write_pipe_spec : ident * funspec :=
  DECLARE _kalloc_write_pipe
@@ -41,7 +41,7 @@ Definition kalloc_write_pipe_spec : ident * funspec :=
     
 Definition kfree_kalloc_spec := 
     DECLARE _kfree_kalloc
-    WITH new_head:val, sh : share, original_freelist_pointer:val, xx:Z, ls:list val, gv:globals
+    WITH gv:globals, sh : share, new_head:val, original_freelist_pointer:val, xx:Z, ls:list val
     PRE [ tptr tvoid ]
         PROP(is_pointer_or_null new_head) 
         PARAMS (new_head) GLOBALS(gv)
@@ -59,19 +59,26 @@ Definition kfree_kalloc_spec :=
         )
         RETURN (r) (* we return the head like in the pop function*)
         SEP (
-            
-            (if eq_dec new_head nullval then 
-                (if (eq_dec original_freelist_pointer nullval) then 
-                    (emp *  KF_globals gv  sh ls xx original_freelist_pointer)
-                else (
-                    (EX next ls',
-                    (!! (next :: ls' = ls) &&
-                        KF_globals gv  sh ls' xx next
-                    ) *  
-                    kalloc_token' KF_APD sh (sizeof t_run) original_freelist_pointer)))
-            else (
-                KF_globals gv  sh ls xx original_freelist_pointer* (* is this still wrong?? *)
-                kalloc_token' KF_APD sh (sizeof t_run) new_head) )
+            let freelist_case :=
+            if eq_dec original_freelist_pointer nullval then
+            emp * KF_globals gv sh ls xx original_freelist_pointer
+            else
+            EX next, EX ls',
+                !! (next :: ls' = ls) &&
+                KF_globals gv sh ls' xx next *
+                kalloc_token' KF_APD sh (sizeof t_run) original_freelist_pointer
+        in
+        
+        let newhead_case :=
+            KF_globals gv sh ls xx original_freelist_pointer *
+            kalloc_token' KF_APD sh (sizeof t_run) new_head
+        in
+        
+        if eq_dec new_head nullval then
+            freelist_case
+        else
+            newhead_case
+      
             ).
 
 Definition kalloc_write_42_spec : ident * funspec :=
@@ -113,6 +120,88 @@ Definition kalloc_write_42_kfree_spec : ident * funspec :=
             )
         ).
         
+Definition kfree_kalloc_twice_spec:= 
+    DECLARE _kfree_kalloc_twice
+    WITH sh : share, pa1:val, pa2:val, original_freelist_pointer:val, xx:Z, gv:globals, ls:list val
+    PRE [ tptr tvoid, tptr tvoid ]
+        PROP(
+            is_pointer_or_null pa1 /\
+            is_pointer_or_null pa2
+        ) 
+        PARAMS (pa1; pa2) GLOBALS(gv)
+        SEP (
+            KF_globals gv  sh ls xx original_freelist_pointer *
+            (if eq_dec pa1 nullval then emp
+            else (kalloc_token' KF_APD sh (sizeof t_run) pa1)) *
+            (if eq_dec pa2 nullval then emp
+            else (kalloc_token' KF_APD sh (sizeof t_run) pa2))
+        )
+    POST [ tptr tvoid ]
+        EX r,
+        PROP(
+            ((pa1 = nullval) /\ (pa2 = nullval) /\ ( original_freelist_pointer = nullval) /\ r = nullval) \/
+            ((pa1 <> nullval) /\  (pa2 <> nullval) /\ r = pa2) \/
+            ((pa1 <> nullval) /\  (pa2 = nullval) /\ (original_freelist_pointer = nullval) /\ r = nullval) \/
+            ((pa1 <> nullval) /\  (pa2 = nullval) /\ (original_freelist_pointer <> nullval)) \/
+            ((pa1 = nullval) /\  (pa2 <> nullval) /\ r = pa2) \/
+            ((pa1 = nullval) /\ (pa2 = nullval) /\ ( original_freelist_pointer <> nullval)) (* r is either nullval or next next*)
+            ) 
+            RETURN (r) (* we return the head like in the pop function*)
+            SEP 
+            (
+                let freelist_only_pa1_null_case :=
+                kalloc_token' KF_APD sh (sizeof t_run) pa2 *
+                (if eq_dec original_freelist_pointer nullval then
+                    KF_globals gv sh ls xx original_freelist_pointer * emp
+                else
+                    EX next, EX ls',
+                    !! (next :: ls' = ls) &&
+                    KF_globals gv sh ls' xx next *
+                    kalloc_token' KF_APD sh (sizeof t_run) original_freelist_pointer)
+                in
+                let freelist_only_pa2_null_case :=
+                    kalloc_token' KF_APD sh (sizeof t_run) pa1 * 
+                    (if eq_dec original_freelist_pointer nullval then 
+                        KF_globals gv sh ls xx original_freelist_pointer * emp
+                    else 
+                        (EX next, EX ls',
+                        !! (next :: ls' = ls) &&
+                        KF_globals gv sh ls' xx next *
+                        kalloc_token' KF_APD sh (sizeof t_run) original_freelist_pointer) ) 
+                in
+                let freelist_both_null_case :=
+                    if eq_dec original_freelist_pointer nullval then
+                        emp * KF_globals gv sh ls xx original_freelist_pointer
+                    else
+                        (kalloc_token' KF_APD sh (sizeof t_run) original_freelist_pointer *
+                        (EX next1, EX ls1,
+                        !! (next1:: ls1 = ls) &&
+                        if eq_dec next1 nullval then
+                            KF_globals gv sh ls1 xx next1
+                        else (
+                        EX next2, EX ls2,
+                        !! (next2:: ls2 = ls1) &&
+                        KF_globals gv sh ls2 xx next2 * 
+                        kalloc_token' KF_APD sh (sizeof t_run) next1
+                        )))
+                in
+                let both_pointers_case :=
+                KF_globals gv sh ls xx original_freelist_pointer *
+                kalloc_token' KF_APD sh (sizeof t_run) pa1 *
+                kalloc_token' KF_APD sh (sizeof t_run) pa2
+                in
+                if eq_dec pa1 nullval then
+                    if eq_dec pa2 nullval then
+                        freelist_both_null_case
+                    else freelist_only_pa1_null_case
+                else 
+                    if eq_dec pa2 nullval then
+                        freelist_only_pa2_null_case
+                    else both_pointers_case
+).
+
+Definition KFGprog_clients: funspecs := KFGprog ++ [kalloc_write_pipe_spec; kfree_kalloc_spec; kalloc_write_42_spec; kalloc_write_42_kfree_spec].
+
 
 
 Lemma body_kalloc_write_pipe: semax_body KFVprog KFGprog f_kalloc_write_pipe kalloc_write_pipe_spec.
@@ -213,3 +302,73 @@ Proof.
             entailer!.
         * forward.
 Qed.
+
+Lemma body_kfree_kalloc_twice: semax_body KFVprog KFGprog_clients f_kfree_kalloc_twice kfree_kalloc_twice_spec.
+Proof.
+start_function. destruct H.
+forward_call (gv, sh, pa1, original_freelist_pointer, xx, ls).
+- entailer!.
+- Intros vret.
+    if_tac.
+    + if_tac.
+        * if_tac.
+            -- forward_call (gv, sh, pa2, original_freelist_pointer, xx, ls).
+                ++ if_tac; auto_contradict.
+                    entailer!.
+                ++ if_tac; auto_contradict. Intros vret0.
+                    if_tac; auto_contradict.
+                    forward.
+                    Exists vret0. entailer!.
+                    destruct H6 as [ [H11 [H12 H13]] | [[H21 H22] | [H31 [H32 H33]]] ]; auto.
+            --forward_call (gv, sh, pa2, original_freelist_pointer, xx, ls).
+                ++ if_tac; auto_contradict. entailer!.
+                ++ if_tac; auto_contradict. Intros vret0. forward.
+                  Exists vret0. entailer!.
+                  destruct H6 as [ [H11 [H12 H13]] | [[H21 H22] | [H31 [H32 H33]]] ]; auto_contradict. do 4 right. left. auto.
+        * if_tac; Intros ab.
+            -- destruct ls as [ | next1 ls1]; auto_contradict. (*unfold abbreviate in POSTCONDITION.*)
+                forward_call (gv, sh, pa2, next1, xx, ls1).
+                ++ if_tac; auto_contradict.
+                inversion H5. rewrite H8; rewrite H9. entailer!.
+                ++ if_tac; auto_contradict. if_tac; auto_contradict. 
+                    ** Intros vret0. forward.
+                    Exists vret0. Exists nullval ls1. if_tac; auto_contradict. entailer!.
+                    destruct H8 as [ [H11 [H12 H13]] | [[H21 H22] | [H31 [H32 H33]]] ]; auto_contradict. 
+                    do 5 right. split; auto.
+                    ** Intros vret0. Intros ab0. forward.
+                    Exists vret0. Exists (next1) (snd ab). if_tac; auto_contradict.
+                    Exists (fst ab0) (snd ab0). entailer!.
+                    do 5 right. split; auto.
+            -- destruct ls as [ | next1 ls1]; auto_contradict. 
+                forward_call (gv, sh, pa2, next1, xx, ls1).
+                ++ if_tac; auto_contradict.
+                inversion H5. rewrite H8; rewrite H9. entailer!.
+                ++ Intros vret0. forward. if_tac; auto_contradict.
+                Exists vret0. Exists next1 ls1. entailer!.
+                destruct H6 as [ [H11 [H12 H13]] | [[H21 H22] | [H31 [H32 H33]]] ]; auto_contradict. 
+                do 4 right. left; split; auto.
+    + if_tac.
+        -- forward_call (gv, sh, pa2, original_freelist_pointer, xx, ls).
+            ++ if_tac; auto_contradict.
+                entailer!.
+            ++ if_tac; auto_contradict. Intros vret0.
+                if_tac; auto_contradict.
+                ** forward. 
+                Exists vret0. entailer!.
+                destruct H5 as [ [H11 [H12 H13]] | [[H21 H22] | [H31 [H32 H33]]] ]; auto.
+                do 2 right. left. split; auto.
+                ** Intros ab.
+                    forward. Exists vret0. Exists (fst ab) (snd ab). entailer!.
+                    destruct H5 as [ [H11 [H12 H13]] | [[H21 H22] | [H31 [H32 H33]]] ]; auto.
+                    do 2 right. left; split; auto.
+                    do 3 right. left; split; auto.
+        -- Intros. forward_call (gv, sh, pa2, original_freelist_pointer, xx, ls).
+            ++ if_tac; auto_contradict. entailer!.
+            ++ if_tac; auto_contradict. 
+                Intros vret0. forward.
+                Exists vret0. entailer!.
+                destruct H5 as [ [H11 [H12 H13]] | [[H21 H22] | [H31 [H32 H33]]] ]; auto_contradict.
+                ** right. left; split; auto.
+Qed.
+
+

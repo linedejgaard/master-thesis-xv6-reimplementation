@@ -17,12 +17,10 @@ Definition t_struct_kmem := Tstruct _struct_kmem noattr.
 
 Definition t_struct_pipe := Tstruct _pipe noattr.
 
-Local Open Scope logic.
-
 Definition pipe_rep sh (pi: val) : mpred :=
-   EX data,
+  EX data,
   data_at sh t_struct_pipe
-    ( (* data = uninitialized? depends on model *)
+    (
       (data), (* array data[PIPESIZE] *)
       (Vint (Int.repr 0), (* nread *)
       (Vint (Int.repr 0), (* nwrite *)

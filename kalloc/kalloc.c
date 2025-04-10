@@ -53,11 +53,6 @@ void *kalloc(void)
   return (void*)r; 
 }
 
-
-
-
-
-
 /// clients
 
 
@@ -126,7 +121,22 @@ void kalloc_write_pipe()
   }
 }
 
+
+
+
+
+
+
+
+
 // working in progress
+
+void *kfree_kalloc_twice(void *pa1, void *pa2) { // original 4
+  kfree_kalloc(pa1);
+  return kfree_kalloc(pa2);
+}
+
+
 
 // not added to client 1 yet -- it is in simple-kfree
 void freerange_while_loop(void *pa_start, void *pa_end) {  // admit on pointer
@@ -152,10 +162,7 @@ void *client6(void *pa1, void *pa2) { // original 3
   return kalloc();
 }
 
-void *client7(void *pa1, void *pa2) { // original 4
-  kfree_kalloc(pa1);
-  return kfree_kalloc(pa2);
-}
+
 
 void *client8(void *pa1, void *pa2) { // original 5
   kfree(pa1);

@@ -131,9 +131,7 @@ Lemma kalloc_spec_sub:
     if_tac.
     (*entailer.
     destruct (EqDec_val v nullval).*)
-    - entailer!. entailer!. (*split.
-      + entailer!.
-      + admit. (* assume sizeof t can fit within the pgsize.. *)*)
+    - entailer!. entailer!.
     - entailer!. (*split.*)
       + entailer!. Exists next ls'. entailer!. unfold my_kalloc_token. 
       assert_PROP (field_compatible t [] (eval_id ret_temp x)).
