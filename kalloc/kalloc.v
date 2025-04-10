@@ -80,7 +80,6 @@ Definition _client11 : ident := $"client11".
 Definition _client12 : ident := $"client12".
 Definition _client13 : ident := $"client13".
 Definition _client5 : ident := $"client5".
-Definition _client9 : ident := $"client9".
 Definition _data : ident := $"data".
 Definition _freelist : ident := $"freelist".
 Definition _freerange_while_loop : ident := $"freerange_while_loop".
@@ -88,12 +87,14 @@ Definition _i : ident := $"i".
 Definition _kalloc : ident := $"kalloc".
 Definition _kalloc_write_42 : ident := $"kalloc_write_42".
 Definition _kalloc_write_42_kfree : ident := $"kalloc_write_42_kfree".
+Definition _kalloc_write_42_kfree_kfree : ident := $"kalloc_write_42_kfree_kfree".
 Definition _kalloc_write_pipe : ident := $"kalloc_write_pipe".
 Definition _kfree : ident := $"kfree".
 Definition _kfree_kalloc : ident := $"kfree_kalloc".
 Definition _kfree_kalloc_kfree_kalloc : ident := $"kfree_kalloc_kfree_kalloc".
 Definition _kfree_kalloc_twice : ident := $"kfree_kalloc_twice".
 Definition _kfree_kfree_kalloc : ident := $"kfree_kfree_kalloc".
+Definition _kfree_kfree_kalloc_loop : ident := $"kfree_kfree_kalloc_loop".
 Definition _kmem : ident := $"kmem".
 Definition _main : ident := $"main".
 Definition _n : ident := $"n".
@@ -361,6 +362,72 @@ Definition f_kfree_kfree_kalloc := {|
       (Sreturn (Some (Etempvar _t'1 (tptr tvoid)))))))
 |}.
 
+Definition f_kalloc_write_42_kfree_kfree := {|
+  fn_return := tint;
+  fn_callconv := cc_default;
+  fn_params := nil;
+  fn_vars := nil;
+  fn_temps := ((_pa, (tptr tint)) :: (_X, tint) :: (_t'1, (tptr tvoid)) ::
+               nil);
+  fn_body :=
+(Ssequence
+  (Sset _pa (Ecast (Econst_int (Int.repr 0) tint) (tptr tint)))
+  (Ssequence
+    (Ssequence
+      (Scall (Some _t'1)
+        (Evar _kalloc (Tfunction nil (tptr tvoid) cc_default)) nil)
+      (Sset _pa (Ecast (Etempvar _t'1 (tptr tvoid)) (tptr tint))))
+    (Ssequence
+      (Sifthenelse (Etempvar _pa (tptr tint))
+        (Ssequence
+          (Sassign (Ederef (Etempvar _pa (tptr tint)) tint)
+            (Econst_int (Int.repr 42) tint))
+          (Ssequence
+            (Sset _X (Ederef (Etempvar _pa (tptr tint)) tint))
+            (Ssequence
+              (Scall None
+                (Evar _kfree (Tfunction ((tptr tvoid) :: nil) tvoid
+                               cc_default))
+                ((Etempvar _pa (tptr tint)) :: nil))
+              (Sreturn (Some (Etempvar _X tint))))))
+        Sskip)
+      (Ssequence
+        (Scall None
+          (Evar _kfree (Tfunction ((tptr tvoid) :: nil) tvoid cc_default))
+          ((Etempvar _pa (tptr tint)) :: nil))
+        (Sreturn (Some (Econst_int (Int.repr 0) tint)))))))
+|}.
+
+Definition f_kfree_kfree_kalloc_loop := {|
+  fn_return := (tptr tvoid);
+  fn_callconv := cc_default;
+  fn_params := ((_pa_start, (tptr tvoid)) :: nil);
+  fn_vars := nil;
+  fn_temps := ((_i, tint) :: (_t'1, (tptr tvoid)) :: nil);
+  fn_body :=
+(Ssequence
+  (Sset _i (Econst_int (Int.repr 0) tint))
+  (Ssequence
+    (Swhile
+      (Ebinop Olt (Etempvar _i tint) (Econst_int (Int.repr 2) tint) tint)
+      (Ssequence
+        (Scall None
+          (Evar _kfree (Tfunction ((tptr tvoid) :: nil) tvoid cc_default))
+          ((Etempvar _pa_start (tptr tvoid)) :: nil))
+        (Ssequence
+          (Sset _pa_start
+            (Ebinop Oadd
+              (Ecast (Etempvar _pa_start (tptr tvoid)) (tptr tschar))
+              (Econst_int (Int.repr 4096) tint) (tptr tschar)))
+          (Sset _i
+            (Ebinop Oadd (Etempvar _i tint) (Econst_int (Int.repr 1) tint)
+              tint)))))
+    (Ssequence
+      (Scall (Some _t'1)
+        (Evar _kalloc (Tfunction nil (tptr tvoid) cc_default)) nil)
+      (Sreturn (Some (Etempvar _t'1 (tptr tvoid)))))))
+|}.
+
 Definition f_freerange_while_loop := {|
   fn_return := tvoid;
   fn_callconv := cc_default;
@@ -403,36 +470,6 @@ Definition f_client5 := {|
         (Scall (Some _t'1)
           (Evar _kalloc (Tfunction nil (tptr tvoid) cc_default)) nil)
         (Sreturn (Some (Etempvar _t'1 (tptr tvoid))))))))
-|}.
-
-Definition f_client9 := {|
-  fn_return := (tptr tvoid);
-  fn_callconv := cc_default;
-  fn_params := ((_pa_start, (tptr tvoid)) :: nil);
-  fn_vars := nil;
-  fn_temps := ((_i, tint) :: (_t'1, (tptr tvoid)) :: nil);
-  fn_body :=
-(Ssequence
-  (Sset _i (Econst_int (Int.repr 0) tint))
-  (Ssequence
-    (Swhile
-      (Ebinop Olt (Etempvar _i tint) (Econst_int (Int.repr 2) tint) tint)
-      (Ssequence
-        (Scall None
-          (Evar _kfree (Tfunction ((tptr tvoid) :: nil) tvoid cc_default))
-          ((Etempvar _pa_start (tptr tvoid)) :: nil))
-        (Ssequence
-          (Sset _pa_start
-            (Ebinop Oadd
-              (Ecast (Etempvar _pa_start (tptr tvoid)) (tptr tschar))
-              (Econst_int (Int.repr 4096) tint) (tptr tschar)))
-          (Sset _i
-            (Ebinop Oadd (Etempvar _i tint) (Econst_int (Int.repr 1) tint)
-              tint)))))
-    (Ssequence
-      (Scall (Some _t'1)
-        (Evar _kalloc (Tfunction nil (tptr tvoid) cc_default)) nil)
-      (Sreturn (Some (Etempvar _t'1 (tptr tvoid)))))))
 |}.
 
 Definition f_client10 := {|
@@ -798,17 +835,19 @@ Definition global_definitions : list (ident * globdef fundef type) :=
  (_kfree_kalloc_twice, Gfun(Internal f_kfree_kalloc_twice)) ::
  (_kfree_kalloc_kfree_kalloc, Gfun(Internal f_kfree_kalloc_kfree_kalloc)) ::
  (_kfree_kfree_kalloc, Gfun(Internal f_kfree_kfree_kalloc)) ::
+ (_kalloc_write_42_kfree_kfree, Gfun(Internal f_kalloc_write_42_kfree_kfree)) ::
+ (_kfree_kfree_kalloc_loop, Gfun(Internal f_kfree_kfree_kalloc_loop)) ::
  (_freerange_while_loop, Gfun(Internal f_freerange_while_loop)) ::
  (_client5, Gfun(Internal f_client5)) ::
- (_client9, Gfun(Internal f_client9)) ::
  (_client10, Gfun(Internal f_client10)) ::
  (_client11, Gfun(Internal f_client11)) ::
  (_client12, Gfun(Internal f_client12)) ::
  (_client13, Gfun(Internal f_client13)) :: nil).
 
 Definition public_idents : list ident :=
-(_client13 :: _client12 :: _client11 :: _client10 :: _client9 :: _client5 ::
- _freerange_while_loop :: _kfree_kfree_kalloc ::
+(_client13 :: _client12 :: _client11 :: _client10 :: _client5 ::
+ _freerange_while_loop :: _kfree_kfree_kalloc_loop ::
+ _kalloc_write_42_kfree_kfree :: _kfree_kfree_kalloc ::
  _kfree_kalloc_kfree_kalloc :: _kfree_kalloc_twice :: _kalloc_write_pipe ::
  _kalloc_write_42_kfree :: _kalloc_write_42 :: _kfree_kalloc :: _kalloc ::
  _kfree :: _kmem :: ___builtin_debug :: ___builtin_write32_reversed ::

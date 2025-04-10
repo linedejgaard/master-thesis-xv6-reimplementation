@@ -140,6 +140,35 @@ void *kfree_kfree_kalloc(void *pa1, void *pa2) { // original 3
   return kalloc();
 }
 
+// working in progress
+
+int kalloc_write_42_kfree_kfree(void) {
+
+  int *pa;
+  pa = 0;
+  pa = (int*)kalloc();           // cast to int pointer
+  if (pa) {
+    *pa = 42;
+    int X = *pa;
+    kfree(pa);
+    return X;
+  }
+  kfree(pa); // make sure it is free
+  return 0;
+}
+
+
+
+void *kfree_kfree_kalloc_loop(void *pa_start) { // original 6
+  int i = 0;
+  while (i < 2) {
+      kfree(pa_start);
+      pa_start = (char*)pa_start + PGSIZE;
+      i++;
+  }
+  return kalloc();
+}
+
 
 
 
@@ -177,15 +206,7 @@ void *client5(void *pa1, void *pa2) { // original 2
 
 
 
-void *client9(void *pa_start) { // original 6
-  int i = 0;
-  while (i < 2) {
-      kfree(pa_start);
-      pa_start = (char*)pa_start + PGSIZE;
-      i++;
-  }
-  return kalloc();
-}
+
 
 void *client10(void *pa_start, int n) { // original 7
   int i = 0;

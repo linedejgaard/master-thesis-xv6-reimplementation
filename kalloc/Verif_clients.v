@@ -339,6 +339,23 @@ Definition kfree_kfree_kalloc_spec :=
                 else both_pointers_case
         ).
 
+Definition kalloc_write_42_kfree_kfree_spec : ident * funspec :=
+    DECLARE _kalloc_write_42_kfree_kfree
+    WITH sh : share, original_freelist_pointer:val, xx:Z, ls:list val, gv:globals
+    PRE [ ] 
+        PROP () PARAMS() GLOBALS(gv) SEP (KF_globals gv sh ls xx original_freelist_pointer)
+    POST [ tint ] 
+        EX r,
+        PROP ( ) RETURN (r) SEP (
+            (if eq_dec original_freelist_pointer nullval then
+                (!! (r = Vint (Int.repr 0)) &&
+                KF_globals gv  sh ls xx original_freelist_pointer)
+            else
+                (!! ( r = Vint (Int.repr 42) ) &&
+                KF_globals gv  sh ls xx original_freelist_pointer)
+            )
+        ).
+
 Definition KFGprog_clients: funspecs := KFGprog ++ [kalloc_write_pipe_spec; kfree_kalloc_spec; kalloc_write_42_spec; kalloc_write_42_kfree_spec].
 
 
@@ -622,4 +639,37 @@ forward_call (kfree_spec_sub KF_APD t_run) (pa2, gv, sh , original_freelist_poin
     forward. Exists pa2. unfold KF_globals, my_kalloc_token. entailer!.
     inversion H6.
     entailer.
+Qed.
+
+
+Lemma body_kalloc_write_42_kfree_kfree: semax_body KFVprog KFGprog f_kalloc_write_42_kfree_kfree kalloc_write_42_kfree_kfree_spec.
+Proof.
+    start_function.
+    forward. 
+    forward_call (kalloc_spec_sub KF_APD tint) (gv, sh , ls, xx, original_freelist_pointer ). (* kalloc *)
+    - unfold KF_globals. entailer!.
+    - if_tac.
+    + forward_if.
+        * rewrite H in H0; auto_contradict.
+        * forward_call (kfree_spec_sub KF_APD t_run) (original_freelist_pointer, gv, sh , ls, xx,original_freelist_pointer). (* call kfree*)
+            -- if_tac_auto_contradict. entailer!.
+            -- rewrite H. simpl. auto.
+            -- if_tac_auto_contradict. 
+            forward. Exists (Vint(Int.repr 0)). entailer.
+    + Intros ab.
+      destruct ls; auto_contradict.
+      forward_if.
+        * unfold my_kalloc_token. rewrite kalloc_token_sz_split. Intros.
+        rewrite memory_block_data_at_; auto. rewrite data_at__eq. Intros. forward.
+        forward. 
+        forward_call (kfree_spec_sub KF_APD tint) (original_freelist_pointer, gv, sh , snd ab, xx, (fst ab)). (* call kfree *)
+        -- if_tac_auto_contradict.
+            unfold my_kalloc_token. rewrite kalloc_token_sz_split. entailer!.
+            sep_apply data_at_memory_block. entailer!.
+        -- if_tac_auto_contradict.
+            forward. Exists (Vint (Int.repr 42)).
+            unfold KF_globals.
+            inversion H0. rewrite H9; rewrite H10.
+            entailer!.
+        * rewrite H1 in H. auto_contradict.
 Qed.
