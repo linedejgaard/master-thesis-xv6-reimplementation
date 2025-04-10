@@ -153,7 +153,7 @@ int kalloc_write_42_kfree_kfree(void) {
     kfree(pa);
     return X;
   }
-  kfree(pa); // make sure it is free
+  kfree(pa); // make sure it is free and we are back to scratch
   return 0;
 }
 
