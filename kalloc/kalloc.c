@@ -126,9 +126,16 @@ void *kfree_kalloc_twice(void *pa1, void *pa2) {
   return kfree_kalloc(pa2);
 }
 
-void *kfree_kalloc_kfree_kalloc(void *pa1, void *pa2) { // original 5
+void *kfree_kalloc_kfree_kalloc(void *pa1, void *pa2) { 
   kfree(pa1);
   kalloc();
+  kfree(pa2);
+  return kalloc();
+}
+
+// should return pa2 if they are both pointers
+void *kfree_kfree_kalloc(void *pa1, void *pa2) { // original 3
+  kfree(pa1);
   kfree(pa2);
   return kalloc();
 }
@@ -163,12 +170,7 @@ void *client5(void *pa1, void *pa2) { // original 2
 }
 
 
-// should return pa2
-void *client6(void *pa1, void *pa2) { // original 3
-  kfree(pa1);
-  kfree(pa2);
-  return kalloc();
-}
+
 
 
 

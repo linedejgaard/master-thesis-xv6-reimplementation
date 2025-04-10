@@ -12,7 +12,7 @@ Global Open Scope funspec_scope.
 
 (*** kalloc token type... *)
 Definition my_kalloc_token K {cs: compspecs} sh t p :=
-  !! field_compatible t [] p && (* this shoudl work because of memory_block_data_at_*)
+  !! field_compatible t [] p && (* this should work because of memory_block_data_at_*)
   (kalloc_token' K sh (sizeof t) p).
 
 Lemma my_kalloc_token_valid_pointer:
@@ -80,7 +80,7 @@ Definition kfree_spec (K:KallocFreeAPD) {cs: compspecs} (t: type) :=
         SEP (
           ASI_kalloc.mem_mgr K gv sh ls xx original_freelist_pointer *
           (if eq_dec new_head nullval then emp
-          else (my_kalloc_token K sh (t) new_head (* data_at_ Ews t new_head*)))
+          else (my_kalloc_token K sh (t) new_head))
         )
       POST [ tvoid ]
         PROP()
@@ -129,10 +129,8 @@ Lemma kalloc_spec_sub:
     repeat (destruct p).
     Exists (sizeof t, g0, s, l, z, v) emp. entailer.
     if_tac.
-    (*entailer.
-    destruct (EqDec_val v nullval).*)
     - entailer!. entailer!.
-    - entailer!. (*split.*)
+    - entailer!.
       + entailer!. Exists next ls'. entailer!. unfold my_kalloc_token. 
       assert_PROP (field_compatible t [] (eval_id ret_temp x)).
       { entailer!.
