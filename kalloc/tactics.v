@@ -1,6 +1,7 @@
-(************************ Helper functions and tactics  *************************)
-
 Require Import VST.floyd.proofauto.
+
+(* ================================================================= *)
+(** ** Helper functions and tactics *)
 
 Ltac auto_contradict := try discriminate; try contradiction.
 

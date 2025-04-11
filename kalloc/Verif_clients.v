@@ -3,7 +3,6 @@ Require Import VST.floyd.proofauto.
 Require Import VC.ASI_kalloc.
 Require Import VC.kalloc_kfree_definitions.
 Require Import VC.Spec_kalloc.
-Require Import VC.kallocfun.
 Require Import VC.clientsfun.
 Require Import VC.tactics.
 
