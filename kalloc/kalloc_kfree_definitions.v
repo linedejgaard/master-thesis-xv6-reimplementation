@@ -1,4 +1,5 @@
 Require Import VST.floyd.proofauto.
+Require Import VST.floyd.VSU.
 
 Require Import VC.tactics.
 Require Import VC.ASI_kalloc.
@@ -105,7 +106,7 @@ Ltac refold_freelistrep :=
 Definition Tok_APD := Build_KallocTokenAPD kalloc_token_sz kalloc_token_sz_valid_pointer
   kalloc_token_sz_local_facts.
 
-Definition mem_mgr (gv: globals) (sh : share) (ls: list val) (xx:Z) (original_freelist_pointer:val): mpred := (* I am unsure how to access all these elements.. *)
+Definition mem_mgr_internal (gv: globals) (sh : share) (ls: list val) (xx:Z) (original_freelist_pointer:val): mpred := (* I am unsure how to access all these elements.. *)
     !! (writable_share sh /\
         is_pointer_or_null original_freelist_pointer /\
               (((ls = nil) /\ original_freelist_pointer = nullval) \/ 
@@ -114,23 +115,62 @@ Definition mem_mgr (gv: globals) (sh : share) (ls: list val) (xx:Z) (original_fr
       (sepcon (data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem))
       (freelistrep sh ls original_freelist_pointer)).
 
-Definition KF_APD := Build_KallocFreeAPD Tok_APD mem_mgr.
+Definition mem_mgr_external (gv: globals) : mpred :=
+  EX (sh : share), EX (ls: list val), EX (xx:Z), EX (original_freelist_pointer:val), (* I am unsure how to access all these elements.. *)
+  !! (writable_share sh /\
+    is_pointer_or_null original_freelist_pointer /\
+          (((ls = nil) /\ original_freelist_pointer = nullval) \/ 
+          ((ls <> nil) /\ isptr original_freelist_pointer))
+    ) &&
+  (sepcon (data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem))
+  (freelistrep sh ls original_freelist_pointer)).
+
+Lemma mem_mgr_internal_entails_mem_mgr_external :
+  forall gv sh ls xx original_freelist_pointer,
+    mem_mgr_internal gv sh ls xx original_freelist_pointer
+    |-- mem_mgr_external gv.
+Proof.
+  intros gv sh ls xx original_freelist_pointer.
+  unfold mem_mgr_internal.
+  unfold mem_mgr_external.
+  Intros.
+  Exists sh ls xx original_freelist_pointer.
+  entailer!.
+Qed.
+
+Lemma mem_mgr_local_facts :
+  forall gv,
+    (mem_mgr_external gv) |-- (EX (sh : share), EX (ls : list val), EX (original_freelist_pointer : val),
+      !! (writable_share sh /\
+          is_pointer_or_null original_freelist_pointer /\
+          (((ls = nil) /\ original_freelist_pointer = nullval) \/ 
+           ((ls <> nil) /\ isptr original_freelist_pointer)))).
+Proof.
+  intros. unfold mem_mgr_external. Intros sh ls xx original_freelist_pointer.
+  Exists sh ls original_freelist_pointer.
+  entailer!.
+Qed.
+
+
+Definition KF_APD := Build_KallocFreeAPD Tok_APD mem_mgr_external mem_mgr_local_facts.
 
 (* ================================================================= *)
 (** ** Constructing Vprog and Gprog *)
 
 Definition KF_ASI: funspecs := Kalloc_ASI KF_APD _kalloc _kfree.
+Definition KF_imported_specs:funspecs :=  nil.
 Definition KF_internal_specs: funspecs := KF_ASI.
-Definition KF_globals gv  sh ls xx original_freelist_pointer: mpred:= ASI_kalloc.mem_mgr KF_APD gv sh ls xx original_freelist_pointer.
+Definition KF_globals_external gv : mpred:= ASI_kalloc.mem_mgr KF_APD gv.
+(*Definition KF_globals_internal gv sh ls xx original_freelist_pointer: mpred:= ASI_kalloc.mem_mgr KF_APD gv sh ls xx original_freelist_pointer.*)
 Definition KFVprog : varspecs. mk_varspecs kalloc.prog. Defined.
-Definition KFGprog: funspecs := KF_internal_specs.
+Definition KFGprog: funspecs := KF_imported_specs ++ KF_internal_specs.
 
 (* ================================================================= *)
 (** ** Lemma to unfold mem_mgr *)
 
-Lemma mem_mgr_split: 
+Lemma mem_mgr_internal_split: 
  forall (gv:globals) (sh:share) (ls: list val) (xx:Z) (original_freelist_pointer:val),
-  mem_mgr gv sh ls xx original_freelist_pointer
+  mem_mgr_internal gv sh ls xx original_freelist_pointer
   = 
   !! (writable_share sh /\
         is_pointer_or_null original_freelist_pointer /\
@@ -141,9 +181,50 @@ Lemma mem_mgr_split:
       (freelistrep sh ls original_freelist_pointer)).
 Proof.
   intros. apply pred_ext.
-  - unfold mem_mgr. entailer!.
-  - unfold mem_mgr. entailer!.
+  - unfold mem_mgr_internal. entailer!.
+  - unfold mem_mgr_internal. entailer!.
 Qed.
 
+Lemma mem_mgr_external_split: 
+ forall (gv:globals),
+  mem_mgr_external gv 
+  = 
+  EX (sh : share), EX (ls: list val), EX (xx:Z), EX (original_freelist_pointer:val),
+  !! (writable_share sh /\
+        is_pointer_or_null original_freelist_pointer /\
+              (((ls = nil) /\ original_freelist_pointer = nullval) \/ 
+              ((ls <> nil) /\ isptr original_freelist_pointer))
+        ) &&
+      (sepcon (data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem))
+      (freelistrep sh ls original_freelist_pointer)).
+Proof.
+  intros. apply pred_ext.
+  - unfold mem_mgr_external. entailer!.
+  Exists sh ls xx original_freelist_pointer. entailer!.
+  - unfold mem_mgr_external. entailer!.
+  Exists sh ls xx original_freelist_pointer. entailer!.
+Qed.
+
+
+(*************************)
+
+(* ================================================================= *)
+
+(* ################################################################# *)
+(** * Constructing the Component and the VSU *)
+
+Definition KF_Externs : funspecs := nil.
+
+Definition MallocFreeVSU: @VSU NullExtension.Espec
+         KF_Externs KF_imported_specs ltac:(QPprog prog) KF_ASI KF_globals_external.
+  Proof. 
+ mkVSU prog KF_internal_specs.
+    (*- dmit. solve_SF_internal body_kalloc.
+    - solve_SF_internal body_kfree.
+    - solve_SF_internal body_exit.
+    - apply initialize; auto.*)
+Admitted.
+
 Ltac start_function_hint ::= idtac. (* no hint reminder *)
+
 

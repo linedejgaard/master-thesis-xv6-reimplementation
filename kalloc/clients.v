@@ -15,10 +15,11 @@ Module Info.
   Definition abi := "macos".
   Definition bitsize := 64.
   Definition big_endian := false.
-  Definition source_file := "kalloc.c".
+  Definition source_file := "clients.c".
   Definition normalized := true.
 End Info.
 
+Definition _X : ident := $"X".
 Definition ___builtin_annot : ident := $"__builtin_annot".
 Definition ___builtin_annot_intval : ident := $"__builtin_annot_intval".
 Definition ___builtin_bswap : ident := $"__builtin_bswap".
@@ -74,89 +75,369 @@ Definition ___compcert_va_composite : ident := $"__compcert_va_composite".
 Definition ___compcert_va_float64 : ident := $"__compcert_va_float64".
 Definition ___compcert_va_int32 : ident := $"__compcert_va_int32".
 Definition ___compcert_va_int64 : ident := $"__compcert_va_int64".
-Definition _freelist : ident := $"freelist".
+Definition _data : ident := $"data".
+Definition _i : ident := $"i".
 Definition _kalloc : ident := $"kalloc".
+Definition _kalloc_int_array : ident := $"kalloc_int_array".
+Definition _kalloc_write_42 : ident := $"kalloc_write_42".
+Definition _kalloc_write_42_kfree : ident := $"kalloc_write_42_kfree".
+Definition _kalloc_write_42_kfree_kfree : ident := $"kalloc_write_42_kfree_kfree".
+Definition _kalloc_write_pipe : ident := $"kalloc_write_pipe".
 Definition _kfree : ident := $"kfree".
-Definition _kmem : ident := $"kmem".
+Definition _kfree_kalloc : ident := $"kfree_kalloc".
+Definition _kfree_kalloc_kfree_kalloc : ident := $"kfree_kalloc_kfree_kalloc".
+Definition _kfree_kalloc_twice : ident := $"kfree_kalloc_twice".
+Definition _kfree_kfree_kalloc : ident := $"kfree_kfree_kalloc".
+Definition _kfree_kfree_kalloc_loop : ident := $"kfree_kfree_kalloc_loop".
+Definition _kfree_loop : ident := $"kfree_loop".
+Definition _kfree_loop_kalloc : ident := $"kfree_loop_kalloc".
 Definition _main : ident := $"main".
-Definition _next : ident := $"next".
+Definition _n : ident := $"n".
+Definition _nread : ident := $"nread".
+Definition _nwrite : ident := $"nwrite".
 Definition _pa : ident := $"pa".
-Definition _r : ident := $"r".
-Definition _run : ident := $"run".
-Definition _struct_kmem : ident := $"struct_kmem".
-Definition _xx : ident := $"xx".
+Definition _pa1 : ident := $"pa1".
+Definition _pa2 : ident := $"pa2".
+Definition _pa_start : ident := $"pa_start".
+Definition _pi : ident := $"pi".
+Definition _pipe : ident := $"pipe".
+Definition _readopen : ident := $"readopen".
+Definition _writeopen : ident := $"writeopen".
 Definition _t'1 : ident := 128%positive.
 
-Definition v_kmem := {|
-  gvar_info := (Tstruct _struct_kmem noattr);
-  gvar_init := (Init_space 16 :: nil);
-  gvar_readonly := false;
-  gvar_volatile := false
-|}.
-
-Definition f_kfree := {|
-  fn_return := tvoid;
+Definition f_kfree_kalloc := {|
+  fn_return := (tptr tvoid);
   fn_callconv := cc_default;
   fn_params := ((_pa, (tptr tvoid)) :: nil);
   fn_vars := nil;
-  fn_temps := ((_r, (tptr (Tstruct _run noattr))) ::
-               (_t'1, (tptr (Tstruct _run noattr))) :: nil);
+  fn_temps := ((_t'1, (tptr tvoid)) :: nil);
   fn_body :=
 (Ssequence
-  (Sset _r (Ecast (Etempvar _pa (tptr tvoid)) (tptr (Tstruct _run noattr))))
-  (Sifthenelse (Etempvar _r (tptr (Tstruct _run noattr)))
-    (Ssequence
-      (Ssequence
-        (Sset _t'1
-          (Efield (Evar _kmem (Tstruct _struct_kmem noattr)) _freelist
-            (tptr (Tstruct _run noattr))))
-        (Sassign
-          (Efield
-            (Ederef (Etempvar _r (tptr (Tstruct _run noattr)))
-              (Tstruct _run noattr)) _next (tptr (Tstruct _run noattr)))
-          (Etempvar _t'1 (tptr (Tstruct _run noattr)))))
-      (Sassign
-        (Efield (Evar _kmem (Tstruct _struct_kmem noattr)) _freelist
-          (tptr (Tstruct _run noattr)))
-        (Etempvar _r (tptr (Tstruct _run noattr)))))
-    Sskip))
+  (Scall None
+    (Evar _kfree (Tfunction ((tptr tvoid) :: nil) tvoid cc_default))
+    ((Etempvar _pa (tptr tvoid)) :: nil))
+  (Ssequence
+    (Scall (Some _t'1) (Evar _kalloc (Tfunction nil (tptr tvoid) cc_default))
+      nil)
+    (Sreturn (Some (Etempvar _t'1 (tptr tvoid))))))
 |}.
 
-Definition f_kalloc := {|
-  fn_return := (tptr tvoid);
+Definition f_kalloc_write_42 := {|
+  fn_return := tint;
   fn_callconv := cc_default;
   fn_params := nil;
   fn_vars := nil;
-  fn_temps := ((_r, (tptr (Tstruct _run noattr))) ::
-               (_t'1, (tptr (Tstruct _run noattr))) :: nil);
+  fn_temps := ((_pa, (tptr tint)) :: (_X, tint) :: (_t'1, (tptr tvoid)) ::
+               nil);
   fn_body :=
 (Ssequence
-  (Sset _r
-    (Efield (Evar _kmem (Tstruct _struct_kmem noattr)) _freelist
-      (tptr (Tstruct _run noattr))))
+  (Sset _pa (Ecast (Econst_int (Int.repr 0) tint) (tptr tint)))
   (Ssequence
-    (Sifthenelse (Etempvar _r (tptr (Tstruct _run noattr)))
+    (Ssequence
+      (Scall (Some _t'1)
+        (Evar _kalloc (Tfunction nil (tptr tvoid) cc_default)) nil)
+      (Sset _pa (Ecast (Etempvar _t'1 (tptr tvoid)) (tptr tint))))
+    (Ssequence
+      (Sifthenelse (Etempvar _pa (tptr tint))
+        (Ssequence
+          (Sassign (Ederef (Etempvar _pa (tptr tint)) tint)
+            (Econst_int (Int.repr 42) tint))
+          (Ssequence
+            (Sset _X (Ederef (Etempvar _pa (tptr tint)) tint))
+            (Sreturn (Some (Etempvar _X tint)))))
+        Sskip)
+      (Sreturn (Some (Econst_int (Int.repr 0) tint))))))
+|}.
+
+Definition f_kalloc_write_42_kfree := {|
+  fn_return := tint;
+  fn_callconv := cc_default;
+  fn_params := nil;
+  fn_vars := nil;
+  fn_temps := ((_pa, (tptr tint)) :: (_X, tint) :: (_t'1, (tptr tvoid)) ::
+               nil);
+  fn_body :=
+(Ssequence
+  (Sset _pa (Ecast (Econst_int (Int.repr 0) tint) (tptr tint)))
+  (Ssequence
+    (Ssequence
+      (Scall (Some _t'1)
+        (Evar _kalloc (Tfunction nil (tptr tvoid) cc_default)) nil)
+      (Sset _pa (Ecast (Etempvar _t'1 (tptr tvoid)) (tptr tint))))
+    (Ssequence
+      (Sifthenelse (Etempvar _pa (tptr tint))
+        (Ssequence
+          (Sassign (Ederef (Etempvar _pa (tptr tint)) tint)
+            (Econst_int (Int.repr 42) tint))
+          (Ssequence
+            (Sset _X (Ederef (Etempvar _pa (tptr tint)) tint))
+            (Ssequence
+              (Scall None
+                (Evar _kfree (Tfunction ((tptr tvoid) :: nil) tvoid
+                               cc_default))
+                ((Etempvar _pa (tptr tint)) :: nil))
+              (Sreturn (Some (Etempvar _X tint))))))
+        Sskip)
+      (Sreturn (Some (Econst_int (Int.repr 0) tint))))))
+|}.
+
+Definition f_kalloc_write_pipe := {|
+  fn_return := tvoid;
+  fn_callconv := cc_default;
+  fn_params := nil;
+  fn_vars := nil;
+  fn_temps := ((_pi, (tptr (Tstruct _pipe noattr))) ::
+               (_t'1, (tptr tvoid)) :: nil);
+  fn_body :=
+(Ssequence
+  (Sset _pi
+    (Ecast (Econst_int (Int.repr 0) tint) (tptr (Tstruct _pipe noattr))))
+  (Ssequence
+    (Ssequence
+      (Scall (Some _t'1)
+        (Evar _kalloc (Tfunction nil (tptr tvoid) cc_default)) nil)
+      (Sset _pi
+        (Ecast (Etempvar _t'1 (tptr tvoid)) (tptr (Tstruct _pipe noattr)))))
+    (Sifthenelse (Etempvar _pi (tptr (Tstruct _pipe noattr)))
       (Ssequence
-        (Sset _t'1
-          (Efield
-            (Ederef (Etempvar _r (tptr (Tstruct _run noattr)))
-              (Tstruct _run noattr)) _next (tptr (Tstruct _run noattr))))
         (Sassign
-          (Efield (Evar _kmem (Tstruct _struct_kmem noattr)) _freelist
-            (tptr (Tstruct _run noattr)))
-          (Etempvar _t'1 (tptr (Tstruct _run noattr)))))
-      Sskip)
-    (Sreturn (Some (Ecast (Etempvar _r (tptr (Tstruct _run noattr)))
-                     (tptr tvoid))))))
+          (Efield
+            (Ederef (Etempvar _pi (tptr (Tstruct _pipe noattr)))
+              (Tstruct _pipe noattr)) _readopen tint)
+          (Econst_int (Int.repr 1) tint))
+        (Ssequence
+          (Sassign
+            (Efield
+              (Ederef (Etempvar _pi (tptr (Tstruct _pipe noattr)))
+                (Tstruct _pipe noattr)) _writeopen tint)
+            (Econst_int (Int.repr 1) tint))
+          (Ssequence
+            (Sassign
+              (Efield
+                (Ederef (Etempvar _pi (tptr (Tstruct _pipe noattr)))
+                  (Tstruct _pipe noattr)) _nwrite tuint)
+              (Econst_int (Int.repr 0) tint))
+            (Sassign
+              (Efield
+                (Ederef (Etempvar _pi (tptr (Tstruct _pipe noattr)))
+                  (Tstruct _pipe noattr)) _nread tuint)
+              (Econst_int (Int.repr 0) tint)))))
+      Sskip)))
+|}.
+
+Definition f_kfree_kalloc_twice := {|
+  fn_return := (tptr tvoid);
+  fn_callconv := cc_default;
+  fn_params := ((_pa1, (tptr tvoid)) :: (_pa2, (tptr tvoid)) :: nil);
+  fn_vars := nil;
+  fn_temps := ((_t'1, (tptr tvoid)) :: nil);
+  fn_body :=
+(Ssequence
+  (Scall None
+    (Evar _kfree_kalloc (Tfunction ((tptr tvoid) :: nil) (tptr tvoid)
+                          cc_default)) ((Etempvar _pa1 (tptr tvoid)) :: nil))
+  (Ssequence
+    (Scall (Some _t'1)
+      (Evar _kfree_kalloc (Tfunction ((tptr tvoid) :: nil) (tptr tvoid)
+                            cc_default))
+      ((Etempvar _pa2 (tptr tvoid)) :: nil))
+    (Sreturn (Some (Etempvar _t'1 (tptr tvoid))))))
+|}.
+
+Definition f_kfree_kalloc_kfree_kalloc := {|
+  fn_return := (tptr tvoid);
+  fn_callconv := cc_default;
+  fn_params := ((_pa1, (tptr tvoid)) :: (_pa2, (tptr tvoid)) :: nil);
+  fn_vars := nil;
+  fn_temps := ((_t'1, (tptr tvoid)) :: nil);
+  fn_body :=
+(Ssequence
+  (Scall None
+    (Evar _kfree (Tfunction ((tptr tvoid) :: nil) tvoid cc_default))
+    ((Etempvar _pa1 (tptr tvoid)) :: nil))
+  (Ssequence
+    (Scall None (Evar _kalloc (Tfunction nil (tptr tvoid) cc_default)) nil)
+    (Ssequence
+      (Scall None
+        (Evar _kfree (Tfunction ((tptr tvoid) :: nil) tvoid cc_default))
+        ((Etempvar _pa2 (tptr tvoid)) :: nil))
+      (Ssequence
+        (Scall (Some _t'1)
+          (Evar _kalloc (Tfunction nil (tptr tvoid) cc_default)) nil)
+        (Sreturn (Some (Etempvar _t'1 (tptr tvoid))))))))
+|}.
+
+Definition f_kfree_kfree_kalloc := {|
+  fn_return := (tptr tvoid);
+  fn_callconv := cc_default;
+  fn_params := ((_pa1, (tptr tvoid)) :: (_pa2, (tptr tvoid)) :: nil);
+  fn_vars := nil;
+  fn_temps := ((_t'1, (tptr tvoid)) :: nil);
+  fn_body :=
+(Ssequence
+  (Scall None
+    (Evar _kfree (Tfunction ((tptr tvoid) :: nil) tvoid cc_default))
+    ((Etempvar _pa1 (tptr tvoid)) :: nil))
+  (Ssequence
+    (Scall None
+      (Evar _kfree (Tfunction ((tptr tvoid) :: nil) tvoid cc_default))
+      ((Etempvar _pa2 (tptr tvoid)) :: nil))
+    (Ssequence
+      (Scall (Some _t'1)
+        (Evar _kalloc (Tfunction nil (tptr tvoid) cc_default)) nil)
+      (Sreturn (Some (Etempvar _t'1 (tptr tvoid)))))))
+|}.
+
+Definition f_kalloc_write_42_kfree_kfree := {|
+  fn_return := tint;
+  fn_callconv := cc_default;
+  fn_params := nil;
+  fn_vars := nil;
+  fn_temps := ((_pa, (tptr tint)) :: (_X, tint) :: (_t'1, (tptr tvoid)) ::
+               nil);
+  fn_body :=
+(Ssequence
+  (Sset _pa (Ecast (Econst_int (Int.repr 0) tint) (tptr tint)))
+  (Ssequence
+    (Ssequence
+      (Scall (Some _t'1)
+        (Evar _kalloc (Tfunction nil (tptr tvoid) cc_default)) nil)
+      (Sset _pa (Ecast (Etempvar _t'1 (tptr tvoid)) (tptr tint))))
+    (Ssequence
+      (Sifthenelse (Etempvar _pa (tptr tint))
+        (Ssequence
+          (Sassign (Ederef (Etempvar _pa (tptr tint)) tint)
+            (Econst_int (Int.repr 42) tint))
+          (Ssequence
+            (Sset _X (Ederef (Etempvar _pa (tptr tint)) tint))
+            (Ssequence
+              (Scall None
+                (Evar _kfree (Tfunction ((tptr tvoid) :: nil) tvoid
+                               cc_default))
+                ((Etempvar _pa (tptr tint)) :: nil))
+              (Sreturn (Some (Etempvar _X tint))))))
+        Sskip)
+      (Ssequence
+        (Scall None
+          (Evar _kfree (Tfunction ((tptr tvoid) :: nil) tvoid cc_default))
+          ((Etempvar _pa (tptr tint)) :: nil))
+        (Sreturn (Some (Econst_int (Int.repr 0) tint)))))))
+|}.
+
+Definition f_kfree_kfree_kalloc_loop := {|
+  fn_return := (tptr tvoid);
+  fn_callconv := cc_default;
+  fn_params := ((_pa_start, (tptr tvoid)) :: nil);
+  fn_vars := nil;
+  fn_temps := ((_i, tint) :: (_t'1, (tptr tvoid)) :: nil);
+  fn_body :=
+(Ssequence
+  (Sset _i (Econst_int (Int.repr 0) tint))
+  (Ssequence
+    (Swhile
+      (Ebinop Olt (Etempvar _i tint) (Econst_int (Int.repr 2) tint) tint)
+      (Ssequence
+        (Scall None
+          (Evar _kfree (Tfunction ((tptr tvoid) :: nil) tvoid cc_default))
+          ((Etempvar _pa_start (tptr tvoid)) :: nil))
+        (Ssequence
+          (Sset _pa_start
+            (Ebinop Oadd
+              (Ecast (Etempvar _pa_start (tptr tvoid)) (tptr tschar))
+              (Econst_int (Int.repr 4096) tint) (tptr tschar)))
+          (Sset _i
+            (Ebinop Oadd (Etempvar _i tint) (Econst_int (Int.repr 1) tint)
+              tint)))))
+    (Ssequence
+      (Scall (Some _t'1)
+        (Evar _kalloc (Tfunction nil (tptr tvoid) cc_default)) nil)
+      (Sreturn (Some (Etempvar _t'1 (tptr tvoid)))))))
+|}.
+
+Definition f_kfree_loop := {|
+  fn_return := tvoid;
+  fn_callconv := cc_default;
+  fn_params := ((_pa_start, (tptr tvoid)) :: (_n, tint) :: nil);
+  fn_vars := nil;
+  fn_temps := ((_i, tint) :: nil);
+  fn_body :=
+(Ssequence
+  (Sset _i (Econst_int (Int.repr 0) tint))
+  (Swhile
+    (Ebinop Olt (Etempvar _i tint) (Etempvar _n tint) tint)
+    (Ssequence
+      (Scall None
+        (Evar _kfree (Tfunction ((tptr tvoid) :: nil) tvoid cc_default))
+        ((Etempvar _pa_start (tptr tvoid)) :: nil))
+      (Ssequence
+        (Sset _pa_start
+          (Ebinop Oadd
+            (Ecast (Etempvar _pa_start (tptr tvoid)) (tptr tschar))
+            (Econst_int (Int.repr 4096) tint) (tptr tschar)))
+        (Sset _i
+          (Ebinop Oadd (Etempvar _i tint) (Econst_int (Int.repr 1) tint)
+            tint))))))
+|}.
+
+Definition f_kfree_loop_kalloc := {|
+  fn_return := (tptr tvoid);
+  fn_callconv := cc_default;
+  fn_params := ((_pa_start, (tptr tvoid)) :: (_n, tint) :: nil);
+  fn_vars := nil;
+  fn_temps := ((_t'1, (tptr tvoid)) :: nil);
+  fn_body :=
+(Ssequence
+  (Scall None
+    (Evar _kfree_loop (Tfunction ((tptr tvoid) :: tint :: nil) tvoid
+                        cc_default))
+    ((Etempvar _pa_start (tptr tvoid)) :: (Etempvar _n tint) :: nil))
+  (Ssequence
+    (Scall (Some _t'1) (Evar _kalloc (Tfunction nil (tptr tvoid) cc_default))
+      nil)
+    (Sreturn (Some (Etempvar _t'1 (tptr tvoid))))))
+|}.
+
+Definition f_kalloc_int_array := {|
+  fn_return := (tptr tint);
+  fn_callconv := cc_default;
+  fn_params := ((_n, tint) :: nil);
+  fn_vars := nil;
+  fn_temps := ((_pa, (tptr tint)) :: (_i, tint) :: (_t'1, (tptr tvoid)) ::
+               nil);
+  fn_body :=
+(Ssequence
+  (Sset _pa (Ecast (Econst_int (Int.repr 0) tint) (tptr tint)))
+  (Ssequence
+    (Ssequence
+      (Scall (Some _t'1)
+        (Evar _kalloc (Tfunction nil (tptr tvoid) cc_default)) nil)
+      (Sset _pa (Ecast (Etempvar _t'1 (tptr tvoid)) (tptr tint))))
+    (Ssequence
+      (Sifthenelse (Etempvar _pa (tptr tint))
+        (Ssequence
+          (Sset _i (Econst_int (Int.repr 0) tint))
+          (Ssequence
+            (Swhile
+              (Ebinop Olt (Etempvar _i tint) (Etempvar _n tint) tint)
+              (Ssequence
+                (Sassign
+                  (Ederef
+                    (Ebinop Oadd (Etempvar _pa (tptr tint))
+                      (Etempvar _i tint) (tptr tint)) tint)
+                  (Econst_int (Int.repr 42) tint))
+                (Sset _i
+                  (Ebinop Oadd (Etempvar _i tint)
+                    (Econst_int (Int.repr 1) tint) tint))))
+            (Sreturn (Some (Etempvar _pa (tptr tint))))))
+        Sskip)
+      (Sreturn (Some (Econst_int (Int.repr 0) tint))))))
 |}.
 
 Definition composites : list composite_definition :=
-(Composite _run Struct
-   (Member_plain _next (tptr (Tstruct _run noattr)) :: nil)
-   noattr ::
- Composite _struct_kmem Struct
-   (Member_plain _xx tint ::
-    Member_plain _freelist (tptr (Tstruct _run noattr)) :: nil)
+(Composite _pipe Struct
+   (Member_plain _data (tarray tschar 512) :: Member_plain _nread tuint ::
+    Member_plain _nwrite tuint :: Member_plain _readopen tint ::
+    Member_plain _writeopen tint :: nil)
    noattr :: nil).
 
 Definition global_definitions : list (ident * globdef fundef type) :=
@@ -410,11 +691,32 @@ Definition global_definitions : list (ident * globdef fundef type) :=
                      {|cc_vararg:=(Some 1); cc_unproto:=false; cc_structret:=false|}))
      (tint :: nil) tvoid
      {|cc_vararg:=(Some 1); cc_unproto:=false; cc_structret:=false|})) ::
- (_kmem, Gvar v_kmem) :: (_kfree, Gfun(Internal f_kfree)) ::
- (_kalloc, Gfun(Internal f_kalloc)) :: nil).
+ (_kalloc,
+   Gfun(External (EF_external "kalloc" (mksignature nil AST.Xptr cc_default))
+     nil (tptr tvoid) cc_default)) ::
+ (_kfree,
+   Gfun(External (EF_external "kfree"
+                   (mksignature (AST.Xptr :: nil) AST.Xvoid cc_default))
+     ((tptr tvoid) :: nil) tvoid cc_default)) ::
+ (_kfree_kalloc, Gfun(Internal f_kfree_kalloc)) ::
+ (_kalloc_write_42, Gfun(Internal f_kalloc_write_42)) ::
+ (_kalloc_write_42_kfree, Gfun(Internal f_kalloc_write_42_kfree)) ::
+ (_kalloc_write_pipe, Gfun(Internal f_kalloc_write_pipe)) ::
+ (_kfree_kalloc_twice, Gfun(Internal f_kfree_kalloc_twice)) ::
+ (_kfree_kalloc_kfree_kalloc, Gfun(Internal f_kfree_kalloc_kfree_kalloc)) ::
+ (_kfree_kfree_kalloc, Gfun(Internal f_kfree_kfree_kalloc)) ::
+ (_kalloc_write_42_kfree_kfree, Gfun(Internal f_kalloc_write_42_kfree_kfree)) ::
+ (_kfree_kfree_kalloc_loop, Gfun(Internal f_kfree_kfree_kalloc_loop)) ::
+ (_kfree_loop, Gfun(Internal f_kfree_loop)) ::
+ (_kfree_loop_kalloc, Gfun(Internal f_kfree_loop_kalloc)) ::
+ (_kalloc_int_array, Gfun(Internal f_kalloc_int_array)) :: nil).
 
 Definition public_idents : list ident :=
-(_kalloc :: _kfree :: _kmem :: ___builtin_debug ::
+(_kalloc_int_array :: _kfree_loop_kalloc :: _kfree_loop ::
+ _kfree_kfree_kalloc_loop :: _kalloc_write_42_kfree_kfree ::
+ _kfree_kfree_kalloc :: _kfree_kalloc_kfree_kalloc :: _kfree_kalloc_twice ::
+ _kalloc_write_pipe :: _kalloc_write_42_kfree :: _kalloc_write_42 ::
+ _kfree_kalloc :: _kfree :: _kalloc :: ___builtin_debug ::
  ___builtin_write32_reversed :: ___builtin_write16_reversed ::
  ___builtin_read32_reversed :: ___builtin_read16_reversed ::
  ___builtin_fnmsub :: ___builtin_fnmadd :: ___builtin_fmsub ::
