@@ -3,10 +3,12 @@ Require Import VST.floyd.proofauto.
 Require Import VC.tactics.
 Require Import VC.ASI_kalloc.
 Require Import VC.kalloc.
-Require Import VC.kallocfun.
 
+#[export] Instance CompSpecs : compspecs. make_compspecs kalloc.prog. Defined.
 
-(* THIS SHOULD CONTAIN ANY INTERNAL FUNCTIONS... I DON'T HAVE ANY *)
+(* ================================================================= *)
+(** ** Size-based kalloc tokens *)
+
 Definition kalloc_token_sz (sh: share) (n: Z) (p: val) : mpred :=
   !! ((*field_compatible t_run [] p /\*)
       0 < n <= PGSIZE
@@ -48,7 +50,57 @@ Proof.
   - unfold kalloc_token_sz. entailer!.
 Qed.
 
-(***** kalloc token size ******)
+
+(* ================================================================= *)
+(** ** Defining freelistrep *)
+
+Definition PGSIZE : Z := 4096.
+Definition t_run := Tstruct _run noattr.
+Definition t_struct_kmem := Tstruct _struct_kmem noattr.
+
+(* NOTE: assume PGSIZE is greater than sizeof t_run *)
+Fixpoint freelistrep (sh: share) (il: list val) (p: val) : mpred := (* the list contains the next*)
+ match il with
+ | next::il' =>
+        !! malloc_compatible (PGSIZE) p &&  (* p is compatible with a memory block of size sizeof theader. *)
+        (sepcon (data_at sh t_run next p) (* at the location p, there is a t_run structure with the value next *)
+        (freelistrep sh il' next) (* "*" ensures no loops... *))
+ | nil => !! (p = nullval) && emp
+ end.
+
+Arguments freelistrep sh il p : simpl never.
+
+Lemma freelistrep_local_prop: forall sh n p, 
+   freelistrep sh n p |--  !! (is_pointer_or_null p /\ (n=nil<->p=nullval) /\ ((n <> nil)<->isptr p))%nat.
+Proof.
+  intros.
+  induction n as [| n' IH].
+  - unfold freelistrep. entailer!. split; auto.
+    + split; auto.
+    + split; try lia. intros. simpl in *. auto_contradict. intros; auto_contradict.
+  - unfold freelistrep. destruct p; entailer!. split.
+    + split; intros; inversion H2.
+    + split; intros; auto. unfold not; intros. auto_contradict.
+   Qed.
+#[export] Hint Resolve freelistrep_local_prop : saturate_local.
+
+Lemma freelistrep_valid_pointer:
+  forall sh n p, 
+  readable_share sh ->
+   freelistrep sh n p |-- valid_pointer p.
+Proof.
+  intros. destruct n.
+  - unfold freelistrep. entailer!.
+  - unfold freelistrep. entailer.
+Qed. 
+#[export] Hint Resolve freelistrep_valid_pointer : valid_pointer.
+
+Ltac refold_freelistrep :=
+  unfold freelistrep;
+  fold freelistrep.
+
+(* ================================================================= *)
+(** ** Defining APD: use tokens based on size *)
 
 Definition Tok_APD := Build_KallocTokenAPD kalloc_token_sz kalloc_token_sz_valid_pointer
   kalloc_token_sz_local_facts.
@@ -62,7 +114,20 @@ Definition mem_mgr (gv: globals) (sh : share) (ls: list val) (xx:Z) (original_fr
       (sepcon (data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem))
       (freelistrep sh ls original_freelist_pointer)).
 
-(************ lemmas etc. *************)
+Definition KF_APD := Build_KallocFreeAPD Tok_APD mem_mgr.
+
+(* ================================================================= *)
+(** ** Constructing Vprog and Gprog *)
+
+Definition KF_ASI: funspecs := Kalloc_ASI KF_APD _kalloc _kfree.
+Definition KF_internal_specs: funspecs := KF_ASI.
+Definition KF_globals gv  sh ls xx original_freelist_pointer: mpred:= ASI_kalloc.mem_mgr KF_APD gv sh ls xx original_freelist_pointer.
+Definition KFVprog : varspecs. mk_varspecs kalloc.prog. Defined.
+Definition KFGprog: funspecs := KF_internal_specs.
+
+(* ================================================================= *)
+(** ** Lemma to unfold mem_mgr *)
+
 Lemma mem_mgr_split: 
  forall (gv:globals) (sh:share) (ls: list val) (xx:Z) (original_freelist_pointer:val),
   mem_mgr gv sh ls xx original_freelist_pointer
@@ -79,25 +144,6 @@ Proof.
   - unfold mem_mgr. entailer!.
   - unfold mem_mgr. entailer!.
 Qed.
-
-(************ lemmas etc. end *************)
-
-
-Definition KF_APD := Build_KallocFreeAPD Tok_APD mem_mgr.
-
-(*+ specs of private functions *)
-
-
-Definition MF_Vprog : varspecs. mk_varspecs prog. Defined.
-
-Definition MF_internal_specs: funspecs :=
-    [].
-   (*++ _malloc _free.*)
-
-(*Definition MF_Imports:funspecs := Mmap0_ASI _mmap0 _munmap.*)
-
-Definition MF_Gprog:funspecs := (*MF_Imports ++*) MF_internal_specs.
-(* I don't think I have any internal specs netiher MF imports..*)
 
 Ltac start_function_hint ::= idtac. (* no hint reminder *)
 

@@ -1,32 +1,46 @@
-(** abstract spec interface *)
+(** Kalloc Specification
+
+    This specification is tight to the c-implementations
+    kalloc and kfree.
+
+    It utilizes the KallocTokenAPD from ASI_kalloc in 
+    type_kalloc_token.
+
+*)
+
 Require Import VST.floyd.proofauto.
 Require Import VC.ASI_kalloc.
 Require Import VC.kalloc.
-Require Import VC.kallocfun.
+(*Require Import VC.kallocfun.*)
 Require Import VC.kalloc_kfree_definitions.
 
 Global Open Scope funspec_scope.
 
 
-(******************************)
+(* ================================================================= *)
+(** ** Type-based kalloc tokens *)
 
-(*** kalloc token type... *)
-Definition my_kalloc_token K {cs: compspecs} sh t p :=
+Definition type_kalloc_token K {cs: compspecs} sh t p :=
   !! field_compatible t [] p && (* this should work because of memory_block_data_at_*)
   (kalloc_token' K sh (sizeof t) p).
 
-Lemma my_kalloc_token_valid_pointer:
+Lemma type_kalloc_token_valid_pointer:
   forall K (sh : share) (t : type) (p : val),
-  my_kalloc_token K sh t p |-- valid_pointer p.
+  type_kalloc_token K sh t p |-- valid_pointer p.
 Proof.
   intros. 
-  unfold my_kalloc_token. unfold kalloc_token_sz. entailer!.
+  unfold type_kalloc_token. entailer!.
 Qed.
+
+(**
+  Automates the proof by trying to prove a goal of the form:
+      |- <kalloc_token> |-- valid_pointer p
+*)
 
 Ltac kalloc_token_data_at_valid_pointer :=
   match goal with |- ?A |-- valid_pointer ?p =>
    match A with
-   | context [my_kalloc_token _ _ ?t p] =>
+   | context [type_kalloc_token _ _ ?t p] =>
          try (assert (sizeof t <= 0)
 	  by (simpl sizeof in *; rep_lia); fail 1);
          try (assert (sizeof t > 0)
@@ -41,33 +55,37 @@ Ltac kalloc_token_data_at_valid_pointer :=
    end
  end.
 
-#[export] Hint Extern 1 (my_kalloc_token _ _ _ _ |-- valid_pointer _) =>
-  (simple apply my_kalloc_token_valid_pointer; data_at_valid_aux) : valid_pointer.
+(** Tell coq to apply the Ltac automatically *)
+#[export] Hint Extern 1 (type_kalloc_token _ _ _ _ |-- valid_pointer _) =>
+  (simple apply type_kalloc_token_valid_pointer; data_at_valid_aux) : valid_pointer.
 #[export] Hint Extern 4 (_ |-- valid_pointer _) => kalloc_token_data_at_valid_pointer : valid_pointer.
 
-Lemma my_kalloc_token_local_facts: forall K {cs: compspecs} sh t p,
-      my_kalloc_token K sh t p |-- !! (field_compatible t [] p /\ malloc_compatible (sizeof t) p).
+Lemma type_kalloc_token_local_facts: forall K {cs: compspecs} sh t p,
+      type_kalloc_token K sh t p |-- !! (field_compatible t [] p /\ malloc_compatible (sizeof t) p).
 Proof. intros.
- unfold my_kalloc_token.
+ unfold type_kalloc_token.
  normalize. rewrite prop_and.
  apply andp_right. apply prop_right; auto.
  apply kalloc_token'_local_facts.
 Qed.
-#[export] Hint Resolve my_kalloc_token_local_facts : saturate_local.
+#[export] Hint Resolve type_kalloc_token_local_facts : saturate_local.
 
 
-Lemma my_kalloc_token_split: 
+Lemma type_kalloc_token_split: 
  forall K (sh: share) (t: type) (p: val),
- my_kalloc_token K (sh) (t) (p)
+ type_kalloc_token K (sh) (t) (p)
   = 
   !! field_compatible t [] p &&
   (kalloc_token' K sh (sizeof t) p).
 Proof.
   intros. apply pred_ext.
-  - unfold my_kalloc_token. entailer.
-  - unfold my_kalloc_token. entailer!.
+  - unfold type_kalloc_token. entailer.
+  - unfold type_kalloc_token. entailer!.
 Qed.
 
+
+(* ================================================================= *)
+(** ** Type-based specification of kalloc and kfree *)
 
 Definition kfree_spec (K:KallocFreeAPD) {cs: compspecs} (t: type) := 
   DECLARE _kfree
@@ -80,7 +98,7 @@ Definition kfree_spec (K:KallocFreeAPD) {cs: compspecs} (t: type) :=
         SEP (
           ASI_kalloc.mem_mgr K gv sh ls xx original_freelist_pointer *
           (if eq_dec new_head nullval then emp
-          else (my_kalloc_token K sh (t) new_head))
+          else (type_kalloc_token K sh (t) new_head))
         )
       POST [ tvoid ]
         PROP()
@@ -111,13 +129,15 @@ POST [ tptr tvoid ]
         (
           EX next ls',
           (!! (next :: ls' = ls) &&
-              my_kalloc_token K sh t original_freelist_pointer *
+              type_kalloc_token K sh t original_freelist_pointer *
               ASI_kalloc.mem_mgr K gv sh ls' xx next
         )
         )
     ).
 
 
+(* ================================================================= *)
+(** ** How to use the type-based specification of kalloc and kfree *)
 
 Lemma kalloc_spec_sub:
   forall  (K:KallocFreeAPD) {cs: compspecs} (t: type), 
@@ -131,7 +151,7 @@ Lemma kalloc_spec_sub:
     if_tac.
     - entailer!. entailer!.
     - entailer!.
-      + entailer!. Exists next ls'. entailer!. unfold my_kalloc_token. 
+      + entailer!. Exists next ls'. entailer!. unfold type_kalloc_token. 
       assert_PROP (field_compatible t [] (eval_id ret_temp x)).
       { entailer!.
         apply malloc_compatible_field_compatible; auto. }
@@ -148,12 +168,23 @@ Proof.
   Exists (sizeof t, v0, g0, s, l, z, v) emp.
   entailer!.
   destruct (EqDec_val v0 nullval) eqn:Heq; entailer.
-  unfold my_kalloc_token. entailer.
+  unfold type_kalloc_token. entailer.
 Qed.
+
+
+(* ================================================================= *)
+(** ** Ltac *)
+
+(** ** 
+  Example usage (assuming kalloc_token' = kalloc_token_sz): 
+    kalloc_token' KF_APD sh (sizeof t_run) new_head
+    |-- type_kalloc_token KF_APD sh t_run new_head
+
+*)
 
 Ltac simplify_kalloc_token :=
   repeat (
     rewrite kalloc_token_sz_split;
-    unfold my_kalloc_token
+    unfold type_kalloc_token
   );
   entailer!.

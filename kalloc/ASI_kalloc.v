@@ -1,8 +1,10 @@
-(** abstract spec interface *)
+(** ** Abstract Specification Interface (ASI) *)
+
 Require Import VST.floyd.proofauto.
 Require Import VC.tactics.
 
-(*Global Open Scope funspec_scope.*)
+(* ================================================================= *)
+(** ** Abstract Predicate Declaration (APD) *)
 
 Record KallocTokenAPD := {
   kalloc_token': share -> Z -> val -> mpred;
@@ -13,12 +15,15 @@ Record KallocTokenAPD := {
 }.
 
 Record KallocFreeAPD := {
-  MF_Tok :> KallocTokenAPD;
+  KF_Tok :> KallocTokenAPD;   (* whenever KallocFreeAPD is used, but a KallocTokenAPD is expected, it is automatically converted *)
   mem_mgr: globals -> share -> list val -> Z -> val -> mpred;
 }.
 
 #[export] Hint Resolve kalloc_token'_valid_pointer : valid_pointer. 
 #[export] Hint Resolve kalloc_token'_local_facts : saturate_local.
+
+(* ================================================================= *)
+(** ** Abstract Specification Interface (ASI) *)
 
 Section Kalloc_ASI.
 Variable K: KallocFreeAPD.
