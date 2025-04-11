@@ -7,13 +7,19 @@ Require Import VC.kalloc.
 #[export] Instance CompSpecs : compspecs. make_compspecs kalloc.prog. Defined.
 
 (* ================================================================= *)
+(** ** Types and defs *)
+
+Definition PGSIZE : Z := 4096.
+Definition t_run := Tstruct _run noattr.
+Definition t_struct_kmem := Tstruct _struct_kmem noattr.
+
+(* ================================================================= *)
 (** ** Size-based kalloc tokens *)
 
 Definition kalloc_token_sz (sh: share) (n: Z) (p: val) : mpred :=
-  !! ((*field_compatible t_run [] p /\*)
+  !! (
       0 < n <= PGSIZE
-      /\ malloc_compatible (n) p 
-      /\ malloc_compatible (PGSIZE) p
+      /\ malloc_compatible n p 
       /\ writable_share sh
       (*/\  maybe some alignment and physical address checks here *))
   && memory_block sh (n) (p).
@@ -40,7 +46,6 @@ forall  (sh: share) (n: Z) (p: val),
   !! ((*field_compatible t_run [] p /\*)
   0 < n <= PGSIZE
   /\ malloc_compatible (n) p 
-  /\ malloc_compatible (PGSIZE) p
   /\ writable_share sh
   (*/\  maybe some alignment and physical address checks here *))
   && memory_block sh (n) (p).
@@ -54,15 +59,11 @@ Qed.
 (* ================================================================= *)
 (** ** Defining freelistrep *)
 
-Definition PGSIZE : Z := 4096.
-Definition t_run := Tstruct _run noattr.
-Definition t_struct_kmem := Tstruct _struct_kmem noattr.
-
 (* NOTE: assume PGSIZE is greater than sizeof t_run *)
 Fixpoint freelistrep (sh: share) (il: list val) (p: val) : mpred := (* the list contains the next*)
  match il with
  | next::il' =>
-        !! malloc_compatible (PGSIZE) p &&  (* p is compatible with a memory block of size sizeof theader. *)
+        !! malloc_compatible (sizeof t_run) p &&  (* p is compatible with a memory block of size sizeof theader. *)
         (sepcon (data_at sh t_run next p) (* at the location p, there is a t_run structure with the value next *)
         (freelistrep sh il' next) (* "*" ensures no loops... *))
  | nil => !! (p = nullval) && emp

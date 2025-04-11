@@ -11,8 +11,7 @@
 Require Import VST.floyd.proofauto.
 Require Import VC.ASI_kalloc.
 Require Import VC.kalloc.
-(*Require Import VC.kallocfun.*)
-Require Import VC.kalloc_kfree_definitions.
+Require Import VC.kallocfun.
 
 Global Open Scope funspec_scope.
 
@@ -114,8 +113,7 @@ Definition kalloc_spec (K:KallocFreeAPD) {cs: compspecs} (t: type) :=
 DECLARE _kalloc
 WITH gv:globals, sh:share, ls: list val, xx:Z, original_freelist_pointer:val
 PRE [ ]
-    PROP(0 <= (sizeof t) <= PGSIZE;
-            complete_legal_cosu_type t = true;
+    PROP(   complete_legal_cosu_type t = true;
             natural_aligned natural_alignment t = true) 
     PARAMS () GLOBALS(gv)
     SEP ( ASI_kalloc.mem_mgr K gv sh ls xx original_freelist_pointer )  

@@ -1,7 +1,7 @@
 Require Import VST.floyd.proofauto.
 
 Require Import VC.ASI_kalloc.
-Require Import VC.kalloc_kfree_definitions.
+Require Import VC.kallocfun.
 Require Import VC.Spec_kalloc.
 Require Import VC.clientsfun.
 Require Import VC.tactics.
@@ -462,7 +462,6 @@ Definition kalloc_int_array_spec : ident * funspec :=
             )
             )
         ).
-Compute (sizeof t_struct_pipe).
 
 Definition KFGprog_clients: funspecs := KFGprog ++ [kalloc_write_pipe_spec; kfree_kalloc_spec; kalloc_write_42_spec; kalloc_write_42_kfree_spec; kfree_loop_spec].
 
@@ -563,7 +562,7 @@ Proof.
         -- if_tac_auto_contradict.
             forward. Exists (Vint (Int.repr 42)).
             unfold KF_globals.
-            inversion H0. rewrite H9; rewrite H10.
+            inversion H0. rewrite H8; rewrite H9.
             entailer!.
         * forward.
 Qed.
@@ -783,7 +782,7 @@ Proof.
         -- if_tac_auto_contradict.
             forward. Exists (Vint (Int.repr 42)).
             unfold KF_globals.
-            inversion H0. rewrite H9; rewrite H10.
+            inversion H0. rewrite H8; rewrite H9.
             entailer!.
         * rewrite H1 in H. auto_contradict.
 Qed.

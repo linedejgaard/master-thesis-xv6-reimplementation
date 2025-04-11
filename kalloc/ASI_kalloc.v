@@ -41,7 +41,7 @@ Definition kfree_spec' :=
         SEP (
           mem_mgr K gv sh ls xx original_freelist_pointer;
           if eq_dec new_head nullval then emp
-          else (kalloc_token' K sh (n) new_head (* memory_block Ews n new_head*))
+          else (kalloc_token' K sh n new_head (* memory_block Ews n new_head*))
         )
       POST [ tvoid ]
         PROP()
@@ -58,7 +58,7 @@ Definition kalloc_spec' :=
 DECLARE kallocID
 WITH n:Z, gv:globals, sh:share, ls: list val, xx:Z, original_freelist_pointer:val
 PRE [ ]
-    PROP(0 <= n <= PGSIZE) 
+    PROP() 
     PARAMS () GLOBALS(gv)
     SEP ( mem_mgr K gv sh ls xx original_freelist_pointer )  
 POST [ tptr tvoid ]
