@@ -255,6 +255,20 @@ Definition mem_mgr (gv: globals) : mpred :=
   data_at Ews (tptr tcell) p (gv _freelist) *
   freelistrep frees p.
 
+Lemma mem_mgr_split:
+forall gv,
+mem_mgr (gv) =
+EX i: Z, EX p: val, EX frees: nat,
+!! (0 <= i <= N) &&
+data_at Ews tint (Vint (Int.repr i)) (gv _pool_index) *
+data_at_ Ews (tarray tcell (N-i))
+   (field_address0 (tarray tcell N) [ArraySubsc i]  (gv _pool)) *
+data_at Ews (tptr tcell) p (gv _freelist) *
+freelistrep frees p.
+Proof.
+intros. unfold mem_mgr. auto.
+Qed.
+
 Definition M : MallocFreeAPD := 
     Build_MallocFreeAPD mem_mgr malloc_token_sz
            malloc_token_sz_valid_pointer malloc_token_sz_local_facts.
@@ -277,7 +291,15 @@ Proof.
   forward_if.
   - forward. Exists (Vlong (Int64.repr 0)). 
     simpl. entailer!.
-  - unfold M. unfold mem_mgr. forward. 
+  - rewrite mem_mgr_split. Intros i p frees. forward.
+  forward_if (p <> nullval).
+  + forward. destruct frees eqn:efrees.
+  * unfold freelistrep. Intros. rewrite H3 in H2; inversion H2.
+  * forward. fold freelistrep. forward. entailer. 
+  unfold freelistrep; fold freelistrep. Exists y. entailer!. apply derives_refl.
+
+  
+  forward. Exists 0. forward. unfold M. re unfold mem_mgr. forward. 
     (*forward_if.
   + induction 
   + induction
