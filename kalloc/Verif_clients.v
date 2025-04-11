@@ -357,6 +357,7 @@ Definition kalloc_write_42_kfree_kfree_spec : ident * funspec :=
                 KF_globals gv  sh ls xx original_freelist_pointer)
             )
         ).
+
 Definition kfree_kfree_kalloc_loop_spec := 
     DECLARE _kfree_kfree_kalloc_loop
     WITH sh : share, pa1:val, original_freelist_pointer:val, xx:Z, gv:globals, ls : list val, next:val
@@ -379,32 +380,6 @@ Definition kfree_kfree_kalloc_loop_spec :=
                 kalloc_token' KF_APD sh (sizeof t_run) (offset_val PGSIZE pa1) *
                 KF_globals gv sh (original_freelist_pointer::ls) xx pa1
                 ).
-
-Definition kfree_loop_spec := 
-    DECLARE _kfree_loop
-    WITH sh : share, pa1:val, original_freelist_pointer:val, xx:Z, gv:globals, ls : list val, n:Z
-    PRE [ tptr tvoid, tint ]
-        PROP(
-            isptr pa1 /\
-            Int.min_signed <= Int.signed (Int.repr n) + Int.signed (Int.repr 1) <= Int.max_signed /\
-            0 <= n <= Int.max_signed
-        ) 
-        PARAMS (pa1; Vint (Int.repr n)) GLOBALS(gv)
-        SEP (
-            kalloc_tokens Tok_APD sh (Z.to_nat n)%nat pa1 PGSIZE t_run *
-            KF_globals gv sh ls xx original_freelist_pointer
-        )
-    POST [ tvoid ]
-        EX head, EX added_elem, (* TODO: fix top and next is the same?? *)
-        PROP( 
-            added_elem = (pointers_with_original_head (Z.to_nat n) (pa1) PGSIZE original_freelist_pointer) /\
-            head = (hd nullval ((pointers_with_original_head (Z.to_nat n+1) (pa1) PGSIZE original_freelist_pointer)++ls))
-            )
-            RETURN () (* we return the head like in the pop function*)
-            SEP 
-            (
-                KF_globals gv sh (added_elem++ls) xx head
-            ).
 
 Definition kfree_loop_kalloc_spec := 
     DECLARE _kfree_loop_kalloc
@@ -449,7 +424,53 @@ Definition kfree_loop_kalloc_spec :=
                 n_eq_0_case
                 ).
 
-Definition KFGprog_clients: funspecs := KFGprog ++ [kalloc_write_pipe_spec; kfree_kalloc_spec; kalloc_write_42_spec; kalloc_write_42_kfree_spec; kfree_loop_spec].
+Definition kfree_loop_kalloc_usage_spec := 
+    DECLARE _kfree_loop_kalloc_usage
+    WITH sh : share, pa1:val, original_freelist_pointer:val, xx:Z, gv:globals, ls : list val, n:Z
+    PRE [ tptr tvoid, tint ]
+        PROP(
+            isptr pa1 /\
+            Int.min_signed <= Int.signed (Int.repr n) + Int.signed (Int.repr 1) <= Int.max_signed /\
+            0 <= n <= Int.max_signed
+        ) 
+        PARAMS (pa1; Vint (Int.repr n)) GLOBALS(gv)
+        SEP (
+            kalloc_tokens Tok_APD sh (Z.to_nat n)%nat pa1 PGSIZE t_run *
+            KF_globals gv sh ls xx original_freelist_pointer
+        )
+    POST [ tint ]
+        EX r, EX head, EX added_elem, (* TODO: fix top and next is the same?? *)
+        PROP( 
+            (* before alloc *)
+            added_elem = (pointers_with_original_head (Z.to_nat n) (pa1) PGSIZE original_freelist_pointer) /\
+            head = (hd nullval ((pointers_with_original_head (Z.to_nat n+1) (pa1) PGSIZE original_freelist_pointer)++ls))
+            )
+            RETURN (r) (* we return the head like in the pop function*)
+            SEP 
+            (
+            let n_eq_0_case :=
+                if eq_dec original_freelist_pointer nullval then
+                (!! (r = Vint (Int.repr 0)) &&
+                emp * KF_globals gv sh ls xx original_freelist_pointer)
+                else
+                    (EX next, EX ls',
+                        !! (next :: ls' = ls /\ r = Vint (Int.repr 42) /\ head = original_freelist_pointer) &&
+                        KF_globals gv sh ls' xx next *
+                        data_at sh tint (Vint (Int.repr 42)) original_freelist_pointer)
+            in
+            let n_gt_0_case :=
+                (!! (r = Vint (Int.repr 42)) 
+                    && KF_globals gv sh ((tl added_elem)++ls) xx (hd nullval added_elem) *
+                data_at sh tint r head)
+            in
+            if (Z.ltb 0 n) then
+                n_gt_0_case
+            else 
+                n_eq_0_case
+                ).
+
+
+Definition KFGprog_clients: funspecs := KFGprog ++ [kalloc_write_pipe_spec; kfree_kalloc_spec; kalloc_write_42_spec; kalloc_write_42_kfree_spec; kfree_loop_spec; kfree_loop_kalloc_spec].
 
 Lemma body_kalloc_write_pipe: semax_body KFVprog KFGprog f_kalloc_write_pipe kalloc_write_pipe_spec.
 Proof.
@@ -966,6 +987,143 @@ start_function.
 forward_call (sh, pa1:val, original_freelist_pointer:val, xx:Z, gv:globals, ls : list val, n:Z).
 - destruct H as [H1 [H2 H3]]; auto.
 - Intros vret. 
+forward_call (kalloc_spec_sub KF_APD t_run) (gv, sh , snd vret ++ ls, xx,  fst vret ); (* kalloc *)
+destruct H as [H11 [H12 H13]]; auto.
+    + unfold KF_globals. entailer!.
+    + if_tac; auto_contradict.
+        * forward. destruct (Z.to_nat n) eqn:en.
+            -- assert (n = 0); try rep_lia. rewrite H3. Exists (fst vret) (snd vret).
+                    entailer.
+                    if_tac_auto_contradict;
+                    destruct (0 <? 0) eqn:efalse; try rep_lia.
+                ++simpl in H0. rewrite H0. simpl in H1. rewrite H1. unfold KF_globals. rewrite app_nil_l. entailer!.
+                ++simpl in H1. rewrite <- H1 in H3. rewrite H in H3; auto_contradict.
+            -- rewrite <- add_to_pointers_with_head in H1; auto; try rep_lia. simpl in H1.
+            assert (isptr (offset_val (Z.of_nat (n0 - 0) * PGSIZE) pa1)). { apply isptr_offset_val'. auto. }
+            rewrite <- H1 in H3. rewrite H in H3; auto_contradict.
+        * forward. destruct (Z.to_nat n) eqn:en.
+            -- Exists (fst vret) (snd vret).
+                assert (n = 0); try rep_lia. rewrite H4.
+                if_tac_auto_contradict;
+                destruct (0 <? 0) eqn:efalse; try rep_lia.
+                ++ unfold KF_globals. entailer!.
+                ++ destruct ls eqn:els.
+                    **  simpl in H0. rewrite H0 in H3. inversion H3.
+                    ** simpl in H1. simpl in H0. Exists (fst ab) (snd ab). unfold KF_globals. rewrite H1.
+                    entailer!. rewrite H0 in H3. rewrite app_nil_l in H3. auto.
+                    unfold my_kalloc_token. entailer!.
+            -- Exists (fst vret) (snd vret).
+                entailer.
+                destruct (0 <? n) eqn:etrue; try rep_lia.
+                unfold KF_globals. unfold my_kalloc_token. entailer!.
+                destruct (snd vret).
+                ++ replace (S n0) with (n0 + 1)%nat in H0; try rep_lia. 
+                destruct n0 eqn:en0.
+                ** simpl in H0. inversion H0.
+                ** rewrite  <- add_to_pointers_with_head in H0; auto; try rep_lia. inversion H0.
+                ++ simpl. rewrite <- app_comm_cons in H3. inversion H3. entailer.
+Qed.
+
+
+Lemma body_kfree_loop_kalloc_usage: semax_body KFVprog KFGprog_clients f_kfree_loop_kalloc_usage kfree_loop_kalloc_usage_spec.
+Proof.
+start_function.
+Intros. forward. 
+forward_call (sh, pa1:val, original_freelist_pointer:val, xx:Z, gv:globals, ls : list val, n:Z); destruct H as [H1 [H2 H3]].
+- entailer!.
+- auto.
+- Intros vret. (*der går mpget galt, når keg kalder forward_if og jeg ved simpelthen ikke hvad det er.. forward_if (fst vret <> nullval). destruct (Z.to_nat n) eqn:en.*)
+    + assert (n = 0); try rep_lia. rewrite H6.
+        destruct (0 <? 0) eqn:efalse; try rep_lia. 
+        if_tac_auto_contradict. unfold KF_globals; entailer!.
+        * Intros. unfold KF_globals. rewrite mem_mgr_split. Intros.
+        forward_if. 
+            -- rewrite H0; entailer.
+            -- destruct vret eqn:evret. simpl in H0. rewrite H0 in H8. rewrite H5 in H8. auto_contradict.
+            -- forward. Exists (Vint (Int.repr 0)) (fst vret) (snd vret).
+            rewrite efalse. entailer!. unfold KF_globals. rewrite mem_mgr_split. entailer!.
+        * forward_if.
+    
+    
+        destruct (0 <? 0) eqn:efalse2; try rep_lia. 
+
+
+    destruct H7 as [[H71 H72] | [H71 H72]]; auto_contradict.
+    2: { rewrite H5 in H72; auto_contradict. }
+    forward_if. 
+    -- subst; entailer.
+
+
+    simpl in H0. rewrite H5 in H0. forward_if; auto_contradict. subst. forward_if.
+    forward_if. 
+        --simpl in H0. rewrite H0. entailer!.
+        -- Intros.  forward.
+    
+
+  forward_if.
+        entailer.
+        if_tac_auto_contradict;
+        destruct (0 <? 0) eqn:efalse; try rep_lia.
+    ++simpl in H0. rewrite H0. simpl in H1. rewrite H1. unfold KF_globals. rewrite app_nil_l. entailer!.
+    ++simpl in H1. rewrite <- H1 in H3. rewrite H in H3; auto_contradict.
+-- rewrite <- add_to_pointers_with_head in H1; auto; try rep_lia. simpl in H1.
+assert (isptr (offset_val (Z.of_nat (n0 - 0) * PGSIZE) pa1)). { apply isptr_offset_val'. auto. }
+rewrite <- H1 in H3. rewrite H in H3; auto_contradict.
+ forward_if.
+
+
+forward_call (kalloc_spec_sub KF_APD tint) (gv, sh , ls, xx, original_freelist_pointer ). (* kalloc *)
+- unfold KF_globals. entailer!.
+- if_tac.
+    + forward_if.
+        * rewrite H in H0; auto_contradict.
+        * forward. Exists (Vint(Int.repr 0)). entailer.
+    + Intros ab.
+      destruct ls; auto_contradict.
+      forward_if.
+        * unfold my_kalloc_token. rewrite kalloc_token_sz_split. Intros.
+        rewrite memory_block_data_at_; auto. rewrite data_at__eq. forward.
+        forward. forward.
+        Exists (Vint(Int.repr 42)) (fst ab) (snd ab). entailer.
+        * forward.
+
+
+start_function.
+Intros. forward.
+unfold KF_globals. Intros.
+forward_call (sh, pa1:val, original_freelist_pointer:val, xx:Z, gv:globals, ls : list val, n:Z); 
+destruct H as [H1 [H2 H3]]; auto.
+- unfold KF_globals. entailer!.
+- Intros vret.  destruct (Z.to_nat n) eqn:en.
+    + assert (n = 0); try rep_lia. rewrite H4. 
+        if_tac_auto_contradict;
+        destruct (0 <? 0) eqn:efalse; try rep_lia.
+        * Intros. forward_if. unfold KF_globals. entailer!.
+    ++simpl in H0. rewrite H0. simpl in H1. rewrite H1. unfold KF_globals. rewrite app_nil_l. entailer!.
+    ++simpl in H1. rewrite <- H1 in H3. rewrite H in H3; auto_contradict.
+-- rewrite <- add_to_pointers_with_head in H1; auto; try rep_lia. simpl in H1.
+assert (isptr (offset_val (Z.of_nat (n0 - 0) * PGSIZE) pa1)). { apply isptr_offset_val'. auto. }
+rewrite <- H1 in H3. rewrite H in H3; auto_contradict.
+
+if_tac.
+    + forward_if.
+        * destruct (Z.to_nat n) eqn:en. 
+        assert (n = 0); try rep_lia. rewrite H4.                
+                    destruct (0 <? 0) eqn:efalse; try rep_lia.
+                ++simpl in H0. rewrite H0. simpl in H1. rewrite H1. unfold KF_globals. rewrite app_nil_l. entailer!.
+                ++simpl in H1. rewrite <- H1 in H3. rewrite H in H3; auto_contradict.
+            --  assert (n = 0); try rep_lia. rewrite H4; simpl. entailer!. 
+        rewrite H in H0; auto_contradict.
+        * forward. Exists (Vint(Int.repr 0)). entailer.
+    + Intros ab.
+    destruct ls; auto_contradict.
+    forward_if.
+        * unfold my_kalloc_token. rewrite kalloc_token_sz_split. Intros.
+        rewrite memory_block_data_at_; auto. rewrite data_at__eq. forward.
+        forward. forward.
+        Exists (Vint(Int.repr 42)) (fst ab) (snd ab). entailer.
+        * forward.
+
 forward_call (kalloc_spec_sub KF_APD t_run) (gv, sh , snd vret ++ ls, xx,  fst vret ); (* kalloc *)
 destruct H as [H11 [H12 H13]]; auto.
     + unfold KF_globals. entailer!.

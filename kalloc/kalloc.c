@@ -53,10 +53,22 @@ void *kalloc(void)
   return (void*)r; 
 }
 
+#define PGSIZE 4096 // bytes per page - original saved in risc.h
+
+void kfree_loop(void *pa_start, int n) { // original 8
+  int i = 0;
+  while (i < n) {
+      kfree(pa_start);
+      pa_start = (char*)pa_start + PGSIZE;
+      i++;
+  }
+}
+
+
+
 /// clients
 
 
-#define PGSIZE 4096 // bytes per page - original saved in risc.h
 #define PIPESIZE 512
 typedef unsigned int   uint;
 
@@ -140,10 +152,8 @@ void *kfree_kfree_kalloc(void *pa1, void *pa2) { // original 3
   return kalloc();
 }
 
-// working in progress
 
 int kalloc_write_42_kfree_kfree(void) {
-
   int *pa;
   pa = 0;
   pa = (int*)kalloc();           // cast to int pointer
@@ -169,20 +179,24 @@ void *kfree_kfree_kalloc_loop(void *pa_start) { // original 6
   return kalloc();
 }
 
-void kfree_loop(void *pa_start, int n) { // original 8
-  int i = 0;
-  while (i < n) {
-      kfree(pa_start);
-      pa_start = (char*)pa_start + PGSIZE;
-      i++;
-  }
-}
-
 void* kfree_loop_kalloc(void *pa_start, int n) { // original 7
   kfree_loop(pa_start, n);
   return kalloc();
 }
 
+// working in progress
+int kfree_loop_kalloc_usage(void *pa_start, int n) {
+  int *pa;
+  pa = 0;
+  pa = (int*)kfree_loop_kalloc(pa_start, n);           // cast to int pointer
+  if (pa) {
+    *pa = 42;
+    int X = *pa;
+    kfree(pa);
+    return X;
+  }
+  return 0;
+}
 
 
 // working in progress

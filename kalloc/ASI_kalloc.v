@@ -9,7 +9,12 @@ Record KallocTokenAPD := {
   kalloc_token'_valid_pointer: forall sh sz p, 
   kalloc_token' sh sz p |-- valid_pointer p;
   kalloc_token'_local_facts:  forall sh sz p, 
-      kalloc_token' sh sz p |-- !! malloc_compatible sz p;
+      kalloc_token' sh sz p |-- (!! (
+            0 < sz <= PGSIZE
+            /\ malloc_compatible (sz) p 
+            /\ malloc_compatible (PGSIZE) p
+            /\ writable_share sh
+            /\ malloc_compatible sz p) && memory_block sh (sz) (p));
 }.
 
 Record KallocFreeAPD := {
@@ -24,6 +29,7 @@ Section Kalloc_ASI.
 Variable K: KallocFreeAPD.
 Variable kallocID: ident.
 Variable kfreeID: ident.
+Variable kfreeLoopID: ident.
 
 Definition kfree_spec' := 
   DECLARE kfreeID
@@ -71,6 +77,7 @@ POST [ tptr tvoid ]
           )
         )
     ).
+
 
 Definition Kalloc_ASI:funspecs := [kalloc_spec'; kfree_spec'].
 

@@ -75,7 +75,7 @@ forward_if (
     * entailer. Exists v ls. entailer. unfold my_kalloc_token.
     rewrite kalloc_token_sz_split. rewrite mem_mgr_split. entailer!.
     -- split. unfold malloc_compatible. destruct original_freelist_pointer; auto_contradict. 
-        unfold malloc_compatible in H3. destruct H3. split; auto.
+        unfold malloc_compatible in H3. destruct H3. split; auto. simpl. unfold kallocfun.PGSIZE in H12. 
         try rep_lia.
         destruct ls.
         ++ left; split; auto. rewrite <- H9; auto.
