@@ -17,14 +17,6 @@ Record KallocTokenAPD := {
 Record KallocFreeAPD := {
   KF_Tok :> KallocTokenAPD;   (* whenever KallocFreeAPD is used, but a KallocTokenAPD is expected, it is automatically converted *)
   mem_mgr: globals -> mpred;
-  mem_mgr_local_facts: forall gv,
-    (mem_mgr gv) |-- (EX (sh : share), EX (ls: list val), EX (original_freelist_pointer:val), (* I am unsure how to access all these elements.. *)
-      !! (writable_share sh /\
-        is_pointer_or_null original_freelist_pointer /\
-              (((ls = nil) /\ original_freelist_pointer = nullval) \/ 
-              ((ls <> nil) /\ isptr original_freelist_pointer))
-        ))
-
 }.
 
 #[export] Hint Resolve kalloc_token'_valid_pointer : valid_pointer. 

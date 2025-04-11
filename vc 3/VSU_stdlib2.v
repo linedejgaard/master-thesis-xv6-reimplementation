@@ -289,7 +289,7 @@ Proof.
     + forward.
    forward_if (
     PROP (q <> nullval)
-    LOCAL (temp _q q; temp _p p; temp _i (Vint (Int.repr i)))
+    LOCAL (temp _q q; temp _p p; temp _i (Vint (Int.repr i)) )
     SEP (
     if eq_dec q nullval
     then emp

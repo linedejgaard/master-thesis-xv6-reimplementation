@@ -89,14 +89,14 @@ Qed.
 
 Definition kfree_spec (K:KallocFreeAPD) {cs: compspecs} (t: type) := 
   DECLARE _kfree
-      WITH new_head:val, gv:globals, sh:share, ls: list val, xx:Z, original_freelist_pointer:val
+      WITH new_head:val, gv:globals, sh:share
       PRE [ tptr tvoid]
         PROP(
               is_pointer_or_null new_head
               ) 
         PARAMS (new_head) GLOBALS(gv)
         SEP (
-          mem_mgr_internal gv sh ls xx original_freelist_pointer *
+          mem_mgr_impl gv *
           (if eq_dec new_head nullval then emp
           else (type_kalloc_token K sh (t) new_head))
         )
@@ -105,32 +105,32 @@ Definition kfree_spec (K:KallocFreeAPD) {cs: compspecs} (t: type) :=
         RETURN () 
         SEP (
           if eq_dec new_head nullval then 
-          mem_mgr_internal gv sh ls xx original_freelist_pointer
+          mem_mgr_impl gv 
           else 
-          mem_mgr_internal gv sh (original_freelist_pointer::ls) xx new_head
+          mem_mgr_impl gv
             ).
 
-Definition kalloc_spec (K:KallocFreeAPD) {cs: compspecs} (t: type) (ls:list val) (xx:Z) (original_freelist_pointer:val) :=
+Definition kalloc_spec (K:KallocFreeAPD) {cs: compspecs} (t: type) :=
 DECLARE _kalloc
-WITH gv:globals, sh:share(*, ls: list val, xx:Z, original_freelist_pointer:val*)
+WITH gv:globals, sh:share
 PRE [ ]
     PROP(0 <= (sizeof t) <= PGSIZE;
             complete_legal_cosu_type t = true;
             natural_aligned natural_alignment t = true) 
     PARAMS () GLOBALS(gv)
-    SEP ( mem_mgr_internal gv sh ls xx original_freelist_pointer )  
-POST [ tptr tvoid ]
-    PROP()
-    RETURN (original_freelist_pointer) 
+    SEP ( mem_mgr_impl gv )  
+POST [ tptr tvoid ] EX p:_, EX ls:list val,
+    PROP() 
+    RETURN (p) 
     SEP (
-      if (eq_dec original_freelist_pointer nullval) then
-        (mem_mgr_internal gv sh ls xx original_freelist_pointer * emp)
+      if (eq_dec p nullval) then
+        (mem_mgr_impl gv * emp)
       else 
         (
           EX next ls',
           (!! (next :: ls' = ls) &&
-              type_kalloc_token K sh t original_freelist_pointer *
-              mem_mgr_internal gv sh ls' xx next
+              type_kalloc_token K sh t p *
+              mem_mgr_impl gv
         )
         )
     ).
@@ -140,25 +140,30 @@ POST [ tptr tvoid ]
 (** ** How to use the type-based specification of kalloc and kfree *)
 
 Lemma kalloc_spec_sub:
- forall (K:KallocFreeAPD) {cs: compspecs} (t: type)(ls:list val) (xx:Z) (original_freelist_pointer:val),
-   funspec_sub (snd (kalloc_spec' K _kalloc)) (snd (kalloc_spec K t ls xx original_freelist_pointer)).
-Proof.
+  forall  (K:KallocFreeAPD) {cs: compspecs} (t: type), 
+    funspec_sub (snd (kalloc_spec' K _kalloc)) (snd (kalloc_spec K t)).
+  Proof.
   do_funspec_sub.
-  destruct w as [gv sh].
-  Exists (sizeof t, gv, sh) emp.
-  Intros.
-  entailer!.
-  2: {
-    unfold mem_mgr_internal. entailer!.
-  }
-  unfold mem_mgr_internal.
-  destruct w as [[[[gv sh] ls] xx] original_freelist_pointer].
-  Exists (sizeof t, gv, sh) emp. entailer!.
-  intros tau ? ?. 
+  destruct w.
+  repeat (destruct p).
+  Exists (sizeof t, g0, s) emp.  simpl; entailer!.
+  intros tau ? ?.
   if_tac; auto.
-  
-  Exists (eval_id ret_temp tau).
+  assert_PROP (field_compatible t [] (eval_id ret_temp tau)).
+  { entailer!.
+    apply malloc_compatible_field_compatible; auto. rewrite H6. auto. }
   entailer!.
+  rewrite memory_block_data_at_; auto.
+Qed.
+
+
+  -
+  intros. if_tac;
+  simpl; entailer.
+  Exists (eval_id ret_temp ?).
+
+  2: { unfold mem_mgr_impl. enta }
+  intros tau ? ?.
   if_tac; auto.
   unfold malloc_token.
   assert_PROP (field_compatible t [] (eval_id ret_temp tau)).
@@ -166,6 +171,22 @@ Proof.
     apply malloc_compatible_field_compatible; auto. }
   entailer!.
   rewrite memory_block_data_at_; auto.
+Qed.
+
+
+    do_funspec_sub. 
+    entailer.
+    destruct w.
+    repeat (destruct p).
+    Exists (sizeof t, g0, s) emp. entailer.
+    if_tac.
+    - entailer!. entailer!.
+    - entailer!.
+      + entailer!. Exists next ls'. entailer!. unfold type_kalloc_token. 
+      assert_PROP (field_compatible t [] (eval_id ret_temp x)).
+      { entailer!.
+        apply malloc_compatible_field_compatible; auto. }
+      entailer.
 Qed.
 
 Lemma kalloc_spec_sub:
@@ -178,7 +199,7 @@ Lemma kalloc_spec_sub:
     Exists (sizeof t, gv, sh) emp. entailer!.
     intros tau.
     if_tac.
-    - rewrite mem_mgr_internal_split. entailer!.
+    - rewrite mem_mgr_split. entailer!.
     intros tau.
     Exists (eval_id ret_temp rho').
       destruct (EqDec_val x nullval)
