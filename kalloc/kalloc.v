@@ -509,20 +509,23 @@ Definition f_kalloc_int_array := {|
     (Ssequence
       (Sifthenelse (Etempvar _pa (tptr tint))
         (Ssequence
-          (Sset _i (Econst_int (Int.repr 0) tint))
           (Ssequence
-            (Swhile
-              (Ebinop Olt (Etempvar _i tint) (Etempvar _n tint) tint)
+            (Sset _i (Econst_int (Int.repr 0) tint))
+            (Sloop
               (Ssequence
+                (Sifthenelse (Ebinop Olt (Etempvar _i tint)
+                               (Etempvar _n tint) tint)
+                  Sskip
+                  Sbreak)
                 (Sassign
                   (Ederef
                     (Ebinop Oadd (Etempvar _pa (tptr tint))
                       (Etempvar _i tint) (tptr tint)) tint)
-                  (Econst_int (Int.repr 42) tint))
-                (Sset _i
-                  (Ebinop Oadd (Etempvar _i tint)
-                    (Econst_int (Int.repr 1) tint) tint))))
-            (Sreturn (Some (Etempvar _pa (tptr tint))))))
+                  (Econst_int (Int.repr 42) tint)))
+              (Sset _i
+                (Ebinop Oadd (Etempvar _i tint)
+                  (Econst_int (Int.repr 1) tint) tint))))
+          (Sreturn (Some (Etempvar _pa (tptr tint)))))
         Sskip)
       (Sreturn (Some (Econst_int (Int.repr 0) tint))))))
 |}.

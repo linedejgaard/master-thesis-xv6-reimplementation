@@ -196,11 +196,9 @@ int* kalloc_int_array(int n) {
   pa = 0;
   pa = (int*)kalloc();           // cast to int pointer
   if (pa) {
-    int i = 0;
-    while (i < n) {
+    for (int i = 0; i < n; i++) {
       pa[i] = 42;
-      i++;
-    }
+    }  
     return pa; // Return the array to the allocated array
   }
   return 0;

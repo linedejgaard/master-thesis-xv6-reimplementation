@@ -211,3 +211,46 @@ Definition pipe_rep sh (pi: val) : mpred :=
       (Vint (Int.repr 1), (* readopen *)
        Vint (Int.repr 1)  (* writeopen *))))
     ) pi.
+
+(** ** 42 array  *)
+
+Fixpoint array_42 (n : nat) : list val :=
+  match n with
+  | O => nil  (* If we have reached i == n, just return pa unchanged *)
+  | S n' => (Vint (Int.repr 42)) :: array_42 n'  (* Recursively fill the array *)
+  end.
+
+Definition array_42_rep sh (n:Z) (pi: val) : mpred :=
+  data_at sh (tarray (tint) n)
+    (
+      (array_42 (Z.to_nat n))
+    ) pi.
+
+Lemma array_42_length :
+    forall n,
+    Zlength (array_42 n) = Z.of_nat n.
+Proof.
+    intros. induction n.
+    - unfold array_42. rewrite calc_Zlength_nil. try rep_lia.
+    - unfold array_42; fold array_42.
+    rewrite Zlength_cons. rewrite IHn. try rep_lia.
+Qed.
+
+Lemma array_42_append :
+    forall i,
+    array_42 (i) ++ [Vint (Int.repr 42)] =  array_42 (i + 1).
+Proof.
+    intros. induction i.
+    - simpl. auto. (*assert (i = 0); try rep_lia. rewrite H0. simpl. auto.*)
+    - unfold array_42; fold array_42. simpl.
+    f_equal. rewrite IHi. auto.
+Qed. 
+
+Definition tmp_array_42_rep sh (n:Z) (pi: val) (i : Z) : mpred :=
+  data_at sh (tarray (tint) n)
+    (
+      (array_42 (Z.to_nat i)) ++ (Zrepeat (default_val tint) (n - i))
+    ) pi.
+
+
+    
