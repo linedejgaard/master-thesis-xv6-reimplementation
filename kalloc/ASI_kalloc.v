@@ -58,7 +58,7 @@ Definition kalloc_spec' :=
 DECLARE kallocID
 WITH n:Z, gv:globals, sh:share, ls: list val, xx:Z, original_freelist_pointer:val
 PRE [ ]
-    PROP() 
+    PROP(n <= PGSIZE) 
     PARAMS () GLOBALS(gv)
     SEP ( mem_mgr K gv sh ls xx original_freelist_pointer )  
 POST [ tptr tvoid ]

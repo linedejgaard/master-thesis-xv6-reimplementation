@@ -113,7 +113,8 @@ Definition kalloc_spec (K:KallocFreeAPD) {cs: compspecs} (t: type) :=
 DECLARE _kalloc
 WITH gv:globals, sh:share, ls: list val, xx:Z, original_freelist_pointer:val
 PRE [ ]
-    PROP(   complete_legal_cosu_type t = true;
+    PROP(   (sizeof t) <= PGSIZE;
+            complete_legal_cosu_type t = true;
             natural_aligned natural_alignment t = true) 
     PARAMS () GLOBALS(gv)
     SEP ( ASI_kalloc.mem_mgr K gv sh ls xx original_freelist_pointer )  

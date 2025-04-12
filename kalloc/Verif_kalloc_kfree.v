@@ -45,22 +45,22 @@ forward_if (
         )
     )
 )%assert.
-- destruct H2 as [[H0011 H0012] | [H0021 H0022]].
-    + rewrite H0012 in H3; auto_contradict.
+- destruct H3 as [[H0011 H0012] | [H0021 H0022]].
+    + rewrite H0012 in H4; auto_contradict.
     + destruct ls; auto_contradict.
     refold_freelistrep. Intros.
     forward. forward.
     entailer.
     rewrite mem_mgr_split. Intros. 
     refold_freelistrep. if_tac.
-    * rewrite H10 in H0022; auto_contradict.
+    * rewrite H11 in H0022; auto_contradict.
     * entailer. Exists v ls. entailer. unfold type_kalloc_token.
     rewrite kalloc_token_sz_split. rewrite mem_mgr_split. entailer!.
     -- destruct ls.
-        ++ left; split; auto. rewrite <- H8; auto.
+        ++ left; split; auto. rewrite <- H9; auto.
         ++ right. split.
             **  unfold not. intros; auto_contradict.
-            ** rewrite <- H9. unfold not; intros; auto_contradict.
+            ** rewrite <- H10. unfold not; intros; auto_contradict.
     -- apply data_at_memory_block.
 -forward. destruct (eq_dec original_freelist_pointer nullval) eqn:e1; auto_contradict. entailer.
 rewrite mem_mgr_split. entailer.
