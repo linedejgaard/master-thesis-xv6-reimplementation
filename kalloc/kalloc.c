@@ -182,14 +182,6 @@ void* kfree_loop_kalloc(void *pa_start, int n) {
 }
 
 
-// working in progress
-
-void *kfree_kfree_kalloc_kalloc(void *pa1, void *pa2) { 
-  kfree(pa1);
-  kfree(pa2);
-  kalloc();
-  return kalloc();
-}
 
 int* kalloc_int_array(int n) {
   int *pa;
@@ -202,4 +194,13 @@ int* kalloc_int_array(int n) {
     return pa; // Return the array to the allocated array
   }
   return 0;
+}
+
+// working in progress
+
+void *kfree_kfree_kalloc_kalloc(void *pa1, void *pa2) { 
+  kfree(pa1);
+  kfree(pa2);
+  kalloc();
+  return kalloc();
 }
