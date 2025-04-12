@@ -310,6 +310,30 @@ Definition kalloc_write_42_kfree_kfree_spec : ident * funspec :=
             )
         ).
 
+Definition kfree_kfree_kalloc_kalloc_spec := 
+    DECLARE _kfree_kfree_kalloc_kalloc
+    WITH sh : share, pa1:val, pa2:val, original_freelist_pointer:val, xx:Z, gv:globals, ls : list val, next:val
+    PRE [ tptr tvoid, tptr tvoid ]
+        PROP(
+            isptr pa1 /\
+            isptr pa2
+        ) 
+        PARAMS (pa1; pa2) GLOBALS(gv)
+        SEP (
+            KF_globals gv  sh ls xx original_freelist_pointer *
+            kalloc_token' KF_APD sh (sizeof t_run) pa1 *
+            kalloc_token' KF_APD sh (sizeof t_run) pa2
+        )
+    POST [ tptr tvoid ]
+        PROP( )
+            RETURN (pa1) (* we return the head like in the pop function*)
+            SEP 
+            (
+                KF_globals gv  sh ls xx original_freelist_pointer *
+                kalloc_token' KF_APD sh (sizeof t_run) pa1 *
+                kalloc_token' KF_APD sh (sizeof t_run) pa2
+                ).
+
 
 Definition KFGprog_clients: funspecs := KFGprog ++ [kfree_kalloc_spec].
 
@@ -592,3 +616,30 @@ Proof.
             entailer!.
         * rewrite H1 in H. auto_contradict.
         Qed.
+
+
+Lemma body_kfree_kfree_kalloc_kalloc: semax_body KFVprog KFGprog f_kfree_kfree_kalloc_kalloc kfree_kfree_kalloc_kalloc_spec.
+Proof.
+start_function.
+Intros.
+destruct H. 
+forward_call (kfree_spec_sub KF_APD t_run) (pa1, gv, sh , ls, xx, original_freelist_pointer). (* call kfree *)
+- unfold KF_globals.
+    if_tac.
+    + rewrite H1 in H. auto_contradict.
+    + unfold type_kalloc_token. entailer!. 
+- if_tac_auto_contradict. rewrite H1 in H. auto_contradict.
+    forward_call (kfree_spec_sub KF_APD t_run) (pa2, gv, sh , original_freelist_pointer::ls, xx, pa1).
+    if_tac_auto_contradict. rewrite H2 in H0; auto_contradict.
+    unfold type_kalloc_token.
+    entailer!.
+    forward_call (kalloc_spec_sub KF_APD t_run) (gv, sh , pa1::original_freelist_pointer::ls, xx, pa2). (* kalloc *)
+    if_tac_auto_contradict; entailer!.
+    if_tac_auto_contradict. rewrite H2 in H0; auto_contradict.
+    Intros ab. 
+    forward_call (kalloc_spec_sub KF_APD t_run) (gv, sh , original_freelist_pointer::ls, xx, pa1). (* kalloc *)
+    inversion H3. entailer!.
+    if_tac_auto_contradict.
+    Intros ab0. 
+    forward. unfold type_kalloc_token. entailer!. unfold KF_globals. inversion H5; entailer.
+Qed.
