@@ -121,7 +121,7 @@ forward_call (kalloc_spec_sub KAF_APD (tarray tint n)) (gv, sh , ls, xx, origina
             )
             )
         )%assert.
-        -- destruct H. unfold tarray in H7. rewrite sizeof_Tarray in H7. 
+        -- destruct H. unfold tarray in H8. rewrite sizeof_Tarray in H8. 
         assert (Z.max 0 n <= PGSIZE / (sizeof tint)). {  apply Zdiv_le_lower_bound. simpl; try rep_lia. auto. rewrite Z.mul_comm. auto. }
         assert (n <= PGSIZE / (sizeof tint)); try rep_lia. apply (Z.le_trans) with (PGSIZE / sizeof tint). try rep_lia.
         unfold PGSIZE; simpl; try rep_lia.
@@ -129,7 +129,7 @@ forward_call (kalloc_spec_sub KAF_APD (tarray tint n)) (gv, sh , ls, xx, origina
         -- Intros.
         assert (Int.min_signed <= i <= Int.max_signed). { 
             assert (n <= Int.max_signed). {
-            destruct H. unfold tarray in H7. unfold tarray in H8. rewrite sizeof_Tarray in H8. 
+            destruct H. unfold tarray in H9. rewrite sizeof_Tarray in H9. 
             assert (Z.max 0 n <= PGSIZE / (sizeof tint)). {  apply Zdiv_le_lower_bound. simpl; try rep_lia. auto. rewrite Z.mul_comm. auto. }
             assert (n <= PGSIZE / (sizeof tint)); try rep_lia. apply (Z.le_trans) with (PGSIZE / sizeof tint). try rep_lia.
             unfold PGSIZE; simpl; try rep_lia.
@@ -142,8 +142,8 @@ forward_call (kalloc_spec_sub KAF_APD (tarray tint n)) (gv, sh , ls, xx, origina
         ++ rewrite sublist_firstn. 
         rewrite firstn_app1.
         assert (Zlength (array_42 (Z.to_nat i)) = i). { rewrite array_42_length. try rep_lia. }
-        rewrite Zlength_length in H13; try rep_lia.
-        rewrite <- H13 at 1.
+        rewrite Zlength_length in H14; try rep_lia.
+        rewrite <- H14 at 1.
         rewrite firstn_exact_length with (xs :=array_42 (Z.to_nat i)); try rep_lia.
         rewrite sublist_app2.
         rewrite array_42_length.
@@ -164,7 +164,7 @@ forward_call (kalloc_spec_sub KAF_APD (tarray tint n)) (gv, sh , ls, xx, origina
             rewrite array_42_length.
             try rep_lia.
         }
-        rewrite H13; auto.
+        rewrite H14; auto.
         ++ rewrite Zlength_app. rewrite array_42_length. rewrite Zlength_Zrepeat; try rep_lia.
         -- forward. Exists v ls. entailer!. unfold tmp_array_42_rep. unfold array_42_rep. 
         replace (n - n) with 0; try rep_lia. 

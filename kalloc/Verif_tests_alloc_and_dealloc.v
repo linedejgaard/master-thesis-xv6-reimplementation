@@ -400,281 +400,6 @@ forward_call (kfree_spec_sub KAF_APD t_run) (new_head, gv, sh , ls, xx, original
             -- forward.
             -- forward. Exists new_head. entailer. inversion H0; subst; entailer. unfold KAF_globals. entailer!. simplify_kalloc_token.
 Qed.
-        
-Lemma body_kalloc_write_42_kfree: semax_body KAFVprog KAFGprog f_kalloc_write_42_kfree kalloc_write_42_kfree_spec.
-Proof.
-    start_function.
-    forward. 
-    forward_call (kalloc_spec_sub KAF_APD tint) (gv, sh , ls, xx, original_freelist_pointer ). (* kalloc *)
-    - unfold KAF_globals. entailer!.
-    - if_tac.
-    + forward_if.
-        * rewrite H in H0; auto_contradict.
-        * forward. Exists (Vint(Int.repr 0)). entailer.
-    + Intros ab.
-        destruct ls; auto_contradict.
-        forward_if.
-        * unfold type_kalloc_token. rewrite kalloc_token_sz_split. Intros.
-        rewrite memory_block_data_at_; auto. rewrite data_at__eq. Intros. forward.
-        forward. 
-        forward_call (kfree_spec_sub KAF_APD tint) (original_freelist_pointer, gv, sh , snd ab, xx, (fst ab)). (* call kfree *)
-        -- if_tac_auto_contradict.
-            unfold type_kalloc_token. rewrite kalloc_token_sz_split. entailer!.
-            sep_apply data_at_memory_block. entailer!. 
-        -- if_tac_auto_contradict.
-            forward. Exists (Vint (Int.repr 42)).
-            unfold KAF_globals.
-            inversion H0. rewrite H8; rewrite H9.
-            entailer!.
-        * forward.
-Qed.
-        
-Lemma body_kfree_kalloc_twice: semax_body KAFVprog KAFGprog_clients f_kfree_kalloc_twice kfree_kalloc_twice_spec.
-Proof.
-start_function. destruct H.
-forward_call (gv, sh, pa1, original_freelist_pointer, xx, ls).
-- entailer!.
-- Intros vret.
-    if_tac.
-    + if_tac.
-        * if_tac.
-            -- forward_call (gv, sh, pa2, original_freelist_pointer, xx, ls).
-                ++ if_tac_auto_contradict.
-                    entailer!.
-                ++ if_tac_auto_contradict. Intros vret0.
-                    if_tac_auto_contradict.
-                    forward.
-                    Exists vret0. entailer!.
-                    destruct H6 as [ [H11 [H12 H13]] | [[H21 H22] | [H31 [H32 H33]]] ]; auto.
-            --forward_call (gv, sh, pa2, original_freelist_pointer, xx, ls).
-                ++ if_tac_auto_contradict. entailer!.
-                ++ if_tac_auto_contradict. Intros vret0. forward.
-                    Exists vret0. entailer!.
-                    destruct H6 as [ [H11 [H12 H13]] | [[H21 H22] | [H31 [H32 H33]]] ]; auto_contradict. do 4 right. left. auto.
-        * if_tac; Intros ab.
-            -- destruct ls as [ | next1 ls1]; auto_contradict. (*unfold abbreviate in POSTCONDITION.*)
-                forward_call (gv, sh, pa2, next1, xx, ls1).
-                ++ if_tac_auto_contradict.
-                inversion H5. rewrite H8; rewrite H9. entailer!.
-                ++ if_tac_auto_contradict. if_tac_auto_contradict. 
-                    ** Intros vret0. forward.
-                    Exists vret0. Exists nullval ls1. if_tac_auto_contradict. entailer!.
-                    destruct H8 as [ [H11 [H12 H13]] | [[H21 H22] | [H31 [H32 H33]]] ]; auto_contradict. 
-                    do 5 right. split; auto.
-                    ** Intros vret0. Intros ab0. forward.
-                    Exists vret0. Exists (next1) (snd ab). if_tac_auto_contradict.
-                    Exists (fst ab0) (snd ab0). entailer!.
-                    do 5 right. split; auto.
-            -- destruct ls as [ | next1 ls1]; auto_contradict. 
-                forward_call (gv, sh, pa2, next1, xx, ls1).
-                ++ if_tac_auto_contradict.
-                inversion H5. rewrite H8; rewrite H9. entailer!.
-                ++ Intros vret0. forward. if_tac_auto_contradict.
-                Exists vret0. Exists next1 ls1. entailer!.
-                destruct H6 as [ [H11 [H12 H13]] | [[H21 H22] | [H31 [H32 H33]]] ]; auto_contradict. 
-                do 4 right. left; split; auto.
-    + if_tac.
-        -- forward_call (gv, sh, pa2, original_freelist_pointer, xx, ls).
-            ++ if_tac_auto_contradict.
-                entailer!.
-            ++ if_tac_auto_contradict. Intros vret0.
-                if_tac_auto_contradict.
-                ** forward. 
-                Exists vret0. entailer!.
-                destruct H5 as [ [H11 [H12 H13]] | [[H21 H22] | [H31 [H32 H33]]] ]; auto.
-                do 2 right. left. split; auto.
-                ** Intros ab.
-                    forward. Exists vret0. Exists (fst ab) (snd ab). entailer!.
-                    destruct H5 as [ [H11 [H12 H13]] | [[H21 H22] | [H31 [H32 H33]]] ]; auto.
-                    do 2 right. left; split; auto.
-                    do 3 right. left; split; auto.
-        -- Intros. forward_call (gv, sh, pa2, original_freelist_pointer, xx, ls).
-            ++ if_tac_auto_contradict. entailer!.
-            ++ if_tac_auto_contradict. 
-                Intros vret0. forward.
-                Exists vret0. entailer!.
-                destruct H5 as [ [H11 [H12 H13]] | [[H21 H22] | [H31 [H32 H33]]] ]; auto_contradict.
-                ** right. left; split; auto.
-        Qed.
-        
-        
-Lemma body_kfree_kalloc_kfree_kalloc: semax_body KAFVprog KAFGprog f_kfree_kalloc_kfree_kalloc kfree_kalloc_kfree_kalloc_spec.
-Proof.
-start_function. Intros.
-if_tac; if_tac; destruct H; 
-forward_call (kfree_spec_sub KAF_APD t_run) (pa1, gv, sh , ls, xx, original_freelist_pointer). (* call kfree *)
-- if_tac_auto_contradict. unfold KAF_globals. entailer!.
-- forward_call (kalloc_spec_sub KAF_APD t_run) (gv, sh , ls, xx, original_freelist_pointer). (* kalloc *)
-    + if_tac_auto_contradict. entailer!.
-    + if_tac_auto_contradict. 
-        * forward_call (kfree_spec_sub KAF_APD t_run) (pa2, gv, sh , ls, xx, original_freelist_pointer). (* call kfree *)
-            -- if_tac_auto_contradict. entailer!.
-            -- if_tac_auto_contradict. forward_call (kalloc_spec_sub KAF_APD t_run) (gv, sh , ls, xx, original_freelist_pointer). (* kalloc *)
-                if_tac.
-                    ++ forward. Exists nullval; unfold KAF_globals. entailer!.
-                    ++ Intros ab. destruct ls; auto_contradict.
-        * Intros ab. destruct ls; auto_contradict. 
-        forward_call (kfree_spec_sub KAF_APD t_run) (pa2, gv, sh , snd ab, xx, fst ab). (* call kfree *)
-            -- entailer!.
-            -- if_tac_auto_contradict. forward_call (kalloc_spec_sub KAF_APD t_run) (gv, sh , snd ab, xx, fst ab). (* kalloc *)
-                if_tac.
-                    ++ forward. Exists (fst ab) (fst ab) (snd ab). if_tac.
-                        ** unfold KAF_globals. unfold type_kalloc_token. entailer!. repeat right. split; auto.
-                        ** entailer.
-                    ++ Intros ab0. forward. Exists (fst ab). unfold type_kalloc_token. rewrite mem_mgr_split. 
-                        Exists (fst ab) (snd ab). if_tac_auto_contradict. Exists (fst ab0) (snd ab0). rewrite mem_mgr_split; entailer!.
-                        repeat right; split; auto.
--if_tac_auto_contradict. unfold KAF_globals. entailer!.
-- forward_call (kalloc_spec_sub KAF_APD t_run) (gv, sh , ls, xx, original_freelist_pointer). (* kalloc *)
-+ if_tac_auto_contradict. entailer!.
-+ if_tac_auto_contradict. 
-    * forward_call (kfree_spec_sub KAF_APD t_run) (pa2, gv, sh , ls, xx, original_freelist_pointer). (* call kfree *)
-        -- if_tac_auto_contradict. unfold type_kalloc_token. entailer!.
-        -- if_tac_auto_contradict. forward_call (kalloc_spec_sub KAF_APD t_run) (gv, sh , (original_freelist_pointer :: ls), xx, pa2). (* kalloc *)
-            if_tac.
-                ++ forward.
-                ++ Intros ab. destruct ls; auto_contradict;
-                    forward; unfold type_kalloc_token, KAF_globals; inversion H6; rewrite H3; rewrite H9; Exists pa2; entailer!;
-                    do 4 right; left; split; auto.
-    * Intros ab. destruct ls; auto_contradict.  
-    forward_call (kfree_spec_sub KAF_APD t_run) (pa2, gv, sh , snd ab, xx, fst ab). (* call kfree *)
-        -- if_tac_auto_contradict. unfold type_kalloc_token at 2. rewrite kalloc_token_sz_split. entailer!.
-        -- if_tac_auto_contradict. rewrite mem_mgr_split. Intros. forward_call (kalloc_spec_sub KAF_APD t_run) (gv, sh , fst ab::snd ab, xx, pa2). (* kalloc *)
-            ++ unfold type_kalloc_token. rewrite mem_mgr_split.  entailer!.
-            ++ forward. if_tac_auto_contradict. Intros ab0. Exists pa2 (fst ab0) (snd ab0). rewrite mem_mgr_split. unfold KAF_globals, type_kalloc_token. rewrite mem_mgr_split. entailer!.
-                do 4 right. left; split; auto.
-- if_tac_auto_contradict. unfold KAF_globals. rewrite kalloc_token_sz_split. unfold type_kalloc_token. rewrite kalloc_token_sz_split. entailer!.
-- if_tac_auto_contradict.
-    forward_call (kalloc_spec_sub KAF_APD t_run) (gv, sh , original_freelist_pointer::ls, xx, pa1). (* kalloc *)
-    if_tac_auto_contradict.
-    Intros ab.
-    forward_call (kfree_spec_sub KAF_APD t_run) (pa2, gv, sh , snd ab, xx, fst ab). (* call kfree *)
-    ++ entailer!.
-    ++ if_tac_auto_contradict. forward_call (kalloc_spec_sub KAF_APD t_run) (gv, sh , snd ab, xx, fst ab). (* kalloc *)
-        forward. if_tac_auto_contradict; inversion H5.
-        ** Exists (fst ab). if_tac_auto_contradict.
-        unfold type_kalloc_token, KAF_globals. entailer!.
-        do 2 right; left; split; auto.
-        ** Intros ab0. Exists (fst ab). if_tac_auto_contradict.
-            Exists (fst ab0) (snd ab0). unfold type_kalloc_token, KAF_globals. entailer!.
-            do 3 right; left; split; auto.
-- if_tac_auto_contradict. unfold KAF_globals. unfold type_kalloc_token. entailer!.
-- if_tac_auto_contradict. forward_call (kalloc_spec_sub KAF_APD t_run) (gv, sh , original_freelist_pointer::ls, xx, pa1). (* kalloc *)
-    if_tac_auto_contradict.
-    Intros ab.
-    forward_call (kfree_spec_sub KAF_APD t_run) (pa2, gv, sh , snd ab, xx, fst ab). (* call kfree *)
-    + if_tac_auto_contradict. unfold type_kalloc_token at 2; entailer!.
-    + if_tac_auto_contradict.
-    forward_call (kalloc_spec_sub KAF_APD t_run) (gv, sh , fst ab::snd ab, xx, pa2). (* kalloc *)
-    if_tac_auto_contradict.
-    Intros ab0. forward. Exists pa2. unfold KAF_globals. unfold type_kalloc_token; entailer!.
-    inversion H8. rewrite H14, H15. inversion H5. rewrite H16, H17. entailer!.
-        Qed.
-        
-Lemma body_kfree_kfree_kalloc: semax_body KAFVprog KAFGprog f_kfree_kfree_kalloc kfree_kfree_kalloc_spec.
-Proof.
-start_function.
-Intros.
-if_tac; if_tac; destruct H; 
-forward_call (kfree_spec_sub KAF_APD t_run) (pa1, gv, sh , ls, xx, original_freelist_pointer). (* call kfree *)
-- if_tac_auto_contradict. unfold KAF_globals. entailer!.
-- if_tac_auto_contradict;
-    forward_call (kfree_spec_sub KAF_APD t_run) (pa2, gv, sh , ls, xx, original_freelist_pointer). (* call kfree*)
-    + if_tac_auto_contradict. entailer!.
-    + if_tac_auto_contradict.
-        forward_call (kalloc_spec_sub KAF_APD t_run) (gv, sh , ls, xx, original_freelist_pointer). (* kalloc *)
-        if_tac_auto_contradict. 
-        * forward. Exists nullval. unfold KAF_globals. entailer!.
-        * forward. Exists original_freelist_pointer. Exists (fst ab) (snd ab). entailer!. 
-        unfold type_kalloc_token, KAF_globals. entailer!.
--if_tac_auto_contradict. unfold KAF_globals. entailer!.
--if_tac_auto_contradict;
-forward_call (kfree_spec_sub KAF_APD t_run) (pa2, gv, sh , ls, xx,original_freelist_pointer). (* call kfree*)
-+ if_tac_auto_contradict. entailer!. unfold type_kalloc_token; entailer!. 
-+ if_tac_auto_contradict.
-    forward_call (kalloc_spec_sub KAF_APD t_run) (gv, sh , original_freelist_pointer::ls, xx, pa2). (* kalloc *)
-    if_tac_auto_contradict. 
-    forward. Exists pa2. unfold KAF_globals. entailer!.
-        * do 3 right. split; auto.
-        * unfold type_kalloc_token. entailer!. inversion H0. rewrite H9, H10. entailer.
-- if_tac_auto_contradict. unfold KAF_globals, type_kalloc_token. entailer!.
-- if_tac_auto_contradict. 
-forward_call (kfree_spec_sub KAF_APD t_run) (pa2, gv, sh , original_freelist_pointer::ls, xx,pa1). (* call kfree*)
-+ if_tac_auto_contradict. entailer!.
-+ if_tac_auto_contradict. forward_call (kalloc_spec_sub KAF_APD t_run) (gv, sh , original_freelist_pointer::ls, xx, pa1). (* kalloc *)
-    if_tac_auto_contradict.
-    Intros ab. forward. Exists pa1. unfold type_kalloc_token, KAF_globals. entailer!.
-    * do 2 right; left; split; auto.
-    * inversion H6. rewrite H9, H10. entailer.
-- if_tac_auto_contradict. unfold type_kalloc_token, KAF_globals. entailer!.
-- if_tac_auto_contradict. forward_call (kfree_spec_sub KAF_APD t_run) (pa2, gv, sh , original_freelist_pointer::ls, xx,pa1). (* call kfree*)
-    + if_tac_auto_contradict. unfold type_kalloc_token. entailer!.
-    + if_tac_auto_contradict. forward_call (kalloc_spec_sub KAF_APD t_run) (gv, sh , pa1::original_freelist_pointer::ls, xx, pa2). (* kalloc *)
-    if_tac_auto_contradict. Intros ab.
-    forward. Exists pa2. unfold KAF_globals, type_kalloc_token. entailer!.
-    inversion H6.
-    entailer.
-        Qed.
-        
-
-Lemma body_kalloc_write_42_kfree_kfree: semax_body KAFVprog KAFGprog f_kalloc_write_42_kfree_kfree kalloc_write_42_kfree_kfree_spec.
-Proof.
-    start_function.
-    forward. 
-    forward_call (kalloc_spec_sub KAF_APD tint) (gv, sh , ls, xx, original_freelist_pointer ). (* kalloc *)
-    - unfold KAF_globals. entailer!.
-    - if_tac.
-    + forward_if.
-        * rewrite H in H0; auto_contradict.
-        * forward_call (kfree_spec_sub KAF_APD t_run) (original_freelist_pointer, gv, sh , ls, xx,original_freelist_pointer). (* call kfree*)
-            -- if_tac_auto_contradict. entailer!.
-            -- rewrite H. simpl. auto.
-            -- if_tac_auto_contradict. 
-            forward. Exists (Vint(Int.repr 0)). entailer.
-    + Intros ab.
-        destruct ls; auto_contradict.
-        forward_if.
-        * unfold type_kalloc_token. rewrite kalloc_token_sz_split. Intros.
-        rewrite memory_block_data_at_; auto. rewrite data_at__eq. Intros. forward.
-        forward. 
-        forward_call (kfree_spec_sub KAF_APD tint) (original_freelist_pointer, gv, sh , snd ab, xx, (fst ab)). (* call kfree *)
-        -- if_tac_auto_contradict.
-            unfold type_kalloc_token. rewrite kalloc_token_sz_split. entailer!.
-            sep_apply data_at_memory_block. entailer!.
-        -- if_tac_auto_contradict.
-            forward. Exists (Vint (Int.repr 42)).
-            unfold KAF_globals.
-            inversion H0. rewrite H8; rewrite H9.
-            entailer!.
-        * rewrite H1 in H. auto_contradict.
-        Qed.
-
-
-Lemma body_kfree_kfree_kalloc_kalloc: semax_body KAFVprog KAFGprog f_kfree_kfree_kalloc_kalloc kfree_kfree_kalloc_kalloc_spec.
-Proof.
-start_function.
-Intros.
-destruct H. 
-forward_call (kfree_spec_sub KAF_APD t_run) (pa1, gv, sh , ls, xx, original_freelist_pointer). (* call kfree *)
-- unfold KAF_globals.
-    if_tac.
-    + rewrite H1 in H. auto_contradict.
-    + unfold type_kalloc_token. entailer!. 
-- if_tac_auto_contradict. rewrite H1 in H. auto_contradict.
-    forward_call (kfree_spec_sub KAF_APD t_run) (pa2, gv, sh , original_freelist_pointer::ls, xx, pa1).
-    if_tac_auto_contradict. rewrite H2 in H0; auto_contradict.
-    unfold type_kalloc_token.
-    entailer!.
-    forward_call (kalloc_spec_sub KAF_APD t_run) (gv, sh , pa1::original_freelist_pointer::ls, xx, pa2). (* kalloc *)
-    if_tac_auto_contradict; entailer!.
-    if_tac_auto_contradict. rewrite H2 in H0; auto_contradict.
-    Intros ab. 
-    forward_call (kalloc_spec_sub KAF_APD t_run) (gv, sh , original_freelist_pointer::ls, xx, pa1). (* kalloc *)
-    inversion H3. entailer!.
-    if_tac_auto_contradict.
-    Intros ab0. 
-    forward. unfold type_kalloc_token. entailer!. unfold KAF_globals. inversion H5; entailer.
-Qed.
 
 Lemma body_kfree_kfree_same_wrong_pointer: semax_body KAFVprog KAFGprog f_kfree_kfree_same_pointer kfree_kfree_same_pointer_wrong_spec.
 Proof.
@@ -683,13 +408,35 @@ Intros.
 forward_call (kfree_spec_sub KAF_APD t_run) (pa1, gv, sh , ls, xx, original_freelist_pointer). (* call kfree *)
 - unfold KAF_globals.
     if_tac.
-    + rewrite H0 in H. auto_contradict.
+    + rewrite H0 in H. destruct H. auto_contradict.
     + unfold type_kalloc_token. entailer!. 
-- if_tac_auto_contradict. rewrite H0 in H. auto_contradict.
-    forward_call (kfree_spec_sub KAF_APD t_run) (pa1, gv, sh , original_freelist_pointer::ls, xx, pa1).
-    +  if_tac_auto_contradict. (*rewrite H2 in H0; auto_contradict.*)
+- split; destruct H. unfold is_pointer_or_null. destruct pa1; auto_contradict; auto.
+destruct H0. left; auto. right; auto.
+- if_tac_auto_contradict.
+    + rewrite H0 in H. auto_contradict. forward_call (kfree_spec_sub KAF_APD t_run) (pa1, gv, sh , original_freelist_pointer::ls, xx, pa1).
+    * if_tac_auto_contradict. (*rewrite H2 in H0; auto_contradict.*)
     unfold type_kalloc_token.
     entailer!.
-    + if_tac_auto_contradict.
-      entailer. 
-Qed.
+    * destruct H. auto_contradict.
+    * if_tac_auto_contradict.
+      entailer. unfold KAF_globals. rewrite mem_mgr_split. rewrite mem_mgr_split.
+      entailer!.
+      -- destruct H3. 
+        ++ destruct H3; auto_contradict.
+        ++  destruct H; auto_contradict.
+      -- destruct H; auto_contradict.
+    + forward_call (kfree_spec_sub KAF_APD t_run) (pa1, gv, sh , original_freelist_pointer::ls, xx, pa1).
+    * if_tac_auto_contradict. unfold type_kalloc_token. entailer!.
+    * destruct H as [H [H1 | H2]]. 
+        -- split. destruct pa1; auto_contradict; unfold is_pointer_or_null; auto.
+        assert (exists ls : list val, In pa1 (original_freelist_pointer :: ls)). 
+        {
+            exists [pa1].
+            simpl. right. left. auto.
+        }
+           left. intros HH. apply H1.
+           (* we have that 
+            ~ In pa1 (original_freelist_pointer :: ls) and
+            exists ls : list val, In pa1 (original_freelist_pointer :: ls)
+            *)
+Abort.
