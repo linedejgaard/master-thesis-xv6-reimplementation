@@ -39,7 +39,7 @@ Definition kalloc_int_array_spec : ident * funspec :=
     DECLARE _kalloc_int_array
     WITH sh : share, original_freelist_pointer:val, xx:Z, ls:list val, gv:globals, n:Z
     PRE [ tint ] 
-    PROP (0 <= n <= Int.max_signed /\ 0 <= sizeof (tarray tint n) <= PGSIZE) (* make sure an array of size n fits into the page *)
+    PROP (0 <= n /\ sizeof (tarray tint n) <= PGSIZE) (* make sure an array of size n fits into the page *)
     PARAMS(Vint (Int.repr n)) GLOBALS(gv) 
     SEP (KF_globals gv sh ls xx original_freelist_pointer)
     POST [ tptr tint ]
@@ -99,7 +99,7 @@ start_function.
 forward.
 forward_call (kalloc_spec_sub KF_APD (tarray tint n)) (gv, sh , ls, xx, original_freelist_pointer ). (* kalloc *)
 - unfold KF_globals. entailer!.
-- destruct H; destruct H0; auto.
+- destruct H; auto.
 - if_tac.
     + forward_if.
         * rewrite H0 in H1; auto_contradict.
@@ -123,9 +123,19 @@ forward_call (kalloc_spec_sub KF_APD (tarray tint n)) (gv, sh , ls, xx, original
             )
             )
         )%assert.
+        -- destruct H. unfold tarray in H7. rewrite sizeof_Tarray in H7. 
+        assert (Z.max 0 n <= PGSIZE / (sizeof tint)). {  apply Zdiv_le_lower_bound. simpl; try rep_lia. auto. rewrite Z.mul_comm. auto. }
+        assert (n <= PGSIZE / (sizeof tint)); try rep_lia. apply (Z.le_trans) with (PGSIZE / sizeof tint). try rep_lia.
+        unfold PGSIZE; simpl; try rep_lia.
         -- entailer!. unfold tmp_array_42_rep. unfold KF_globals. entailer!. inversion H1; entailer.
         -- Intros.
         assert (Int.min_signed <= i <= Int.max_signed). { 
+            assert (n <= Int.max_signed). {
+            destruct H. unfold tarray in H7. unfold tarray in H8. rewrite sizeof_Tarray in H8. 
+            assert (Z.max 0 n <= PGSIZE / (sizeof tint)). {  apply Zdiv_le_lower_bound. simpl; try rep_lia. auto. rewrite Z.mul_comm. auto. }
+            assert (n <= PGSIZE / (sizeof tint)); try rep_lia. apply (Z.le_trans) with (PGSIZE / sizeof tint). try rep_lia.
+            unfold PGSIZE; simpl; try rep_lia.
+            }
             split; try rep_lia.
         } unfold tmp_array_42_rep.
         forward. entailer.
@@ -164,12 +174,16 @@ forward_call (kalloc_spec_sub KF_APD (tarray tint n)) (gv, sh , ls, xx, original
     * forward.
 Qed.
 
-
 Lemma body_kalloc_int_array_fail: semax_body KFVprog KFGprog f_kalloc_int_array kalloc_int_array_spec_fail.
 Proof.
 start_function.
 forward.
 forward_call (kalloc_spec_sub KF_APD (tarray tint n)) (gv, sh , ls, xx, original_freelist_pointer ). (* kalloc *)
 - unfold KF_globals. entailer!.
-- admit. (* this is not provable as n can be arbitrary large *)
-Admitted.
+- assert (exists n : Z, sizeof (tarray tint n) > PGSIZE). 
+    {
+        exists PGSIZE.
+        split.
+    }
+    admit. (* this is not provable as n can be arbitrary large *)
+Abort.
