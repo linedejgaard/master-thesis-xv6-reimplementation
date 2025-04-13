@@ -226,6 +226,12 @@ Definition array_42_rep sh (n:Z) (pi: val) : mpred :=
       (array_42 (Z.to_nat n))
     ) pi.
 
+Definition tmp_array_42_rep sh (n:Z) (pi: val) (i : Z) : mpred :=
+  data_at sh (tarray (tint) n)
+    (
+      (array_42 (Z.to_nat i)) ++ (Zrepeat (default_val tint) (n - i))
+    ) pi.
+    
 Lemma array_42_length :
     forall n,
     Zlength (array_42 n) = Z.of_nat n.
@@ -245,12 +251,6 @@ Proof.
     - unfold array_42; fold array_42. simpl.
     f_equal. rewrite IHi. auto.
 Qed. 
-
-Definition tmp_array_42_rep sh (n:Z) (pi: val) (i : Z) : mpred :=
-  data_at sh (tarray (tint) n)
-    (
-      (array_42 (Z.to_nat i)) ++ (Zrepeat (default_val tint) (n - i))
-    ) pi.
 
 
     
