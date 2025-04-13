@@ -15,27 +15,27 @@ Definition kalloc_write_pipe_spec : ident * funspec :=
  DECLARE _kalloc_write_pipe
  WITH sh : share, original_freelist_pointer:val, xx:Z, ls:list val, gv:globals
  PRE [ ] 
-    PROP () PARAMS() GLOBALS(gv) SEP (KF_globals gv sh ls xx original_freelist_pointer)
+    PROP () PARAMS() GLOBALS(gv) SEP (KAF_globals gv sh ls xx original_freelist_pointer)
  POST [ tvoid ]
     PROP ( ) RETURN () SEP (
         (if eq_dec original_freelist_pointer nullval then
-            KF_globals gv  sh ls xx original_freelist_pointer *emp
+            KAF_globals gv  sh ls xx original_freelist_pointer *emp
         else
         EX next ls',
           (!! (next :: ls' = ls) &&
                 pipe_rep sh original_freelist_pointer *
-                KF_globals gv  sh ls' xx next
+                KAF_globals gv  sh ls' xx next
         )
         )
     ).
 
 
-Lemma body_kalloc_write_pipe: semax_body KFVprog KFGprog f_kalloc_write_pipe kalloc_write_pipe_spec.
+Lemma body_kalloc_write_pipe: semax_body KAFVprog KAFGprog f_kalloc_write_pipe kalloc_write_pipe_spec.
 Proof.
 start_function.
 forward.
-forward_call (kalloc_spec_sub KF_APD t_struct_pipe) (gv, sh , ls, xx, original_freelist_pointer ). (* kalloc *)
-- unfold KF_globals. entailer!. 
+forward_call (kalloc_spec_sub KAF_APD t_struct_pipe) (gv, sh , ls, xx, original_freelist_pointer ). (* kalloc *)
+- unfold KAF_globals. entailer!. 
 - if_tac. (*destruct (eq_dec original_freelist_pointer nullval) eqn:e0.*)
     + forward_if.
         * rewrite H in H0; auto_contradict.
@@ -47,7 +47,7 @@ forward_call (kalloc_spec_sub KF_APD t_struct_pipe) (gv, sh , ls, xx, original_f
         forward. forward. forward. 
         entailer.
         Exists  (fst ab) (snd ab). entailer.
-        unfold KF_globals. unfold pipe_rep.  Exists (fst (default_val t_struct_pipe)). entailer!.
+        unfold KAF_globals. unfold pipe_rep.  Exists (fst (default_val t_struct_pipe)). entailer!.
         rewrite mem_mgr_split. entailer.
         * forward. entailer.
 Qed.

@@ -7,7 +7,7 @@ Require Import VC.kallocfun.
 
 Local Open Scope logic.
 
-Lemma body_kfree: semax_body KFVprog KFGprog f_kfree (kfree_spec KF_APD t_run).
+Lemma body_kfree: semax_body KAFVprog KAFGprog f_kfree (kfree_spec KAF_APD t_run).
 Proof. start_function. Intros.
 forward.
 rewrite mem_mgr_split. Intros.
@@ -23,7 +23,7 @@ destruct (eq_dec new_head nullval).
     * forward. entailer.
 Qed.
 
-Lemma body_kalloc: semax_body KFVprog KFGprog f_kalloc (kalloc_spec (KF_APD) t_run).
+Lemma body_kalloc: semax_body KAFVprog KAFGprog f_kalloc (kalloc_spec (KAF_APD) t_run).
 Proof. start_function.
 rewrite mem_mgr_split. Intros. forward.
 forward_if (
@@ -34,13 +34,13 @@ forward_if (
         )
     SEP (
         if (eq_dec original_freelist_pointer nullval) then
-        (ASI_kalloc.mem_mgr KF_APD gv sh ls xx original_freelist_pointer * emp)
+        (ASI_kalloc.mem_mgr KAF_APD gv sh ls xx original_freelist_pointer * emp)
       else 
         (
           EX next ls',
           (!! (next :: ls' = ls) &&
-              type_kalloc_token KF_APD sh (t_run) original_freelist_pointer *
-              ASI_kalloc.mem_mgr KF_APD gv sh ls' xx next
+              type_kalloc_token KAF_APD sh (t_run) original_freelist_pointer *
+              ASI_kalloc.mem_mgr KAF_APD gv sh ls' xx next
           )
         )
     )

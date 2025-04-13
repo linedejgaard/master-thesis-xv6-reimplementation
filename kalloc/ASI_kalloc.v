@@ -15,7 +15,7 @@ Record KallocTokenAPD := {
 }.
 
 Record KallocFreeAPD := {
-  KF_Tok :> KallocTokenAPD;   (* whenever KallocFreeAPD is used, but a KallocTokenAPD is expected, it is automatically converted *)
+  KAF_Tok :> KallocTokenAPD;   (* whenever KallocFreeAPD is used, but a KallocTokenAPD is expected, it is automatically converted *)
   mem_mgr: globals -> share -> list val -> Z -> val -> mpred;
 }.
 

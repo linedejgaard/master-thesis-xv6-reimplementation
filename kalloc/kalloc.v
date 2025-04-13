@@ -91,6 +91,7 @@ Definition _kfree_kalloc_twice : ident := $"kfree_kalloc_twice".
 Definition _kfree_kfree_kalloc : ident := $"kfree_kfree_kalloc".
 Definition _kfree_kfree_kalloc_kalloc : ident := $"kfree_kfree_kalloc_kalloc".
 Definition _kfree_kfree_kalloc_loop : ident := $"kfree_kfree_kalloc_loop".
+Definition _kfree_kfree_same_pointer : ident := $"kfree_kfree_same_pointer".
 Definition _kfree_loop : ident := $"kfree_loop".
 Definition _kfree_loop_kalloc : ident := $"kfree_loop_kalloc".
 Definition _kmem : ident := $"kmem".
@@ -468,29 +469,6 @@ Definition f_kfree_loop_kalloc := {|
     (Sreturn (Some (Etempvar _t'1 (tptr tvoid))))))
 |}.
 
-Definition f_kfree_kfree_kalloc_kalloc := {|
-  fn_return := (tptr tvoid);
-  fn_callconv := cc_default;
-  fn_params := ((_pa1, (tptr tvoid)) :: (_pa2, (tptr tvoid)) :: nil);
-  fn_vars := nil;
-  fn_temps := ((_t'1, (tptr tvoid)) :: nil);
-  fn_body :=
-(Ssequence
-  (Scall None
-    (Evar _kfree (Tfunction ((tptr tvoid) :: nil) tvoid cc_default))
-    ((Etempvar _pa1 (tptr tvoid)) :: nil))
-  (Ssequence
-    (Scall None
-      (Evar _kfree (Tfunction ((tptr tvoid) :: nil) tvoid cc_default))
-      ((Etempvar _pa2 (tptr tvoid)) :: nil))
-    (Ssequence
-      (Scall None (Evar _kalloc (Tfunction nil (tptr tvoid) cc_default)) nil)
-      (Ssequence
-        (Scall (Some _t'1)
-          (Evar _kalloc (Tfunction nil (tptr tvoid) cc_default)) nil)
-        (Sreturn (Some (Etempvar _t'1 (tptr tvoid))))))))
-|}.
-
 Definition f_kalloc_int_array := {|
   fn_return := (tptr tint);
   fn_callconv := cc_default;
@@ -528,6 +506,45 @@ Definition f_kalloc_int_array := {|
           (Sreturn (Some (Etempvar _pa (tptr tint)))))
         Sskip)
       (Sreturn (Some (Econst_int (Int.repr 0) tint))))))
+|}.
+
+Definition f_kfree_kfree_kalloc_kalloc := {|
+  fn_return := (tptr tvoid);
+  fn_callconv := cc_default;
+  fn_params := ((_pa1, (tptr tvoid)) :: (_pa2, (tptr tvoid)) :: nil);
+  fn_vars := nil;
+  fn_temps := ((_t'1, (tptr tvoid)) :: nil);
+  fn_body :=
+(Ssequence
+  (Scall None
+    (Evar _kfree (Tfunction ((tptr tvoid) :: nil) tvoid cc_default))
+    ((Etempvar _pa1 (tptr tvoid)) :: nil))
+  (Ssequence
+    (Scall None
+      (Evar _kfree (Tfunction ((tptr tvoid) :: nil) tvoid cc_default))
+      ((Etempvar _pa2 (tptr tvoid)) :: nil))
+    (Ssequence
+      (Scall None (Evar _kalloc (Tfunction nil (tptr tvoid) cc_default)) nil)
+      (Ssequence
+        (Scall (Some _t'1)
+          (Evar _kalloc (Tfunction nil (tptr tvoid) cc_default)) nil)
+        (Sreturn (Some (Etempvar _t'1 (tptr tvoid))))))))
+|}.
+
+Definition f_kfree_kfree_same_pointer := {|
+  fn_return := tvoid;
+  fn_callconv := cc_default;
+  fn_params := ((_pa1, (tptr tvoid)) :: nil);
+  fn_vars := nil;
+  fn_temps := nil;
+  fn_body :=
+(Ssequence
+  (Scall None
+    (Evar _kfree (Tfunction ((tptr tvoid) :: nil) tvoid cc_default))
+    ((Etempvar _pa1 (tptr tvoid)) :: nil))
+  (Scall None
+    (Evar _kfree (Tfunction ((tptr tvoid) :: nil) tvoid cc_default))
+    ((Etempvar _pa1 (tptr tvoid)) :: nil)))
 |}.
 
 Definition composites : list composite_definition :=
@@ -808,12 +825,15 @@ Definition global_definitions : list (ident * globdef fundef type) :=
  (_kfree_kfree_kalloc_loop, Gfun(Internal f_kfree_kfree_kalloc_loop)) ::
  (_kfree_loop, Gfun(Internal f_kfree_loop)) ::
  (_kfree_loop_kalloc, Gfun(Internal f_kfree_loop_kalloc)) ::
+ (_kalloc_int_array, Gfun(Internal f_kalloc_int_array)) ::
  (_kfree_kfree_kalloc_kalloc, Gfun(Internal f_kfree_kfree_kalloc_kalloc)) ::
- (_kalloc_int_array, Gfun(Internal f_kalloc_int_array)) :: nil).
+ (_kfree_kfree_same_pointer, Gfun(Internal f_kfree_kfree_same_pointer)) ::
+ nil).
 
 Definition public_idents : list ident :=
-(_kalloc_int_array :: _kfree_kfree_kalloc_kalloc :: _kfree_loop_kalloc ::
- _kfree_loop :: _kfree_kfree_kalloc_loop :: _kfree_kfree_kalloc ::
+(_kfree_kfree_same_pointer :: _kfree_kfree_kalloc_kalloc ::
+ _kalloc_int_array :: _kfree_loop_kalloc :: _kfree_loop ::
+ _kfree_kfree_kalloc_loop :: _kfree_kfree_kalloc ::
  _kfree_kalloc_kfree_kalloc :: _kfree_kalloc_twice :: _kfree_kalloc ::
  _kalloc_write_42_kfree_kfree :: _kalloc_write_42_kfree ::
  _kalloc_write_42 :: _kalloc_write_pipe :: _kalloc :: _kfree :: _kmem ::

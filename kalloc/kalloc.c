@@ -1,31 +1,11 @@
-// Physical memory allocator, for user processes,
-// kernel stacks, page-table pages,
-// and pipe buffers. Allocates whole 4096-byte pages.
-
-//void freerange(void *pa_start, void *pa_end);
-
-//extern char end[]; // first address after kernel.
-                   // defined by kernel.ld.
-                   
-
 struct run {
   struct run *next;
 };
 
 struct struct_kmem { // Rocq wants it to be named
-  int xx; 
+  int xx; // placeholder for the spinlock
   struct run *freelist; 
 } kmem;
-
-/* void
-freerange(void *pa_start, void *pa_end)
-{
-  char *p;
-  p = (char*)PGROUNDUP((uint64)pa_start);
-  for(; p + PGSIZE <= (char*)pa_end; p += PGSIZE)
-    kfree(p);
-}
- */
 
 // Free the page of physical memory pointed at by pa,
 // which normally should have been returned by a
@@ -203,4 +183,9 @@ void *kfree_kfree_kalloc_kalloc(void *pa1, void *pa2) {
   kfree(pa2);
   kalloc();
   return kalloc();
+}
+
+void kfree_kfree_same_pointer(void *pa1) { 
+  kfree(pa1);
+  kfree(pa1);
 }

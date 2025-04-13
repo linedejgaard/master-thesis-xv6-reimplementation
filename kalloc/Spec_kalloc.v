@@ -176,8 +176,8 @@ Qed.
 
 (** ** 
   Example usage (assuming kalloc_token' = kalloc_token_sz): 
-    kalloc_token' KF_APD sh (sizeof t_run) new_head
-    |-- type_kalloc_token KF_APD sh t_run new_head
+    kalloc_token' KAF_APD sh (sizeof t_run) new_head
+    |-- type_kalloc_token KAF_APD sh t_run new_head
 
 *)
 

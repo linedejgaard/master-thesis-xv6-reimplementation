@@ -100,6 +100,9 @@ Ltac refold_freelistrep :=
   unfold freelistrep;
   fold freelistrep.
 
+Definition freelistrep_safe sh il p :=
+  !! NoDup il && freelistrep sh il p.
+
 (* ================================================================= *)
 (** ** Defining APD: use tokens based on size *)
 
@@ -115,16 +118,16 @@ Definition mem_mgr (gv: globals) (sh : share) (ls: list val) (xx:Z) (original_fr
       (sepcon (data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem))
       (freelistrep sh ls original_freelist_pointer)).
 
-Definition KF_APD := Build_KallocFreeAPD Tok_APD mem_mgr.
+Definition KAF_APD := Build_KallocFreeAPD Tok_APD mem_mgr.
 
 (* ================================================================= *)
 (** ** Constructing Vprog and Gprog *)
 
-Definition KF_ASI: funspecs := Kalloc_ASI KF_APD _kalloc _kfree.
-Definition KF_internal_specs: funspecs := KF_ASI.
-Definition KF_globals gv  sh ls xx original_freelist_pointer: mpred:= ASI_kalloc.mem_mgr KF_APD gv sh ls xx original_freelist_pointer.
-Definition KFVprog : varspecs. mk_varspecs kalloc.prog. Defined.
-Definition KFGprog: funspecs := KF_internal_specs.
+Definition KAF_ASI: funspecs := Kalloc_ASI KAF_APD _kalloc _kfree.
+Definition KAF_internal_specs: funspecs := KAF_ASI.
+Definition KAF_globals gv  sh ls xx original_freelist_pointer: mpred:= ASI_kalloc.mem_mgr KAF_APD gv sh ls xx original_freelist_pointer.
+Definition KAFVprog : varspecs. mk_varspecs kalloc.prog. Defined.
+Definition KAFGprog: funspecs := KAF_internal_specs.
 
 (* ================================================================= *)
 (** ** Lemma to unfold mem_mgr *)
