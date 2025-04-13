@@ -35,7 +35,8 @@ Definition kfree_spec' :=
       WITH n:Z, new_head:val, gv:globals, sh:share, ls: list val, xx:Z, original_freelist_pointer:val
       PRE [ tptr tvoid]
         PROP(
-              is_pointer_or_null new_head
+              is_pointer_or_null new_head /\
+              (~ In new_head (original_freelist_pointer::ls) \/ new_head = nullval)
               ) 
         PARAMS (new_head) GLOBALS(gv)
         SEP (
@@ -70,7 +71,8 @@ POST [ tptr tvoid ]
       else 
         (
           EX next ls',
-          (!! (next :: ls' = ls) &&
+          (!! (next :: ls' = ls /\
+          (~ In original_freelist_pointer ls')) &&
               kalloc_token' K sh n original_freelist_pointer *
               mem_mgr K gv sh ls' xx next
           )

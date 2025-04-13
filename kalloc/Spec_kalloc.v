@@ -27,7 +27,7 @@ Lemma type_kalloc_token_valid_pointer:
   forall K (sh : share) (t : type) (p : val),
   type_kalloc_token K sh t p |-- valid_pointer p.
 Proof.
-  intros. 
+  intros.
   unfold type_kalloc_token. entailer!.
 Qed.
 
@@ -91,7 +91,8 @@ Definition kfree_spec (K:KallocFreeAPD) {cs: compspecs} (t: type) :=
       WITH new_head:val, gv:globals, sh:share, ls: list val, xx:Z, original_freelist_pointer:val
       PRE [ tptr tvoid]
         PROP(
-              is_pointer_or_null new_head
+              is_pointer_or_null new_head /\
+              (~ In new_head (original_freelist_pointer::ls) \/ new_head = nullval)
               ) 
         PARAMS (new_head) GLOBALS(gv)
         SEP (
@@ -127,7 +128,8 @@ POST [ tptr tvoid ]
       else 
         (
           EX next ls',
-          (!! (next :: ls' = ls) &&
+          (!! (next :: ls' = ls  /\
+            (~ In original_freelist_pointer ls')) &&
               type_kalloc_token K sh t original_freelist_pointer *
               ASI_kalloc.mem_mgr K gv sh ls' xx next
         )

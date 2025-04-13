@@ -121,7 +121,8 @@ Proof.
         p_tmp = offset_val (i * PGSIZE)%Z pa1 /\
         Int.min_signed <=
         Int.signed (Int.repr i) + Int.signed (Int.repr 1) <=
-        Int.max_signed 
+        Int.max_signed /\
+        (NoDup (p_tmp::(curr_head::(tmp_added_elem ++ ls))))
     )
     LOCAL (
         gvars gv;
@@ -145,11 +146,11 @@ Proof.
                 -- unfold offset_val in H1. destruct pa1; auto_contradict.
                 --unfold KAF_globals. unfold type_kalloc_token. rewrite kalloc_token_sz_split. simpl. rewrite kalloc_token_sz_split. Intros.
                 entailer!.
-            * destruct H0 as [H01 [H02 [H03 [H04 H05]]]]; rewrite H04. unfold is_pointer_or_null.
-              unfold offset_val. destruct pa1; auto_contradict; auto.
+            * destruct H0 as [H01 [H02 [H03 [H04 [H05 H06]]]]]; rewrite H04. unfold is_pointer_or_null.
+              unfold offset_val. destruct pa1; auto_contradict; auto. split; auto. left. rewrite NoDup_cons_iff in H06; destruct H06 as [H06 HH06]. rewrite H04 in H06. unfold offset_val in H06. auto.
             * forward. entailer!. destruct H0 as [H01 [H02 [H03 [H04 H05]]]]; rewrite H04. unfold is_pointer_or_null.
             unfold offset_val. destruct pa1; auto_contradict; auto.
-            forward. if_tac; auto_contradict; destruct H0 as [H01 [H02 [H03 [H04 H05]]]]; rewrite H04 in H1.
+            forward. if_tac; auto_contradict; destruct H0 as [H01 [H02 [H03 [H04 [H05 H06]]]]]; rewrite H04 in H1.
                 -- unfold offset_val in H1. destruct pa1; auto_contradict.
                 -- Exists ((((i+1)%Z, (offset_val PGSIZE p_tmp):val), p_tmp:val), (curr_head::(pointers_with_original_head(Z.to_nat (i)) pa1 PGSIZE)original_freelist_pointer):list val).
                 entailer!. 
@@ -168,6 +169,8 @@ Proof.
                             replace (Z.to_nat (i + 1)) with (((Z.to_nat i) + 1)%nat); try rep_lia.
                             rewrite add_to_pointers_with_head; auto; try rep_lia.
                         --- replace (i * PGSIZE + PGSIZE) with ((i + 1) * PGSIZE)%Z; try rep_lia; auto.
+                        split; auto. rewrite NoDup_cons_iff. split; auto. rewrite NoDup_cons_iff in H06; destruct H06 as [H06 HH06]. unfold not; intro.
+                        apply H06.
                 ++ unfold KAF_globals. 
                 assert (Z.to_nat (2 - (i + 1)) = n); try rep_lia.
                 rewrite H6. rewrite app_comm_cons. entailer!.

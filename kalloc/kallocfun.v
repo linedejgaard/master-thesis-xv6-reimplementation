@@ -101,7 +101,12 @@ Ltac refold_freelistrep :=
   fold freelistrep.
 
 Definition freelistrep_safe sh il p :=
-  !! NoDup il && freelistrep sh il p.
+  !! NoDup (p::il) && freelistrep sh il p.
+
+Ltac refold_freelistrep_safe :=
+  unfold freelistrep_safe;
+  unfold freelistrep;
+  fold freelistrep.
 
 (* ================================================================= *)
 (** ** Defining APD: use tokens based on size *)
@@ -116,7 +121,7 @@ Definition mem_mgr (gv: globals) (sh : share) (ls: list val) (xx:Z) (original_fr
               ((ls <> nil) /\ isptr original_freelist_pointer))
         ) &&
       (sepcon (data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem))
-      (freelistrep sh ls original_freelist_pointer)).
+      (freelistrep_safe sh ls original_freelist_pointer)).
 
 Definition KAF_APD := Build_KallocFreeAPD Tok_APD mem_mgr.
 
@@ -142,7 +147,7 @@ Lemma mem_mgr_split:
               ((ls <> nil) /\ isptr original_freelist_pointer))
         ) &&
       (sepcon (data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem))
-      (freelistrep sh ls original_freelist_pointer)).
+      (freelistrep_safe sh ls original_freelist_pointer)).
 Proof.
   intros. apply pred_ext.
   - unfold mem_mgr. entailer!.
@@ -150,4 +155,3 @@ Proof.
 Qed.
 
 Ltac start_function_hint ::= idtac. (* no hint reminder *)
-

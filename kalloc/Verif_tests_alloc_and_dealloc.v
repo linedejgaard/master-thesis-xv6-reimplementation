@@ -16,10 +16,12 @@ Definition kfree_kalloc_spec :=
     DECLARE _kfree_kalloc
     WITH gv:globals, sh : share, new_head:val, original_freelist_pointer:val, xx:Z, ls:list val
     PRE [ tptr tvoid ]
-        PROP(is_pointer_or_null new_head) 
+        PROP(is_pointer_or_null new_head /\
+            (~ In new_head (original_freelist_pointer::ls) \/ new_head = nullval)
+        ) 
         PARAMS (new_head) GLOBALS(gv)
         SEP (
-            KAF_globals gv  sh ls xx original_freelist_pointer *
+            KAF_globals gv sh ls xx original_freelist_pointer *
             (if eq_dec new_head nullval then emp
             else (kalloc_token' KAF_APD sh (sizeof t_run) new_head))
         )
@@ -53,7 +55,6 @@ Definition kfree_kalloc_spec :=
             newhead_case
 ).
 
-
 Definition kalloc_write_42_kfree_spec : ident * funspec :=
     DECLARE _kalloc_write_42_kfree
     WITH sh : share, original_freelist_pointer:val, xx:Z, ls:list val, gv:globals
@@ -77,7 +78,10 @@ Definition kfree_kalloc_twice_spec:=
     PRE [ tptr tvoid, tptr tvoid ]
         PROP(
             is_pointer_or_null pa1 /\
-            is_pointer_or_null pa2
+            is_pointer_or_null pa2 /\
+            (~ In pa1 (original_freelist_pointer::ls) \/ pa1 = nullval) /\
+            (~ In pa2 (original_freelist_pointer::ls)  \/ pa2 = nullval) /\
+            ~ (pa1 = pa2)
         ) 
         PARAMS (pa1; pa2) GLOBALS(gv)
         SEP (
@@ -158,7 +162,10 @@ Definition kfree_kalloc_kfree_kalloc_spec:=
     PRE [ tptr tvoid, tptr tvoid ]
         PROP(
             is_pointer_or_null pa1 /\
-            is_pointer_or_null pa2
+            is_pointer_or_null pa2 /\
+            (~ In pa1 (original_freelist_pointer::ls) \/ pa1 = nullval) /\
+            (~ In pa2 (original_freelist_pointer::ls)  \/ pa2 = nullval) /\
+            ~ (pa1 = pa2)
         ) 
         PARAMS (pa1; pa2) GLOBALS(gv)
         SEP (
@@ -238,7 +245,10 @@ Definition kfree_kfree_kalloc_spec :=
     PRE [ tptr tvoid, tptr tvoid ]
         PROP(
             is_pointer_or_null pa1 /\
-            is_pointer_or_null pa2 
+            is_pointer_or_null pa2 /\
+            (~ In pa1 (original_freelist_pointer::ls) \/ pa1 = nullval) /\
+            (~ In pa2 (original_freelist_pointer::ls)  \/ pa2 = nullval) /\
+            ~ (pa1 = pa2)
         ) 
         PARAMS (pa1; pa2) GLOBALS(gv)
         SEP (
@@ -316,7 +326,10 @@ Definition kfree_kfree_kalloc_kalloc_spec :=
     PRE [ tptr tvoid, tptr tvoid ]
         PROP(
             isptr pa1 /\
-            isptr pa2
+            isptr pa2 /\
+            (~ In pa1 (original_freelist_pointer::ls) \/ pa1 = nullval) /\
+            (~ In pa2 (original_freelist_pointer::ls)  \/ pa2 = nullval) /\
+            ~ (pa1 = pa2)
         ) 
         PARAMS (pa1; pa2) GLOBALS(gv)
         SEP (
@@ -339,7 +352,8 @@ Definition kfree_kfree_same_pointer_wrong_spec :=
     WITH sh : share, pa1:val, original_freelist_pointer:val, xx:Z, gv:globals, ls : list val, next:val
     PRE [ tptr tvoid ]
         PROP(
-            isptr pa1
+            isptr pa1 /\
+            (~ In pa1 (original_freelist_pointer::ls) \/ pa1 = nullval) 
         ) 
         PARAMS (pa1) GLOBALS(gv)
         SEP (
@@ -381,13 +395,11 @@ forward_call (kfree_spec_sub KAF_APD t_run) (new_head, gv, sh , ls, xx, original
                 ++ forward. Exists original_freelist_pointer. entailer. Exists v. entailer.
                     Exists ls. entailer. unfold KAF_globals. entailer!. inversion H0; subst. entailer!.
                     simplify_kalloc_token. 
-        *forward_call (kalloc_spec_sub KAF_APD t_run) (gv, sh, original_freelist_pointer::ls, xx, new_head ). (* kalloc *)
+        *forward_call (kalloc_spec_sub KAF_APD t_run) (gv, sh, original_freelist_pointer::ls, xx, new_head). (* kalloc *)
         destruct (eq_dec new_head nullval).
             -- forward.
             -- forward. Exists new_head. entailer. inversion H0; subst; entailer. unfold KAF_globals. entailer!. simplify_kalloc_token.
-        Qed.
-        
-        
+Qed.
         
 Lemma body_kalloc_write_42_kfree: semax_body KAFVprog KAFGprog f_kalloc_write_42_kfree kalloc_write_42_kfree_spec.
 Proof.
@@ -408,14 +420,14 @@ Proof.
         forward_call (kfree_spec_sub KAF_APD tint) (original_freelist_pointer, gv, sh , snd ab, xx, (fst ab)). (* call kfree *)
         -- if_tac_auto_contradict.
             unfold type_kalloc_token. rewrite kalloc_token_sz_split. entailer!.
-            sep_apply data_at_memory_block. entailer!.
+            sep_apply data_at_memory_block. entailer!. 
         -- if_tac_auto_contradict.
             forward. Exists (Vint (Int.repr 42)).
             unfold KAF_globals.
             inversion H0. rewrite H8; rewrite H9.
             entailer!.
         * forward.
-        Qed.
+Qed.
         
 Lemma body_kfree_kalloc_twice: semax_body KAFVprog KAFGprog_clients f_kfree_kalloc_twice kfree_kalloc_twice_spec.
 Proof.
