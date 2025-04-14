@@ -1,6 +1,5 @@
 Require Import VST.floyd.proofauto.
 
-Require Import VC.tactics.
 Require Import VC.kalloc.
 Require Import VC.kallocfun.
 Require Import VC.ASI_kalloc.

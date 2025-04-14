@@ -2,7 +2,7 @@
 
 Require Import VST.floyd.proofauto.
 Require Import VC.tactics.
-Require Import VC.kallocfun.
+Require Import VC.kallocfun. (* only PGSIZE - ideally this dependency shouldn't be here *)
 
 (* ================================================================= *)
 (** ** Abstract Predicate Declaration (APD) *)
