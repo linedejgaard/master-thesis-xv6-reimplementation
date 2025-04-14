@@ -4,6 +4,7 @@ Require Import VC.ASI_kalloc.
 Require Import VC.kalloc.
 Require Import VC.Spec_kalloc.
 Require Import VC.kallocfun.
+Require Import VC.Kalloc_APD.
 
 Local Open Scope logic.
 

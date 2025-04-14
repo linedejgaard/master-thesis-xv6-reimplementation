@@ -2,6 +2,7 @@ Require Import VST.floyd.proofauto.
 
 Require Import VC.ASI_kalloc.
 Require Import VC.kallocfun.
+Require Import VC.Kalloc_APD.
 Require Import VC.Spec_kalloc.
 Require Import VC.clientsfun.
 Require Import VC.tactics.
@@ -116,7 +117,7 @@ start_function.
 forward.
 forward_call (kalloc_spec_sub KAF_APD (tarray tint n)) (gv, sh , ls, xx, original_freelist_pointer ). (* kalloc *)
 - unfold KAF_globals. entailer!.
-- destruct H; auto.
+(*- destruct H; auto.*)
 - if_tac.
     + forward_if.
         * rewrite H0 in H1; auto_contradict.

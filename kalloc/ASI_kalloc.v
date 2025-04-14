@@ -2,6 +2,7 @@
 
 Require Import VST.floyd.proofauto.
 Require Import VC.tactics.
+Require Import VC.kallocfun.
 
 (* ================================================================= *)
 (** ** Abstract Predicate Declaration (APD) *)
