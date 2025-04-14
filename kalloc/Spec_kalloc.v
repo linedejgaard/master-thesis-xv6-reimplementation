@@ -14,7 +14,6 @@ Require Import VC.kallocfun.
 Require Import VC.kalloc.
 
 
-
 Global Open Scope funspec_scope.
 
 

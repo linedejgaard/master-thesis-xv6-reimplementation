@@ -1,10 +1,13 @@
 Require Import VST.floyd.proofauto.
-Require Import VC.tactics.
-Require Import VC.ASI_kalloc.
+
 Require Import VC.kalloc.
-Require Import VC.Spec_kalloc.
 Require Import VC.kallocfun.
+Require Import VC.tactics.
+
+Require Import VC.ASI_kalloc.
 Require Import VC.Kalloc_APD.
+Require Import VC.Spec_kalloc.
+
 
 Local Open Scope logic.
 
