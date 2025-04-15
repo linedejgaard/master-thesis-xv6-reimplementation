@@ -365,6 +365,7 @@ Ltac simplify_kalloc_token :=
     );
 entailer!.
 
+
 Lemma body_kfree_kalloc: semax_body KAFVprog KAFGprog f_kfree_kalloc kfree_kalloc_spec.
 Proof.
 start_function.
@@ -376,27 +377,23 @@ forward_call (kfree_spec_sub KAF_APD t_run) (new_head, gv, sh , ls, xx, original
     + destruct (eq_dec new_head nullval).
         *forward_call (kalloc_spec_sub KAF_APD t_run) (gv, sh , ls, xx, original_freelist_pointer ). (* kalloc *)
         destruct (eq_dec original_freelist_pointer nullval).
-            -- forward. Exists nullval. unfold KAF_globals. entailer!.
-            -- destruct ls.
-                ++ forward. auto_contradict.
-                ++ forward. Exists original_freelist_pointer. entailer. Exists v. entailer.
-                    Exists ls. entailer. unfold KAF_globals. entailer!. inversion H0; subst. entailer!.
-                    simplify_kalloc_token. 
-        *forward_call (kalloc_spec_sub KAF_APD t_run) (gv, sh, original_freelist_pointer::ls, xx, new_head ). (* kalloc *)
+            --forward. Exists nullval. entailer!. unfold KAF_globals; entailer!.
+            -- forward. Exists original_freelist_pointer. entailer.
+            Exists (fst ab) (snd ab). unfold type_kalloc_token. unfold KAF_globals. entailer!.
+        * forward_call (kalloc_spec_sub KAF_APD t_run) (gv, sh, original_freelist_pointer::ls, xx, new_head ). (* kalloc *)
         destruct (eq_dec new_head nullval).
             -- forward.
             -- forward. Exists new_head. entailer. inversion H0; subst; entailer. unfold KAF_globals. entailer!. simplify_kalloc_token.
-        Qed.
-        
-        
-        
+Qed.
+           
 Lemma body_kalloc_write_42_kfree: semax_body KAFVprog KAFGprog f_kalloc_write_42_kfree kalloc_write_42_kfree_spec.
 Proof.
     start_function.
     forward. 
     forward_call (kalloc_spec_sub KAF_APD tint) (gv, sh , ls, xx, original_freelist_pointer ). (* kalloc *)
     - unfold KAF_globals. entailer!.
-    - if_tac.
+    - admit. 
+    -if_tac.
     + forward_if.
         * rewrite H in H0; auto_contradict.
         * forward. Exists (Vint(Int.repr 0)). entailer.

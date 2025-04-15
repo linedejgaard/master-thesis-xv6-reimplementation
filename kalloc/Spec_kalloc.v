@@ -5,8 +5,8 @@
 
     It utilizes the KallocTokenAPD from ASI_kalloc in 
     type_kalloc_token.
-
 *)
+
 
 Require Import VST.floyd.proofauto.
 Require Import VC.ASI_kalloc.
@@ -31,6 +31,7 @@ Proof.
   intros. 
   unfold type_kalloc_token. entailer!.
 Qed.
+
 
 (**
   Automates the proof by trying to prove a goal of the form:
@@ -98,7 +99,9 @@ Definition kfree_spec (K:KallocFreeAPD) {cs: compspecs} (t: type) :=
         SEP (
           ASI_kalloc.mem_mgr K gv sh ls xx original_freelist_pointer *
           (if eq_dec new_head nullval then emp
-          else (type_kalloc_token K sh (t) new_head))
+          else (type_kalloc_token K sh (t) new_head) (*memory_block sh (PGSIZE - t_run_size)
+          (offset_val t_run_size new_head)))*)
+          )
         )
       POST [ tvoid ]
         PROP()
@@ -107,9 +110,10 @@ Definition kfree_spec (K:KallocFreeAPD) {cs: compspecs} (t: type) :=
           if eq_dec new_head nullval then 
           ASI_kalloc.mem_mgr K gv sh ls xx original_freelist_pointer
           else 
-          ASI_kalloc.mem_mgr K gv sh (original_freelist_pointer::ls) xx new_head *
-          memory_block sh (PGSIZE - (t_run_size)) (offset_val (t_run_size) new_head) (* not the whole block is used *)
-            ).
+          (
+          ASI_kalloc.mem_mgr K gv sh (original_freelist_pointer::ls) xx new_head (*
+          memory_block sh (PGSIZE - (t_run_size)) (offset_val (t_run_size) new_head) (* not the whole block is used *)*)
+            )).
 
 Definition kalloc_spec (K:KallocFreeAPD) {cs: compspecs} (t: type) :=
 DECLARE _kalloc
@@ -119,11 +123,7 @@ PRE [ ]
             complete_legal_cosu_type t = true;
             natural_aligned natural_alignment t = true) 
     PARAMS () GLOBALS(gv)
-    SEP ( ASI_kalloc.mem_mgr K gv sh ls xx original_freelist_pointer *
-          if eq_dec original_freelist_pointer nullval then emp else
-          (
-     !! malloc_compatible (sizeof t) original_freelist_pointer &&
-    memory_block sh (PGSIZE - (t_run_size)) (offset_val (t_run_size) original_freelist_pointer)) )
+    SEP ( ASI_kalloc.mem_mgr K gv sh ls xx original_freelist_pointer)
 POST [ tptr tvoid ]
     PROP()
     RETURN (original_freelist_pointer) 
@@ -133,9 +133,9 @@ POST [ tptr tvoid ]
       else 
         (
           EX next ls',
-          (!! (next :: ls' = ls) &&
-              type_kalloc_token K sh t original_freelist_pointer * (*
-              memory_block sh (PGSIZE - (sizeof t)) (offset_val (sizeof t) original_freelist_pointer) *)
+          (!! (next :: ls' = ls  /\ malloc_compatible (sizeof t) original_freelist_pointer) &&
+              type_kalloc_token K sh t original_freelist_pointer * 
+              (*memory_block sh (PGSIZE - (t_run_size)) (offset_val (t_run_size) original_freelist_pointer) **)
               ASI_kalloc.mem_mgr K gv sh ls' xx next
         )
         )

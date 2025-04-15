@@ -42,7 +42,8 @@ Definition kfree_spec' :=
         SEP (
           mem_mgr K gv sh ls xx original_freelist_pointer;
           if eq_dec new_head nullval then emp
-          else (kalloc_token' K sh n new_head (* memory_block Ews n new_head*))
+          else (kalloc_token' K sh n new_head  (* (memory_block sh (PGSIZE - t_run_size)
+          (offset_val t_run_size new_head))*) (* memory_block Ews n new_head*))
         )
       POST [ tvoid ]
         PROP()
@@ -51,22 +52,19 @@ Definition kfree_spec' :=
           if eq_dec new_head nullval then 
           mem_mgr K gv sh ls xx original_freelist_pointer
           else 
-            (mem_mgr K gv sh (original_freelist_pointer::ls) xx new_head *
-            memory_block sh (PGSIZE - (t_run_size)) (offset_val (t_run_size) new_head)) (* not the whole block is used *)
-            ).
+            (
+              mem_mgr K gv sh (original_freelist_pointer::ls) xx new_head
+            (*memory_block sh (PGSIZE - (t_run_size)) (offset_val (t_run_size) new_head)) (* not the whole block is used *)*)
+            )).
 
 
 Definition kalloc_spec' :=
 DECLARE kallocID
 WITH n:Z, gv:globals, sh:share, ls: list val, xx:Z, original_freelist_pointer:val
 PRE [ ]
-    PROP(0 < n <= PGSIZE) 
+    PROP(0 < n <= PGSIZE)
     PARAMS () GLOBALS(gv)
-    SEP ( mem_mgr K gv sh ls xx original_freelist_pointer *
-    if eq_dec original_freelist_pointer nullval then emp else
-    (
-     !! malloc_compatible n original_freelist_pointer &&
-    memory_block sh (PGSIZE - (t_run_size)) (offset_val (t_run_size) original_freelist_pointer))
+    SEP ( mem_mgr K gv sh ls xx original_freelist_pointer
     )  
 POST [ tptr tvoid ]
     PROP()
@@ -78,9 +76,9 @@ POST [ tptr tvoid ]
         (
           EX next ls',
           (!! (next :: ls' = ls) &&
-              kalloc_token' K sh n original_freelist_pointer (*
-              memory_block sh (PGSIZE - n) (offset_val n original_freelist_pointer) *) *
-              mem_mgr K gv sh ls' xx next
+              kalloc_token' K sh n original_freelist_pointer *
+              (*memory_block sh (PGSIZE - t_run_size) (offset_val t_run_size original_freelist_pointer) **)
+              mem_mgr K gv sh ls' xx next 
           )
         )
     ).
