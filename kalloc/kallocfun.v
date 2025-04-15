@@ -12,16 +12,25 @@ Definition PGSIZE : Z := 4096.
 Definition t_run := Tstruct _run noattr.
 Definition t_struct_kmem := Tstruct _struct_kmem noattr.
 
+Definition t_run_size := sizeof t_run.
+
 (* ================================================================= *)
 (** ** Size-based kalloc tokens *)
 
 Definition kalloc_token_sz (sh: share) (n: Z) (p: val) : mpred :=
   !! (
-      0 < n <= PGSIZE
-      /\ malloc_compatible n p 
+      0 < n <= PGSIZE 
+      /\ malloc_compatible n p
       /\ writable_share sh
+      /\ field_compatible t_run [] p (* make sure t_run fits*)
+      /\ malloc_compatible (sizeof t_run) p 
+      /\ 0 < (sizeof t_run) <= PGSIZE 
+      /\ match p with
+         | Vptr _ ofs => Ptrofs.unsigned ofs + PGSIZE < Ptrofs.modulus
+         | _ => True
+         end
       (*/\  maybe some alignment and physical address checks here *))
-  && memory_block sh (n) (p).
+  && memory_block sh PGSIZE (p).
 
 Lemma kalloc_token_sz_valid_pointer:
   forall (sh : share) (sz : Z) (p : val),
@@ -42,12 +51,19 @@ Qed.
 Lemma kalloc_token_sz_split:
 forall  (sh: share) (n: Z) (p: val),
   kalloc_token_sz sh n p =
-  !! ((*field_compatible t_run [] p /\*)
-  0 < n <= PGSIZE
-  /\ malloc_compatible (n) p 
-  /\ writable_share sh
-  (*/\  maybe some alignment and physical address checks here *))
-  && memory_block sh (n) (p).
+  !! (
+      0 < n <= PGSIZE 
+      /\ malloc_compatible n p 
+      /\ writable_share sh
+      /\ field_compatible t_run [] p (* make sure t_run fits*)
+      /\ malloc_compatible (sizeof t_run) p 
+      /\ 0 < (sizeof t_run) <= PGSIZE 
+      /\ match p with
+         | Vptr _ ofs => Ptrofs.unsigned ofs + PGSIZE < Ptrofs.modulus
+         | _ => True (* this is not important if the p is not a pointer *)
+         end
+      (*/\  maybe some alignment and physical address checks here *))
+  && memory_block sh PGSIZE (p).
 Proof.
   intros. apply pred_ext.
   - unfold kalloc_token_sz. entailer.
@@ -62,9 +78,14 @@ Qed.
 Fixpoint freelistrep (sh: share) (il: list val) (p: val) : mpred := (* the list contains the next*)
  match il with
  | next::il' =>
-        !! malloc_compatible (sizeof t_run) p &&  (* p is compatible with a memory block of size sizeof theader. *)
-        (sepcon (data_at sh t_run next p) (* at the location p, there is a t_run structure with the value next *)
-        (freelistrep sh il' next) (* "*" ensures no loops... *))
+        !!(malloc_compatible (sizeof t_run) p 
+          /\ match p with
+          | Vptr _ ofs => Ptrofs.unsigned ofs + PGSIZE < Ptrofs.modulus
+          | _ => True
+          end
+          ) &&  (* p is compatible with a memory block of size sizeof theader. *)
+          (sepcon (data_at sh t_run next p) (* at the location p, there is a t_run structure with the value next *)
+          (freelistrep sh il' next) (* "*" ensures no loops... *))
  | nil => !! (p = nullval) && emp
  end.
 
@@ -78,8 +99,8 @@ Proof.
   - unfold freelistrep. entailer!. split; auto.
     + split; auto.
     + split; try lia. intros. simpl in *. auto_contradict. intros; auto_contradict.
-  - unfold freelistrep. destruct p; entailer!. split.
-    + split; intros; inversion H2.
+  - unfold freelistrep. fold freelistrep. destruct p; entailer!. split.
+    + split; intros; inversion H3.
     + split; intros; auto. unfold not; intros. auto_contradict.
    Qed.
 #[export] Hint Resolve freelistrep_local_prop : saturate_local.

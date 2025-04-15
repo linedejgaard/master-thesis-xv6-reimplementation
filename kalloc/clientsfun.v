@@ -253,4 +253,14 @@ Proof.
 Qed. 
 
 
+Lemma Zrepeat_default_val_array :
+  forall n,
+  (0 < n) ->
+  Zrepeat (default_val tint) n = default_val (tarray tint n).
+Proof.
+Compute (default_val (tarray tint 5)).
+Compute (Zrepeat (default_val tint) 5).
+(* see https://raw.githubusercontent.com/PrincetonUniversity/VST/master/doc/VC.pdf *)
+Admitted.
+
     

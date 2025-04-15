@@ -10,7 +10,7 @@ Require Import VC.kallocfun. (* only PGSIZE - ideally this dependency shouldn't 
 Record KallocTokenAPD := {
   kalloc_token': share -> Z -> val -> mpred;
   kalloc_token'_valid_pointer: forall sh sz p, 
-  kalloc_token' sh sz p |-- valid_pointer p;
+      kalloc_token' sh sz p |-- valid_pointer p;
   kalloc_token'_local_facts:  forall sh sz p, 
       kalloc_token' sh sz p |-- !! malloc_compatible sz p;
 }.
@@ -51,7 +51,8 @@ Definition kfree_spec' :=
           if eq_dec new_head nullval then 
           mem_mgr K gv sh ls xx original_freelist_pointer
           else 
-            mem_mgr K gv sh (original_freelist_pointer::ls) xx new_head
+            (mem_mgr K gv sh (original_freelist_pointer::ls) xx new_head *
+            memory_block sh (PGSIZE - (t_run_size)) (offset_val (t_run_size) new_head)) (* not the whole block is used *)
             ).
 
 
@@ -59,20 +60,26 @@ Definition kalloc_spec' :=
 DECLARE kallocID
 WITH n:Z, gv:globals, sh:share, ls: list val, xx:Z, original_freelist_pointer:val
 PRE [ ]
-    PROP(n <= PGSIZE) 
+    PROP(0 < n <= PGSIZE) 
     PARAMS () GLOBALS(gv)
-    SEP ( mem_mgr K gv sh ls xx original_freelist_pointer )  
+    SEP ( mem_mgr K gv sh ls xx original_freelist_pointer *
+    if eq_dec original_freelist_pointer nullval then emp else
+    (
+     !! malloc_compatible n original_freelist_pointer &&
+    memory_block sh (PGSIZE - (t_run_size)) (offset_val (t_run_size) original_freelist_pointer))
+    )  
 POST [ tptr tvoid ]
     PROP()
     RETURN (original_freelist_pointer) 
     SEP (
       if (eq_dec original_freelist_pointer nullval) then
-        (mem_mgr K gv sh ls xx original_freelist_pointer * emp)
+        (mem_mgr K gv sh ls xx original_freelist_pointer)
       else 
         (
           EX next ls',
           (!! (next :: ls' = ls) &&
-              kalloc_token' K sh n original_freelist_pointer *
+              kalloc_token' K sh n original_freelist_pointer (*
+              memory_block sh (PGSIZE - n) (offset_val n original_freelist_pointer) *) *
               mem_mgr K gv sh ls' xx next
           )
         )
