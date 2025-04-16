@@ -138,7 +138,12 @@ forward. if_tac_auto_contradict.
       forward_if.
         * unfold type_kalloc_token. rewrite kalloc_token_sz_split.
         destruct original_freelist_pointer eqn:eo; inversion H2.
+        assert_PROP (Ptrofs.unsigned i + PGSIZE < Ptrofs.modulus).
+        {
+        Intros. entailer!.
+        }
         rewrite token_merge with (b:= b) (i:= i); auto.
+        2: { try rep_lia. }
         Intros.
         assert (sizeof tint + (PGSIZE - sizeof tint) = PGSIZE). { try rep_lia. }
         rewrite <- H14.
@@ -151,9 +156,8 @@ forward. if_tac_auto_contradict.
         forward. forward. forward.
         Exists (Vint(Int.repr 42)) (fst ab) (snd ab). entailer.
         rewrite <- H15. auto.
-        admit. (* this should be provable if it wasn't for the ";" symbol *)
         * forward.
-Admitted.
+Qed.
 
 
 
