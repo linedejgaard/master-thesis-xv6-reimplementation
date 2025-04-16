@@ -35,8 +35,7 @@ destruct (eq_dec new_head nullval).
     * forward. entailer.
 Qed.
 
-
-Lemma body_kalloc: semax_body KAFVprog KAFGprog f_kalloc (kalloc_spec' (KAF_APD) _kalloc).
+Lemma body_kalloc': semax_body KAFVprog KAFGprog f_kalloc (kalloc_spec' (KAF_APD) _kalloc).
 Proof. start_function.
 rewrite mem_mgr_split. Intros. forward. 
 forward_if (
