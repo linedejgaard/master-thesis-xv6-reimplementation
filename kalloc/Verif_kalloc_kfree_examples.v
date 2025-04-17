@@ -712,7 +712,7 @@ forward_call (kfree_spec_sub KAF_APD t_run) (pa1, gv, sh , ls, xx, original_free
     inversion H3. entailer!.
     if_tac_auto_contradict.
     Intros ab0. 
-    forward. unfold type_kalloc_token. entailer!. unfold KAF_globals. inversion H3; entailer.
+    forward. unfold type_kalloc_token. entailer!. unfold KAF_globals. inversion H6; entailer.
 Qed.
 
 Lemma body_kfree_kfree_same_wrong_pointer: semax_body KAFVprog KAFGprog f_kfree_kfree_same_pointer kfree_kfree_same_pointer_wrong_spec.

@@ -148,6 +148,7 @@ Proof.
             * if_tac; destruct H0 as [H01 [H02 [H03 [H04 H05]]]]; rewrite H04 in H1.
                 -- unfold offset_val in H1. destruct pa1; auto_contradict.
                 --unfold KAF_globals. unfold type_kalloc_token. rewrite kalloc_token_sz_split. simpl. rewrite kalloc_token_sz_split. Intros.
+                simpl. 
                 entailer!.
             * destruct H0 as [H01 [H02 [H03 [H04 H05]]]]; rewrite H04. unfold is_pointer_or_null.
               unfold offset_val. destruct pa1; auto_contradict; auto.
@@ -190,7 +191,7 @@ Proof.
           unfold pointers_with_original_head.
           destruct n eqn:en; try rep_lia.
           destruct n0 eqn:en0; try rep_lia.
-          simpl. rewrite mem_mgr_split. refold_freelistrep. entailer!.
+          simpl. rewrite mem_mgr_split. refold_freelistrep. entailer!. entailer!.
           unfold PGSIZE; rep_lia.
         * rewrite Nat.ltb_ge in ei. try rep_lia.
         + destruct H0 as [H01 [H02 [H03 [H04 H05]]]].
@@ -243,7 +244,7 @@ Intros. forward. (*forward. unfold abb iate in POSTCONDITION.*)
             *if_tac; destruct H0 as [H001 [H002 [H003 [H04 H05]]]]. rewrite H04 in H.
             -- unfold offset_val in H. destruct pa1; auto_contradict.
             --unfold KAF_globals. unfold type_kalloc_token. rewrite kalloc_token_sz_split. simpl. rewrite kalloc_token_sz_split. Intros.
-            entailer!.
+            simpl. entailer!. 
             * destruct H0 as [H001 [H002 [H003 [H04 H05]]]]. rewrite H04.
                 assert ( isptr (offset_val (i * PGSIZE) pa1)). {apply isptr_offset_val'. auto. }
                 auto.
@@ -328,7 +329,7 @@ destruct H as [H11 [H12 H13]]; auto.
             rewrite <- H1 in H3. rewrite H in H3; auto_contradict.
         * forward. destruct (Z.to_nat n) eqn:en.
             -- Exists (fst vret) (snd vret).
-                assert (n = 0); try rep_lia. rewrite H4.
+                assert (n = 0) as HH5; try rep_lia. rewrite HH5.
                 if_tac_auto_contradict;
                 destruct (0 <? 0) eqn:efalse; try rep_lia.
                 ++ unfold KAF_globals. entailer!.
