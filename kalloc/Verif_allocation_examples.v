@@ -175,7 +175,6 @@ forward. if_tac_auto_contradict; destruct H as [HH1 HH2].
       forward_if.
         * unfold type_kalloc_token. rewrite kalloc_token_sz_split. Intros.
         assert (sizeof (tarray tint n) + (PGSIZE - sizeof (tarray tint n)) = PGSIZE). { try rep_lia. }
-        (*unfold abbreviate in POSTCONDITION.*)
         forward_for_simple_bound n
         (EX i:Z,
         PROP  ()

@@ -298,7 +298,13 @@ Definition kalloc_write_42_kfree_kfree_spec : ident * funspec :=
     DECLARE _kalloc_write_42_kfree_kfree
     WITH sh : share, original_freelist_pointer:val, xx:Z, ls:list val, gv:globals
     PRE [ ] 
-        PROP () PARAMS() GLOBALS(gv) SEP (KAF_globals gv sh ls xx original_freelist_pointer)
+        PROP () PARAMS() GLOBALS(gv) 
+        SEP (KAF_globals gv sh ls xx original_freelist_pointer *
+            if eq_dec original_freelist_pointer nullval then emp else
+            (
+            !! malloc_compatible (sizeof (tint)) original_freelist_pointer && emp (*&&
+            memory_block sh (PGSIZE - (t_run_size)) (offset_val (t_run_size) original_freelist_pointer)*))
+            )
     POST [ tint ] 
         EX r,
         PROP ( ) RETURN (r) SEP (
@@ -575,7 +581,7 @@ forward_call (kfree_spec_sub KAF_APD t_run) (pa1, gv, sh , ls, xx, original_free
     forward_call (kalloc_spec_sub KAF_APD t_run) (gv, sh , fst ab::snd ab, xx, pa2). (* kalloc *)
     if_tac_auto_contradict.
     Intros ab0. forward. Exists pa2. unfold KAF_globals. unfold type_kalloc_token; entailer!.
-    inversion H8. rewrite H14, H15. inversion H5. rewrite H16, H17. entailer!.
+    inversion H9. rewrite H14, H15. inversion H5. rewrite H16, H17. entailer!.
         Qed.
         
 Lemma body_kfree_kfree_kalloc: semax_body KAFVprog KAFGprog f_kfree_kfree_kalloc kfree_kfree_kalloc_spec.
@@ -626,35 +632,61 @@ Qed.
 
 Lemma body_kalloc_write_42_kfree_kfree: semax_body KAFVprog KAFGprog f_kalloc_write_42_kfree_kfree kalloc_write_42_kfree_kfree_spec.
 Proof.
-    start_function.
-    forward. 
-    forward_call (kalloc_spec_sub KAF_APD tint) (gv, sh , ls, xx, original_freelist_pointer ). (* kalloc *)
-    - unfold KAF_globals. entailer!.
-    - if_tac.
-    + forward_if.
-        * rewrite H in H0; auto_contradict.
-        * forward_call (kfree_spec_sub KAF_APD t_run) (original_freelist_pointer, gv, sh , ls, xx,original_freelist_pointer). (* call kfree*)
-            -- if_tac_auto_contradict. entailer!.
-            -- rewrite H. simpl. auto.
-            -- if_tac_auto_contradict. 
-            forward. Exists (Vint(Int.repr 0)). entailer.
-    + Intros ab.
-        destruct ls; auto_contradict.
-        forward_if.
-        * unfold type_kalloc_token. rewrite kalloc_token_sz_split. Intros.
-        rewrite memory_block_data_at_; auto. rewrite data_at__eq. Intros. forward.
-        forward. 
-        forward_call (kfree_spec_sub KAF_APD tint) (original_freelist_pointer, gv, sh , snd ab, xx, (fst ab)). (* call kfree *)
-        -- if_tac_auto_contradict.
+start_function.
+Intros.
+forward.
+- forward_call (kalloc_spec_sub KAF_APD tint) (gv, sh , ls, xx, original_freelist_pointer ). (* kalloc *)
++ unfold KAF_globals. entailer!.
++ if_tac_auto_contradict.
+    * forward_if.
+        -- rewrite H in H0; auto_contradict.
+        -- forward_call (kfree_spec_sub KAF_APD t_run) (original_freelist_pointer, gv, sh , ls, xx,original_freelist_pointer). (* call kfree*)
+        ++ if_tac_auto_contradict. entailer!.
+        ++ rewrite H. simpl. auto.
+        ++ if_tac_auto_contradict. 
+        forward. Exists (Vint(Int.repr 0)). entailer.
+    * Intros ab.
+    destruct ls; auto_contradict.
+    forward_if.
+      -- unfold type_kalloc_token. rewrite kalloc_token_sz_split.
+      destruct original_freelist_pointer eqn:eo; inversion H2.
+      assert_PROP (Ptrofs.unsigned i + PGSIZE < Ptrofs.modulus).
+      {
+      Intros. entailer!.
+      }
+      rewrite token_merge with (b:= b) (i:= i); auto.
+      2: { try rep_lia. }
+      Intros.
+      assert (sizeof tint + (PGSIZE - sizeof tint) = PGSIZE). { try rep_lia. }
+      rewrite <- H11.
+      destruct original_freelist_pointer; auto_contradict.
+      assert (i = Ptrofs.repr (Ptrofs.unsigned i)). { rewrite Ptrofs.repr_unsigned. auto. }
+      rewrite H12 at 2.
+      rewrite memory_block_split with (sh := sh) (n:=(sizeof tint)) (m :=(PGSIZE - sizeof tint)) (b := b); try rep_lia.
+      rewrite memory_block_data_at_; auto. rewrite data_at__eq. Intros.
+      rewrite <- H12.
+      forward. forward.
+      forward_call (kfree_spec_sub KAF_APD tint) (Vptr b i, gv, sh , snd ab, xx, (fst ab)). (* call kfree *)
+        ++ if_tac_auto_contradict.
             unfold type_kalloc_token. rewrite kalloc_token_sz_split. entailer!.
-            sep_apply data_at_memory_block. entailer!.
-        -- if_tac_auto_contradict.
-            forward. Exists (Vint (Int.repr 42)).
-            unfold KAF_globals.
-            inversion H0. rewrite H8; rewrite H9.
+            sep_apply data_at_memory_block. 
+            rewrite token_merge with (b:= b) (i:= i); auto; try rep_lia.
+            assert (sizeof tint + (PGSIZE - sizeof tint) = PGSIZE) as Hpgsizetint; try rep_lia.
+            rewrite <- Hpgsizetint at 2.
+            rewrite H12 at 3.
+            rewrite memory_block_split with (n := sizeof tint) (m:= PGSIZE - sizeof tint ); try rep_lia.
+            rewrite <- H12.
             entailer!.
-        * rewrite H1 in H. auto_contradict.
-        Qed.
+        ++ if_tac_auto_contradict.
+            forward. Exists (Vint (Int.repr 42)). inversion H0. unfold KAF_globals. entailer. inversion H1. entailer.
+        ++ rewrite <- H12. auto.
+        --  forward_call (kfree_spec_sub KAF_APD tint) (original_freelist_pointer, gv, sh , snd ab, xx, (fst ab)). (* call kfree *)
+        ++ if_tac_auto_contradict.
+            (*unfold type_kalloc_token. rewrite kalloc_token_sz_split. entailer!.
+            sep_apply data_at_memory_block. entailer!.*)
+        ++ if_tac_auto_contradict. 
+        Unshelve. rewrite H2 in H. auto_contradict.
+Qed.
 
 
 Lemma body_kfree_kfree_kalloc_kalloc: semax_body KAFVprog KAFGprog f_kfree_kfree_kalloc_kalloc kfree_kfree_kalloc_kalloc_spec.
@@ -680,7 +712,7 @@ forward_call (kfree_spec_sub KAF_APD t_run) (pa1, gv, sh , ls, xx, original_free
     inversion H3. entailer!.
     if_tac_auto_contradict.
     Intros ab0. 
-    forward. unfold type_kalloc_token. entailer!. unfold KAF_globals. inversion H5; entailer.
+    forward. unfold type_kalloc_token. entailer!. unfold KAF_globals. inversion H3; entailer.
 Qed.
 
 Lemma body_kfree_kfree_same_wrong_pointer: semax_body KAFVprog KAFGprog f_kfree_kfree_same_pointer kfree_kfree_same_pointer_wrong_spec.
