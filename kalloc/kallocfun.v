@@ -19,7 +19,6 @@ Definition t_run_size := sizeof t_run.
 
 Definition forall_small_PGSIZE p : Prop :=
   (forall n : Z, (0 < n <= PGSIZE /\ ((isptr p /\ 0 < n <= PGSIZE /\ malloc_compatible (n) p)))).
-  (*ALL n : Z, !! (0 < n <= PGSIZE /\ ((isptr p /\ 0 < n <= PGSIZE /\ malloc_compatible (n) p) \/ (p = nullval))).*)
 
 Definition kalloc_token_sz (sh: share) (n: Z) (p: val) : mpred :=
   !! (
@@ -33,8 +32,7 @@ Definition kalloc_token_sz (sh: share) (n: Z) (p: val) : mpred :=
          | Vptr _ ofs => Ptrofs.unsigned ofs + PGSIZE < Ptrofs.modulus
          | _ => True
          end
-      (*/\  maybe some alignment and physical address checks here *))
-  && ((*sepcon (forall_small_PGSIZE p) *)
+  ) && (
   (sepcon (memory_block sh (t_run_size) (p)) (memory_block sh (PGSIZE - t_run_size)
   (offset_val t_run_size p))) ).
 
@@ -105,6 +103,33 @@ rewrite Hpgsz. rewrite HH at 2. auto.
 - unfold t_run_size. simpl; try rep_lia. split; try rep_lia.
 inversion H0. unfold PGSIZE in H1; auto.
 - unfold t_run_size. simpl; try rep_lia.
+Qed.
+
+Lemma token_merge_size :
+forall (sh: share) (p:val) b i sz,
+isptr p ->
+p = Vptr b i ->
+PGSIZE + Ptrofs.unsigned i < Ptrofs.modulus ->
+0 <= sz <= Ptrofs.max_unsigned ->
+0 <= sz <= PGSIZE ->
+(sepcon (memory_block sh sz p)
+  (memory_block sh (PGSIZE - sz) (offset_val sz p)) 
+  = memory_block sh PGSIZE p
+  ).
+Proof.
+destruct p; auto_contradict.
+assert (i = Ptrofs.repr (Ptrofs.unsigned i)) as HH. { rewrite Ptrofs.repr_unsigned. auto. }
+unfold offset_val. intros. rewrite HH at 2. rewrite Ptrofs.add_unsigned.
+rewrite Ptrofs.unsigned_repr; try rep_lia.
+rewrite HH at 1.
+rewrite Ptrofs.unsigned_repr; try rep_lia.
+rewrite <- memory_block_split.
+assert (sz + (PGSIZE - sz) = PGSIZE) as Hpgsz; try rep_lia.
+rewrite Hpgsz. rewrite HH at 2. auto.
+- unfold t_run_size. simpl; try rep_lia.
+- rewrite <- Zle_minus_le_0; try rep_lia.
+- assert (sz + (PGSIZE - sz) = PGSIZE) as Hpgsz; try rep_lia. rewrite Hpgsz.
+inversion H0. split; try rep_lia.
 Qed.
 
 

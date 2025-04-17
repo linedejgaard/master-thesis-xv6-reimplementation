@@ -42,8 +42,7 @@ Definition kfree_spec' :=
         SEP (
           mem_mgr K gv sh ls xx original_freelist_pointer;
           if eq_dec new_head nullval then emp
-          else (kalloc_token' K sh n new_head  (* (memory_block sh (PGSIZE - t_run_size)
-          (offset_val t_run_size new_head))*) (* memory_block Ews n new_head*))
+          else (kalloc_token' K sh n new_head)
         )
       POST [ tvoid ]
         PROP()
@@ -54,7 +53,6 @@ Definition kfree_spec' :=
           else 
             (
               mem_mgr K gv sh (original_freelist_pointer::ls) xx new_head
-            (*memory_block sh (PGSIZE - (t_run_size)) (offset_val (t_run_size) new_head)) (* not the whole block is used *)*)
             )).
 
 
@@ -77,7 +75,6 @@ POST [ tptr tvoid ]
           EX next ls',
           (!! (next :: ls' = ls) &&
               kalloc_token' K sh n original_freelist_pointer *
-              (*memory_block sh (PGSIZE - t_run_size) (offset_val t_run_size original_freelist_pointer) **)
               mem_mgr K gv sh ls' xx next 
           )
         )

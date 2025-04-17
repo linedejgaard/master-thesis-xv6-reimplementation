@@ -49,10 +49,8 @@ Definition kalloc_int_array_spec : ident * funspec :=
     PROP (0 < n /\ 0 < sizeof (tarray tint n) /\ sizeof (tarray tint n) <= PGSIZE) (* make sure an array of size n fits into the page *)
     PARAMS(Vint (Int.repr n)) GLOBALS(gv) 
     SEP (KAF_globals gv sh ls xx original_freelist_pointer *
-    if eq_dec original_freelist_pointer nullval then emp else
-    (
-    !! malloc_compatible (sizeof (tarray tint n)) original_freelist_pointer &&
-    memory_block sh (PGSIZE - (t_run_size)) (offset_val (t_run_size) original_freelist_pointer)))
+            if eq_dec original_freelist_pointer nullval then emp else
+            (!! malloc_compatible (sizeof (tarray tint n)) original_freelist_pointer && emp))
     POST [ tptr tint ]
     PROP ( ) RETURN () SEP (
         (if eq_dec original_freelist_pointer nullval then
@@ -77,7 +75,7 @@ Definition kalloc_write_pipe_spec : ident * funspec :=
         if eq_dec original_freelist_pointer nullval then emp else
         (
         !! malloc_compatible (sizeof t_struct_pipe) original_freelist_pointer &&
-        memory_block sh (PGSIZE - (t_run_size)) (offset_val (t_run_size) original_freelist_pointer)))
+        emp))
     POST [ tvoid ]
         PROP ( ) RETURN () SEP (
             (if eq_dec original_freelist_pointer nullval then
@@ -98,12 +96,11 @@ Definition kalloc_int_array_spec_fail : ident * funspec :=
     DECLARE _kalloc_int_array
     WITH sh : share, original_freelist_pointer:val, xx:Z, ls:list val, gv:globals, n:Z
     PRE [ tint ] 
-    PROP (0 < n <= Int.max_signed) PARAMS(Vint (Int.repr n)) GLOBALS(gv) 
+    PROP () (* make sure an array of size n fits into the page *)
+    PARAMS(Vint (Int.repr n)) GLOBALS(gv) 
     SEP (KAF_globals gv sh ls xx original_freelist_pointer *
-    if eq_dec original_freelist_pointer nullval then emp else
-    (
-    !! malloc_compatible (sizeof (tarray tint n)) original_freelist_pointer &&
-    memory_block sh (PGSIZE - (t_run_size)) (offset_val (t_run_size) original_freelist_pointer)))
+            if eq_dec original_freelist_pointer nullval then emp else
+            (!! malloc_compatible (sizeof (tarray tint n)) original_freelist_pointer && emp))
     POST [ tptr tint ]
     PROP ( ) RETURN () SEP (
         (if eq_dec original_freelist_pointer nullval then
@@ -111,7 +108,7 @@ Definition kalloc_int_array_spec_fail : ident * funspec :=
         else
         EX next ls',
             (!! (next :: ls' = ls) &&
-                array_42_rep sh n original_freelist_pointer*
+                array_42_rep sh n original_freelist_pointer *
                 memory_block sh (PGSIZE - sizeof (tarray tint n))
                         (offset_val (sizeof (tarray tint n)) original_freelist_pointer) *
                 KAF_globals gv  sh ls' xx next
@@ -159,8 +156,6 @@ forward. if_tac_auto_contradict.
         * forward.
 Qed.
 
-
-
 Lemma body_kalloc_int_array: semax_body KAFVprog KAFGprog f_kalloc_int_array kalloc_int_array_spec.
 Proof.
 start_function.
@@ -173,13 +168,14 @@ forward. if_tac_auto_contradict; destruct H as [HH1 HH2].
         -- rewrite H in H1; auto_contradict.
         -- forward.
 - forward_call (kalloc_spec_sub KAF_APD (tarray tint n)) (gv, sh , ls, xx, original_freelist_pointer ). (* kalloc *)
-    + unfold KAF_globals. if_tac_auto_contradict. entailer!.
+    + unfold KAF_globals. entailer!.
     + if_tac_auto_contradict.
     Intros ab.
       destruct ls; auto_contradict.
       forward_if.
         * unfold type_kalloc_token. rewrite kalloc_token_sz_split. Intros.
         assert (sizeof (tarray tint n) + (PGSIZE - sizeof (tarray tint n)) = PGSIZE). { try rep_lia. }
+        (*unfold abbreviate in POSTCONDITION.*)
         forward_for_simple_bound n
         (EX i:Z,
         PROP  ()
@@ -189,7 +185,7 @@ forward. if_tac_auto_contradict; destruct H as [HH1 HH2].
             ) 
         SEP (
             (
-                tmp_array_42_rep sh n original_freelist_pointer i*
+                tmp_array_42_rep sh n original_freelist_pointer i *
                 memory_block sh (PGSIZE - sizeof (tarray tint n))
                         (offset_val (sizeof (tarray tint n)) original_freelist_pointer) *
                 KAF_globals gv sh ls xx v
@@ -204,18 +200,16 @@ forward. if_tac_auto_contradict; destruct H as [HH1 HH2].
         destruct original_freelist_pointer; auto_contradict.
         assert (i = Ptrofs.repr (Ptrofs.unsigned i)) as HH12. { rewrite Ptrofs.repr_unsigned. auto. }
         assert (Zrepeat (default_val tint) n = default_val (tarray tint n)) as Hdefault. {
-            apply Zrepeat_default_val_array. auto.
+            apply Zrepeat_default_val_array. 
         }
+        rewrite token_merge with (b:=b) (i:=i); auto; try rep_lia.
         rewrite HH12 at 1.
-        rewrite <- H10 at 1.
-        rewrite memory_block_split with (m:=(PGSIZE - sizeof (tarray tint n))); try rep_lia.
+        rewrite <- Hdefault at 1.
+        rewrite <- token_merge_size with (b:=b) (i:=i) (sz:=sizeof (tarray tint n)); auto; try rep_lia.
+        2: { rewrite <- HH12. auto. }
+        rewrite <- HH12.
         rewrite memory_block_data_at_; auto. rewrite data_at__eq. 
-        entailer!. simpl. entailer!.
-        rewrite <- H12.
-        rewrite H12.
-        rewrite Hdefault.
-        entailer!. 
-        rewrite Ptrofs.repr_unsigned. auto.
+        entailer!.
         -- Intros.
         assert (Int.min_signed <= i <= Int.max_signed). { 
             assert (n <= Int.max_signed). {
@@ -232,9 +226,9 @@ forward. if_tac_auto_contradict; destruct H as [HH1 HH2].
         rewrite upd_Znth_unfold.
         ++ rewrite sublist_firstn. 
         rewrite firstn_app1.
-        assert (Zlength (array_42 (Z.to_nat i)) = i). { rewrite array_42_length. try rep_lia. }
-        rewrite Zlength_length in H21; try rep_lia.
-        rewrite <- H21 at 1.
+        assert (Zlength (array_42 (Z.to_nat i)) = i) as HH21. { rewrite array_42_length. try rep_lia. }
+        rewrite Zlength_length in HH21; try rep_lia.
+        rewrite <- HH21 at 1.
         rewrite firstn_exact_length with (xs :=array_42 (Z.to_nat i)); try rep_lia.
         rewrite sublist_app2.
         rewrite array_42_length.
@@ -250,12 +244,12 @@ forward. if_tac_auto_contradict; destruct H as [HH1 HH2].
         replace (n - i - 1) with (n - (i + 1)); try rep_lia. 
         rewrite app_assoc. entailer!.
         ** rewrite array_42_length. try rep_lia.
-        ** assert (Datatypes.length (array_42 (Z.to_nat i))%nat = Z.to_nat i). {
+        ** assert (Datatypes.length (array_42 (Z.to_nat i))%nat = Z.to_nat i) as HH21. {
             rewrite <- Zlength_length; try rep_lia.
             rewrite array_42_length.
             try rep_lia.
         }
-        rewrite H21; auto.
+        rewrite HH21; auto.
         ++ rewrite Zlength_app. rewrite array_42_length. rewrite Zlength_Zrepeat; try rep_lia.
         -- forward. Exists v ls. entailer!. unfold tmp_array_42_rep. unfold array_42_rep. 
         replace (n - n) with 0; try rep_lia. 
@@ -292,11 +286,17 @@ forward_call (kalloc_spec_sub KAF_APD t_struct_pipe) (gv, sh , ls, xx, original_
         * forward. entailer.
     + Intros ab. forward_if.
         *
-        rewrite mem_mgr_split. rewrite type_kalloc_token_split. Intros. rewrite kalloc_token_sz_split.
+        rewrite mem_mgr_split. rewrite type_kalloc_token_split. rewrite kalloc_token_sz_split.
+        destruct original_freelist_pointer; auto_contradict.
+        assert_PROP (Ptrofs.unsigned i + PGSIZE < Ptrofs.modulus) as HH11.
+        {
+        Intros. entailer!.
+        }
+        rewrite token_merge with (b:= b) (i:= i); auto.
+        2: { try rep_lia. }
         Intros.
         assert (sizeof (t_struct_pipe) + (PGSIZE - sizeof (t_struct_pipe)) = PGSIZE) as HH12. { try rep_lia. }
         rewrite <- HH12.
-        destruct original_freelist_pointer; auto_contradict.
         assert (i = Ptrofs.repr (Ptrofs.unsigned i)) as HHH12. { rewrite Ptrofs.repr_unsigned. auto. }
         rewrite HHH12.
         rewrite memory_block_split with (m:=(PGSIZE - sizeof t_struct_pipe)); try rep_lia.
