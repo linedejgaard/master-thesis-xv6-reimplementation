@@ -299,12 +299,7 @@ Definition kalloc_write_42_kfree_kfree_spec : ident * funspec :=
     WITH sh : share, orig_head:val, xx:Z, ls:list val, gv:globals
     PRE [ ] 
         PROP () PARAMS() GLOBALS(gv) 
-        SEP (KAF_globals gv sh ls xx orig_head *
-            if eq_dec orig_head nullval then emp else
-            (
-            !! malloc_compatible (sizeof (tint)) orig_head && emp (*&&
-            memory_block sh (PGSIZE - (t_run_size)) (offset_val (t_run_size) orig_head)*))
-            )
+        SEP (KAF_globals gv sh ls xx orig_head )
     POST [ tint ] 
         EX r,
         PROP ( ) RETURN (r) SEP (
@@ -678,7 +673,7 @@ forward.
             rewrite <- H12.
             entailer!.
         ++ if_tac_auto_contradict.
-            forward. Exists (Vint (Int.repr 42)). inversion H0. unfold KAF_globals. entailer. inversion H1. entailer.
+            forward. Exists (Vint (Int.repr 42)). inversion H0. unfold KAF_globals. entailer.
         ++ rewrite <- H12. auto.
         --  forward_call (kfree_spec_sub KAF_APD tint) (orig_head, gv, sh , snd ab, xx, (fst ab)). (* call kfree *)
         ++ if_tac_auto_contradict.
