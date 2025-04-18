@@ -1,7 +1,6 @@
 (** Kalloc Specification
 
-    This specification is tight to the c-implementations
-    kalloc and kfree.
+    This specification is type-based.
 
     It utilizes the KallocTokenAPD from ASI_kalloc in 
     type_kalloc_token.
@@ -90,17 +89,16 @@ Qed.
 
 Definition kfree_spec (K:KallocFreeAPD) {cs: compspecs} (t: type) := 
   DECLARE _kfree
-      WITH new_head:val, gv:globals, sh:share, ls: list val, xx:Z, original_freelist_pointer:val
+      WITH new_head:val, gv:globals, sh:share, ls: list val, xx:Z, orig_head:val
       PRE [ tptr tvoid]
         PROP(
               is_pointer_or_null new_head
               ) 
         PARAMS (new_head) GLOBALS(gv)
         SEP (
-          ASI_kalloc.mem_mgr K gv sh ls xx original_freelist_pointer *
+          ASI_kalloc.mem_mgr K gv sh ls xx orig_head *
           (if eq_dec new_head nullval then emp
-          else (type_kalloc_token K sh (t) new_head) (*memory_block sh (PGSIZE - t_run_size)
-          (offset_val t_run_size new_head)))*)
+          else (type_kalloc_token K sh (t) new_head)
           )
         )
       POST [ tvoid ]
@@ -108,33 +106,32 @@ Definition kfree_spec (K:KallocFreeAPD) {cs: compspecs} (t: type) :=
         RETURN () 
         SEP (
           if eq_dec new_head nullval then 
-          ASI_kalloc.mem_mgr K gv sh ls xx original_freelist_pointer
+          ASI_kalloc.mem_mgr K gv sh ls xx orig_head
           else 
           (
-          ASI_kalloc.mem_mgr K gv sh (original_freelist_pointer::ls) xx new_head (*
-          memory_block sh (PGSIZE - (t_run_size)) (offset_val (t_run_size) new_head) (* not the whole block is used *)*)
-            )).
+          ASI_kalloc.mem_mgr K gv sh (orig_head::ls) xx new_head
+          )).
 
 Definition kalloc_spec (K:KallocFreeAPD) {cs: compspecs} (t: type) :=
 DECLARE _kalloc
-WITH gv:globals, sh:share, ls: list val, xx:Z, original_freelist_pointer:val
+WITH gv:globals, sh:share, ls: list val, xx:Z, orig_head:val
 PRE [ ]
     PROP(0 < (sizeof t) <= PGSIZE;
             complete_legal_cosu_type t = true;
             natural_aligned natural_alignment t = true) 
     PARAMS () GLOBALS(gv)
-    SEP ( ASI_kalloc.mem_mgr K gv sh ls xx original_freelist_pointer)
+    SEP ( ASI_kalloc.mem_mgr K gv sh ls xx orig_head)
 POST [ tptr tvoid ]
     PROP()
-    RETURN (original_freelist_pointer) 
+    RETURN (orig_head) 
     SEP (
-      if (eq_dec original_freelist_pointer nullval) then
-        (ASI_kalloc.mem_mgr K gv sh ls xx original_freelist_pointer * emp)
+      if (eq_dec orig_head nullval) then
+        (ASI_kalloc.mem_mgr K gv sh ls xx orig_head * emp)
       else 
         (
           EX next ls',
-          (!! (next :: ls' = ls  /\ malloc_compatible (sizeof t) original_freelist_pointer) &&
-              type_kalloc_token K sh t original_freelist_pointer * 
+          (!! (next :: ls' = ls  /\ malloc_compatible (sizeof t) orig_head) &&
+              type_kalloc_token K sh t orig_head * 
               ASI_kalloc.mem_mgr K gv sh ls' xx next
         )
         )

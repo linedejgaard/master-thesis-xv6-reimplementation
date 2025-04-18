@@ -41,17 +41,17 @@ rewrite mem_mgr_split. Intros. forward.
 forward_if (
     PROP  ( )
     LOCAL (
-        temp _r original_freelist_pointer; 
+        temp _r orig_head; 
         gvars gv
         )
     SEP (
-        if (eq_dec original_freelist_pointer nullval) then
-        (ASI_kalloc.mem_mgr KAF_APD gv sh ls xx original_freelist_pointer * emp)
+        if (eq_dec orig_head nullval) then
+        (ASI_kalloc.mem_mgr KAF_APD gv sh ls xx orig_head * emp)
       else 
         (
           EX next ls',
           (!! (next :: ls' = ls) &&
-              kalloc_token' KAF_APD sh n original_freelist_pointer *
+              kalloc_token' KAF_APD sh n orig_head *
               ASI_kalloc.mem_mgr KAF_APD gv sh ls' xx next
           )
         )
@@ -75,7 +75,7 @@ unfold pointer_within_size_range. entailer!.
         **  unfold not. intros; auto_contradict.
         ** rewrite <- H12. unfold not; intros; auto_contradict.
 -- apply data_at_memory_block.
--forward. destruct (eq_dec original_freelist_pointer nullval) eqn:e1; auto_contradict. entailer.
+-forward. destruct (eq_dec orig_head nullval) eqn:e1; auto_contradict. entailer.
 rewrite mem_mgr_split. entailer.
 - if_tac; forward.
 Qed.

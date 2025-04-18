@@ -14,29 +14,29 @@ Local Open Scope logic.
 
 Definition kalloc_write_42_spec : ident * funspec :=
     DECLARE _kalloc_write_42
-    WITH sh : share, original_freelist_pointer:val, xx:Z, ls:list val, gv:globals
+    WITH sh : share, orig_head:val, xx:Z, ls:list val, gv:globals
     PRE [ ] 
         PROP () PARAMS() GLOBALS(gv) 
-        SEP (KAF_globals gv sh ls xx original_freelist_pointer *
-            if eq_dec original_freelist_pointer nullval then emp else
+        SEP (KAF_globals gv sh ls xx orig_head *
+            if eq_dec orig_head nullval then emp else
             (
-            !! malloc_compatible (sizeof (tint)) original_freelist_pointer && emp (*&&
-            memory_block sh (PGSIZE - (t_run_size)) (offset_val (t_run_size) original_freelist_pointer)*))
+            !! malloc_compatible (sizeof (tint)) orig_head && emp (*&&
+            memory_block sh (PGSIZE - (t_run_size)) (offset_val (t_run_size) orig_head)*))
             )
     POST [ tint ] 
         EX r,
         PROP ( ) RETURN (r) SEP (
-            (if eq_dec original_freelist_pointer nullval then
+            (if eq_dec orig_head nullval then
                 (!! (r = Vint (Int.repr 0)) &&
-                KAF_globals gv  sh ls xx original_freelist_pointer * emp)
+                KAF_globals gv  sh ls xx orig_head * emp)
             else
             EX next ls',
                 (!! (next :: ls' = ls /\
                     r = Vint (Int.repr 42)
                  ) &&
-                    data_at sh tint (Vint (Int.repr 42)) original_freelist_pointer *
+                    data_at sh tint (Vint (Int.repr 42)) orig_head *
                     memory_block sh (PGSIZE - sizeof tint)
-                        (offset_val (sizeof tint) original_freelist_pointer) *
+                        (offset_val (sizeof tint) orig_head) *
                     KAF_globals gv  sh ls' xx next
             )
             )
@@ -44,23 +44,23 @@ Definition kalloc_write_42_spec : ident * funspec :=
 
 Definition kalloc_int_array_spec : ident * funspec :=
     DECLARE _kalloc_int_array
-    WITH sh : share, original_freelist_pointer:val, xx:Z, ls:list val, gv:globals, n:Z
+    WITH sh : share, orig_head:val, xx:Z, ls:list val, gv:globals, n:Z
     PRE [ tint ] 
     PROP (0 < n /\ 0 < sizeof (tarray tint n) /\ sizeof (tarray tint n) <= PGSIZE) (* make sure an array of size n fits into the page *)
     PARAMS(Vint (Int.repr n)) GLOBALS(gv) 
-    SEP (KAF_globals gv sh ls xx original_freelist_pointer *
-            if eq_dec original_freelist_pointer nullval then emp else
-            (!! malloc_compatible (sizeof (tarray tint n)) original_freelist_pointer && emp))
+    SEP (KAF_globals gv sh ls xx orig_head *
+            if eq_dec orig_head nullval then emp else
+            (!! malloc_compatible (sizeof (tarray tint n)) orig_head && emp))
     POST [ tptr tint ]
     PROP ( ) RETURN () SEP (
-        (if eq_dec original_freelist_pointer nullval then
-            KAF_globals gv  sh ls xx original_freelist_pointer * emp
+        (if eq_dec orig_head nullval then
+            KAF_globals gv  sh ls xx orig_head * emp
         else
         EX next ls',
             (!! (next :: ls' = ls) &&
-                array_42_rep sh n original_freelist_pointer *
+                array_42_rep sh n orig_head *
                 memory_block sh (PGSIZE - sizeof (tarray tint n))
-                        (offset_val (sizeof (tarray tint n)) original_freelist_pointer) *
+                        (offset_val (sizeof (tarray tint n)) orig_head) *
                 KAF_globals gv  sh ls' xx next
         )
         )
@@ -68,24 +68,24 @@ Definition kalloc_int_array_spec : ident * funspec :=
 
 Definition kalloc_write_pipe_spec : ident * funspec :=
     DECLARE _kalloc_write_pipe
-    WITH sh : share, original_freelist_pointer:val, xx:Z, ls:list val, gv:globals
+    WITH sh : share, orig_head:val, xx:Z, ls:list val, gv:globals
     PRE [ ] 
-        PROP () PARAMS() GLOBALS(gv) SEP (KAF_globals gv sh ls xx original_freelist_pointer
+        PROP () PARAMS() GLOBALS(gv) SEP (KAF_globals gv sh ls xx orig_head
         *
-        if eq_dec original_freelist_pointer nullval then emp else
+        if eq_dec orig_head nullval then emp else
         (
-        !! malloc_compatible (sizeof t_struct_pipe) original_freelist_pointer &&
+        !! malloc_compatible (sizeof t_struct_pipe) orig_head &&
         emp))
     POST [ tvoid ]
         PROP ( ) RETURN () SEP (
-            (if eq_dec original_freelist_pointer nullval then
-                KAF_globals gv  sh ls xx original_freelist_pointer *emp
+            (if eq_dec orig_head nullval then
+                KAF_globals gv  sh ls xx orig_head *emp
             else
             EX next ls',
                 (!! (next :: ls' = ls) &&
-                    pipe_rep sh original_freelist_pointer *
+                    pipe_rep sh orig_head *
                     memory_block sh (PGSIZE - sizeof (t_struct_pipe))
-                    (offset_val (sizeof (t_struct_pipe)) original_freelist_pointer) *
+                    (offset_val (sizeof (t_struct_pipe)) orig_head) *
                     KAF_globals gv  sh ls' xx next
             )
             )
@@ -94,23 +94,23 @@ Definition kalloc_write_pipe_spec : ident * funspec :=
 
 Definition kalloc_int_array_spec_fail : ident * funspec :=
     DECLARE _kalloc_int_array
-    WITH sh : share, original_freelist_pointer:val, xx:Z, ls:list val, gv:globals, n:Z
+    WITH sh : share, orig_head:val, xx:Z, ls:list val, gv:globals, n:Z
     PRE [ tint ] 
     PROP () (* make sure an array of size n fits into the page *)
     PARAMS(Vint (Int.repr n)) GLOBALS(gv) 
-    SEP (KAF_globals gv sh ls xx original_freelist_pointer *
-            if eq_dec original_freelist_pointer nullval then emp else
-            (!! malloc_compatible (sizeof (tarray tint n)) original_freelist_pointer && emp))
+    SEP (KAF_globals gv sh ls xx orig_head *
+            if eq_dec orig_head nullval then emp else
+            (!! malloc_compatible (sizeof (tarray tint n)) orig_head && emp))
     POST [ tptr tint ]
     PROP ( ) RETURN () SEP (
-        (if eq_dec original_freelist_pointer nullval then
-            KAF_globals gv  sh ls xx original_freelist_pointer * emp
+        (if eq_dec orig_head nullval then
+            KAF_globals gv  sh ls xx orig_head * emp
         else
         EX next ls',
             (!! (next :: ls' = ls) &&
-                array_42_rep sh n original_freelist_pointer *
+                array_42_rep sh n orig_head *
                 memory_block sh (PGSIZE - sizeof (tarray tint n))
-                        (offset_val (sizeof (tarray tint n)) original_freelist_pointer) *
+                        (offset_val (sizeof (tarray tint n)) orig_head) *
                 KAF_globals gv  sh ls' xx next
         )
         )
@@ -121,20 +121,20 @@ Proof.
 start_function.
 Intros.
 forward. if_tac_auto_contradict. 
-- forward_call (kalloc_spec_sub KAF_APD tint) (gv, sh , ls, xx, original_freelist_pointer ). (* kalloc *)
+- forward_call (kalloc_spec_sub KAF_APD tint) (gv, sh , ls, xx, orig_head ). (* kalloc *)
 + unfold KAF_globals. entailer!.
 + if_tac_auto_contradict.
     * forward_if.
         -- rewrite H in H1; auto_contradict.
         -- forward. Exists (Vint(Int.repr 0)). entailer.
-- forward_call (kalloc_spec_sub KAF_APD tint) (gv, sh , ls, xx, original_freelist_pointer ). (* kalloc *)
+- forward_call (kalloc_spec_sub KAF_APD tint) (gv, sh , ls, xx, orig_head ). (* kalloc *)
     + unfold KAF_globals. entailer!. (*if_tac_auto_contradict. entailer!.*)
     + if_tac_auto_contradict.
     Intros ab.
       destruct ls; auto_contradict.
       forward_if.
         * unfold type_kalloc_token. rewrite kalloc_token_sz_split.
-        destruct original_freelist_pointer eqn:eo; inversion H2.
+        destruct orig_head eqn:eo; inversion H2.
         assert_PROP (Ptrofs.unsigned i + PGSIZE < Ptrofs.modulus).
         {
         Intros. entailer!.
@@ -144,7 +144,7 @@ forward. if_tac_auto_contradict.
         Intros.
         assert (sizeof tint + (PGSIZE - sizeof tint) = PGSIZE). { try rep_lia. }
         rewrite <- H14.
-        destruct original_freelist_pointer; auto_contradict.
+        destruct orig_head; auto_contradict.
         assert (i = Ptrofs.repr (Ptrofs.unsigned i)). { rewrite Ptrofs.repr_unsigned. auto. }
         rewrite H15 at 2.
         rewrite memory_block_split with (sh := sh) (n:=(sizeof tint)) (m :=(PGSIZE - sizeof tint)) (b := b); try rep_lia.
@@ -161,13 +161,13 @@ Proof.
 start_function.
 Intros.
 forward. if_tac_auto_contradict; destruct H as [HH1 HH2].
-- forward_call (kalloc_spec_sub KAF_APD (tarray tint n)) (gv, sh , ls, xx, original_freelist_pointer ). (* kalloc *)
+- forward_call (kalloc_spec_sub KAF_APD (tarray tint n)) (gv, sh , ls, xx, orig_head ). (* kalloc *)
 + unfold KAF_globals. entailer!.
 + if_tac_auto_contradict.
     * forward_if.
         -- rewrite H in H1; auto_contradict.
         -- forward.
-- forward_call (kalloc_spec_sub KAF_APD (tarray tint n)) (gv, sh , ls, xx, original_freelist_pointer ). (* kalloc *)
+- forward_call (kalloc_spec_sub KAF_APD (tarray tint n)) (gv, sh , ls, xx, orig_head ). (* kalloc *)
     + unfold KAF_globals. entailer!.
     + if_tac_auto_contradict.
     Intros ab.
@@ -179,14 +179,14 @@ forward. if_tac_auto_contradict; destruct H as [HH1 HH2].
         (EX i:Z,
         PROP  ()
         LOCAL (
-            temp _pa original_freelist_pointer; gvars gv;
+            temp _pa orig_head; gvars gv;
             temp _n (Vint (Int.repr n))
             ) 
         SEP (
             (
-                tmp_array_42_rep sh n original_freelist_pointer i *
+                tmp_array_42_rep sh n orig_head i *
                 memory_block sh (PGSIZE - sizeof (tarray tint n))
-                        (offset_val (sizeof (tarray tint n)) original_freelist_pointer) *
+                        (offset_val (sizeof (tarray tint n)) orig_head) *
                 KAF_globals gv sh ls xx v
             )
             )
@@ -196,7 +196,7 @@ forward. if_tac_auto_contradict; destruct H as [HH1 HH2].
         assert (n <= PGSIZE / (sizeof tint)); try rep_lia. apply (Z.le_trans) with (PGSIZE / sizeof tint). try rep_lia.
         unfold PGSIZE; simpl; try rep_lia.
         -- entailer. unfold tmp_array_42_rep. unfold KAF_globals. entailer. inversion H1; entailer.
-        destruct original_freelist_pointer; auto_contradict.
+        destruct orig_head; auto_contradict.
         assert (i = Ptrofs.repr (Ptrofs.unsigned i)) as HH12. { rewrite Ptrofs.repr_unsigned. auto. }
         assert (Zrepeat (default_val tint) n = default_val (tarray tint n)) as Hdefault. {
             apply Zrepeat_default_val_array. 
@@ -260,7 +260,7 @@ Lemma body_kalloc_int_array_fail: semax_body KAFVprog KAFGprog f_kalloc_int_arra
 Proof.
 start_function. Intros.
 forward.
-forward_call (kalloc_spec_sub KAF_APD (tarray tint n)) (gv, sh , ls, xx, original_freelist_pointer ). (* kalloc *)
+forward_call (kalloc_spec_sub KAF_APD (tarray tint n)) (gv, sh , ls, xx, orig_head ). (* kalloc *)
 - unfold KAF_globals. if_tac.
 + entailer!.
 + entailer!.
@@ -277,16 +277,16 @@ Proof.
 start_function.
 Intros.
 forward.
-forward_call (kalloc_spec_sub KAF_APD t_struct_pipe) (gv, sh , ls, xx, original_freelist_pointer ). (* kalloc *)
+forward_call (kalloc_spec_sub KAF_APD t_struct_pipe) (gv, sh , ls, xx, orig_head ). (* kalloc *)
 - unfold KAF_globals. entailer!. 
-- if_tac. (*destruct (eq_dec original_freelist_pointer nullval) eqn:e0.*)
+- if_tac. (*destruct (eq_dec orig_head nullval) eqn:e0.*)
     + forward_if.
         * rewrite H in H0; auto_contradict.
         * forward. entailer.
     + Intros ab. forward_if.
         *
         rewrite mem_mgr_split. rewrite type_kalloc_token_split. rewrite kalloc_token_sz_split.
-        destruct original_freelist_pointer; auto_contradict.
+        destruct orig_head; auto_contradict.
         assert_PROP (Ptrofs.unsigned i + PGSIZE < Ptrofs.modulus) as HH11.
         {
         Intros. entailer!.

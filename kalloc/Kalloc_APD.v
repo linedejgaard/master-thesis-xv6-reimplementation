@@ -12,14 +12,14 @@ Require Import VC.ASI_kalloc.
 Definition Tok_APD := Build_KallocTokenAPD kalloc_token_sz kalloc_token_sz_valid_pointer
   kalloc_token_sz_local_facts.
 
-Definition mem_mgr (gv: globals) (sh : share) (ls: list val) (xx:Z) (original_freelist_pointer:val): mpred := (* I am unsure how to access all these elements.. *)
+Definition mem_mgr (gv: globals) (sh : share) (ls: list val) (xx:Z) (orig_head:val): mpred :=
     !! (writable_share sh /\
-        is_pointer_or_null original_freelist_pointer /\
-              (((ls = nil) /\ original_freelist_pointer = nullval) \/ 
-              ((ls <> nil) /\ isptr original_freelist_pointer))
+        is_pointer_or_null orig_head /\
+              (((ls = nil) /\ orig_head = nullval) \/ 
+              ((ls <> nil) /\ isptr orig_head))
         ) &&
-      (sepcon (data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem))
-      (freelistrep sh ls original_freelist_pointer)).
+      (sepcon (data_at sh t_struct_kmem (Vint (Int.repr xx), orig_head) (gv _kmem))
+      (freelistrep sh ls orig_head)).
 
 Definition KAF_APD := Build_KallocFreeAPD Tok_APD mem_mgr.
 
@@ -28,7 +28,7 @@ Definition KAF_APD := Build_KallocFreeAPD Tok_APD mem_mgr.
 
 Definition KAF_ASI: funspecs := Kalloc_ASI KAF_APD _kalloc _kfree.
 Definition KAF_internal_specs: funspecs := KAF_ASI.
-Definition KAF_globals gv  sh ls xx original_freelist_pointer: mpred:= ASI_kalloc.mem_mgr KAF_APD gv sh ls xx original_freelist_pointer.
+Definition KAF_globals gv  sh ls xx orig_head: mpred:= ASI_kalloc.mem_mgr KAF_APD gv sh ls xx orig_head.
 Definition KAFVprog : varspecs. mk_varspecs kalloc.prog. Defined.
 Definition KAFGprog: funspecs := KAF_internal_specs.
 
@@ -36,16 +36,16 @@ Definition KAFGprog: funspecs := KAF_internal_specs.
 (** ** Lemma to unfold mem_mgr *)
 
 Lemma mem_mgr_split: 
- forall (gv:globals) (sh:share) (ls: list val) (xx:Z) (original_freelist_pointer:val),
-  mem_mgr gv sh ls xx original_freelist_pointer
+ forall (gv:globals) (sh:share) (ls: list val) (xx:Z) (orig_head:val),
+  mem_mgr gv sh ls xx orig_head
   = 
   !! (writable_share sh /\
-        is_pointer_or_null original_freelist_pointer /\
-              (((ls = nil) /\ original_freelist_pointer = nullval) \/ 
-              ((ls <> nil) /\ isptr original_freelist_pointer))
+        is_pointer_or_null orig_head /\
+              (((ls = nil) /\ orig_head = nullval) \/ 
+              ((ls <> nil) /\ isptr orig_head))
         ) &&
-      (sepcon (data_at sh t_struct_kmem (Vint (Int.repr xx), original_freelist_pointer) (gv _kmem))
-      (freelistrep sh ls original_freelist_pointer)).
+      (sepcon (data_at sh t_struct_kmem (Vint (Int.repr xx), orig_head) (gv _kmem))
+      (freelistrep sh ls orig_head)).
 Proof.
   intros. apply pred_ext.
   - unfold mem_mgr. entailer!.

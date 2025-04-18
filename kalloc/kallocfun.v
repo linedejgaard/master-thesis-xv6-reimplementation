@@ -136,25 +136,30 @@ Qed.
 (* ================================================================= *)
 (** ** Defining freelistrep *)
 
-
 (* NOTE: assume PGSIZE is greater than sizeof t_run *)
-Fixpoint freelistrep (sh: share) (il: list val) (p: val) : mpred := (* the list contains the next*)
- match il with
- | next::il' =>
-        (!!(malloc_compatible (sizeof t_run) p 
-          /\ match p with
-          | Vptr _ ofs => Ptrofs.unsigned ofs + PGSIZE < Ptrofs.modulus
-          | _ => True
-          end
-          /\
-          pointer_within_size_range p
-          ) &&  (* p is compatible with a memory block of size sizeof theader. *)
-          (
-          (sepcon (sepcon (data_at sh t_run next p) 
-                    (memory_block sh (PGSIZE - t_run_size) (offset_val t_run_size p))) (* at the location p, there is a t_run structure with the value next *)
-          (freelistrep sh il' next) (* "*" ensures no loops... *))))
- | nil => !! (p = nullval) && emp
- end.
+Fixpoint freelistrep (sh: share) (il: list val) (p: val) : mpred := 
+  (* The list contains the next pointer in the freelist *)
+  match il with
+  | next::il' =>
+      (!!(malloc_compatible (sizeof t_run) p 
+         /\ match p with
+            | Vptr _ ofs => Ptrofs.unsigned ofs + PGSIZE < Ptrofs.modulus
+            | _ => True
+            end
+         /\ pointer_within_size_range p
+        ) 
+      && (
+        (* Ensure that at location p, there is a t_run structure with value next *)
+        sepcon (sepcon (data_at sh t_run next p) 
+                     (memory_block sh (PGSIZE - t_run_size) (offset_val t_run_size p)))  
+        (* Recursive call to process the next pointer in the freelist, sepcon ensures no loops *)
+        (freelistrep sh il' next)
+      ))
+  | nil => 
+      (* Base case: if the list is empty, p should be nullval *)
+      !! (p = nullval) && emp
+  end.
+
 
 Arguments freelistrep sh il p : simpl never.
 
