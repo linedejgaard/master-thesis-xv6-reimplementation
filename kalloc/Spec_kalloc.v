@@ -135,7 +135,6 @@ POST [ tptr tvoid ]
           EX next ls',
           (!! (next :: ls' = ls  /\ malloc_compatible (sizeof t) original_freelist_pointer) &&
               type_kalloc_token K sh t original_freelist_pointer * 
-              (*memory_block sh (PGSIZE - (t_run_size)) (offset_val (t_run_size) original_freelist_pointer) **)
               ASI_kalloc.mem_mgr K gv sh ls' xx next
         )
         )

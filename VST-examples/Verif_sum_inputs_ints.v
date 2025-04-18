@@ -75,7 +75,7 @@ Qed.
 
 Lemma prog_correct: semax_prog prog tt Vprog Gprog.
 Proof.
-prove_semax_prog.
-semax_func_cons body_sum.
-semax_func_cons body_main.
+    prove_semax_prog.
+    semax_func_cons body_sum.
+    semax_func_cons body_main.
 Qed.

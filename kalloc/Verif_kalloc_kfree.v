@@ -30,7 +30,7 @@ destruct (eq_dec new_head nullval).
     rewrite data_at__eq. (*rewrite H11.*) forward. forward. 
     entailer. rewrite mem_mgr_split. refold_freelistrep. entailer!.
     right; split; auto. unfold not; auto_contradict.
-    unfold t_run_size. unfold forall_small_PGSIZE. entailer!.
+    unfold t_run_size. unfold pointer_within_size_range. entailer!.
     auto.
     * forward. entailer.
 Qed.
@@ -68,7 +68,7 @@ refold_freelistrep. if_tac.
 * rewrite H13 in H0022; auto_contradict.
 * entailer. Exists v ls. entailer. 
 rewrite kalloc_token_sz_split. rewrite mem_mgr_split. entailer.
-unfold forall_small_PGSIZE. entailer!.
+unfold pointer_within_size_range. entailer!.
 -- destruct ls.
     ++ left; split; auto. rewrite <- H11. auto.
     ++ right. split.
