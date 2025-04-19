@@ -109,7 +109,7 @@ Definition kfree_spec (K:KallocFreeAPD) {cs: compspecs} (t: type) :=
           ASI_kalloc.mem_mgr K gv sh ls xx orig_head
           else 
           (
-          ASI_kalloc.mem_mgr K gv sh (orig_head::ls) xx new_head
+            ASI_kalloc.mem_mgr K gv sh (orig_head::ls) xx new_head
           )).
 
 Definition kalloc_spec (K:KallocFreeAPD) {cs: compspecs} (t: type) :=
@@ -130,7 +130,7 @@ POST [ tptr tvoid ]
       else 
         (
           EX next ls',
-          (!! (next :: ls' = ls  /\ malloc_compatible (sizeof t) orig_head) &&
+          (!! (next :: ls' = ls) &&
               type_kalloc_token K sh t orig_head * 
               ASI_kalloc.mem_mgr K gv sh ls' xx next
         )

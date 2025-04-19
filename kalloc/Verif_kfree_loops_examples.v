@@ -10,10 +10,6 @@ Require Import VC.Spec_kalloc.
 
 Require Import VC.clientsfun.
 
-
-
-
-
 Local Open Scope logic.
 
 Definition kfree_kfree_kalloc_loop_spec := 
@@ -274,8 +270,6 @@ Intros. forward. (*forward. unfold abb iate in POSTCONDITION.*)
                         --- rewrite sem_add_pi'; auto. rewrite H04. apply isptr_offset_val'. auto.
                         try rep_lia.
                     ** unfold KAF_globals.
-                    
-
                     assert (Z.to_nat (n - (i + 1)) = n0); try rep_lia.
                     rewrite H0.
                     assert (curr_head :: tmp_added_elem = pointers_with_original_head (Z.to_nat (i + 1)) pa1 PGSIZE orig_head). {

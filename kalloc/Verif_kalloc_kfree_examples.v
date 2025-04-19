@@ -403,7 +403,7 @@ forward.
     destruct ls; auto_contradict.
     forward_if.
       -- unfold type_kalloc_token. rewrite kalloc_token_sz_split.
-      destruct orig_head eqn:eo; inversion H2.
+      destruct orig_head eqn:eo; inversion H0; auto_contradict.
       assert_PROP (Ptrofs.unsigned i + PGSIZE < Ptrofs.modulus).
       {
       Intros. entailer!.
@@ -411,8 +411,8 @@ forward.
       rewrite token_merge with (b:= b) (i:= i); auto.
       2: { try rep_lia. }
       Intros.
-      assert (sizeof tint + (PGSIZE - sizeof tint) = PGSIZE). { try rep_lia. }
-      rewrite <- H11.
+      assert (sizeof tint + (PGSIZE - sizeof tint) = PGSIZE) as HH11. { try rep_lia. }
+      rewrite <- HH11.
       destruct orig_head; auto_contradict.
       assert (i = Ptrofs.repr (Ptrofs.unsigned i)). { rewrite Ptrofs.repr_unsigned. auto. }
       rewrite H12 at 2.
@@ -576,7 +576,7 @@ forward_call (kfree_spec_sub KAF_APD t_run) (pa1, gv, sh , ls, xx, orig_head). (
     forward_call (kalloc_spec_sub KAF_APD t_run) (gv, sh , fst ab::snd ab, xx, pa2). (* kalloc *)
     if_tac_auto_contradict.
     Intros ab0. forward. Exists pa2. unfold KAF_globals. unfold type_kalloc_token; entailer!.
-    inversion H9. rewrite H14, H15. inversion H5. rewrite H16, H17. entailer!.
+    inversion H8. rewrite H14, H15. inversion H5. entailer!.
         Qed.
         
 Lemma body_kfree_kfree_kalloc: semax_body KAFVprog KAFGprog f_kfree_kfree_kalloc kfree_kfree_kalloc_spec.
@@ -644,7 +644,7 @@ forward.
     destruct ls; auto_contradict.
     forward_if.
       -- unfold type_kalloc_token. rewrite kalloc_token_sz_split.
-      destruct orig_head eqn:eo; inversion H2.
+      destruct orig_head eqn:eo; inversion H0; auto_contradict.
       assert_PROP (Ptrofs.unsigned i + PGSIZE < Ptrofs.modulus).
       {
       Intros. entailer!.
@@ -652,8 +652,8 @@ forward.
       rewrite token_merge with (b:= b) (i:= i); auto.
       2: { try rep_lia. }
       Intros.
-      assert (sizeof tint + (PGSIZE - sizeof tint) = PGSIZE). { try rep_lia. }
-      rewrite <- H11.
+      assert (sizeof tint + (PGSIZE - sizeof tint) = PGSIZE) as HH11. { try rep_lia. }
+      rewrite <- HH11.
       destruct orig_head; auto_contradict.
       assert (i = Ptrofs.repr (Ptrofs.unsigned i)). { rewrite Ptrofs.repr_unsigned. auto. }
       rewrite H12 at 2.
@@ -680,7 +680,7 @@ forward.
             (*unfold type_kalloc_token. rewrite kalloc_token_sz_split. entailer!.
             sep_apply data_at_memory_block. entailer!.*)
         ++ if_tac_auto_contradict. 
-        Unshelve. rewrite H2 in H. auto_contradict.
+        Unshelve. rewrite H1 in H. auto_contradict.
 Qed.
 
 
@@ -707,7 +707,7 @@ forward_call (kfree_spec_sub KAF_APD t_run) (pa1, gv, sh , ls, xx, orig_head). (
     inversion H3. entailer!.
     if_tac_auto_contradict.
     Intros ab0. 
-    forward. unfold type_kalloc_token. entailer!. unfold KAF_globals. inversion H6; entailer.
+    forward. unfold type_kalloc_token. entailer!. unfold KAF_globals. inversion H5; entailer.
 Qed.
 
 Lemma body_kfree_kfree_same_wrong_pointer: semax_body KAFVprog KAFGprog f_kfree_kfree_same_pointer kfree_kfree_same_pointer_wrong_spec.

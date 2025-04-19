@@ -117,7 +117,7 @@ forward_call (kalloc_spec_sub KAF_APD tint) (gv, sh , ls, xx, orig_head ). (* ka
     destruct ls; auto_contradict.
       forward_if.
         -- unfold type_kalloc_token. rewrite kalloc_token_sz_split.
-        destruct orig_head eqn:eo; inversion H2.
+        destruct orig_head eqn:eo; inversion H0; auto_contradict.
         assert_PROP (Ptrofs.unsigned i + PGSIZE < Ptrofs.modulus).
         {
         Intros. entailer!.
