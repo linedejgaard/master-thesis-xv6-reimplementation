@@ -98,7 +98,7 @@ Definition kfree_spec (K:KallocFreeAPD) {cs: compspecs} (t: type) :=
         SEP (
           ASI_kalloc.mem_mgr K gv sh ls xx orig_head *
           (if eq_dec new_head nullval then emp
-          else (type_kalloc_token K sh (t) new_head)
+          else (type_kalloc_token K sh t new_head)
           )
         )
       POST [ tvoid ]

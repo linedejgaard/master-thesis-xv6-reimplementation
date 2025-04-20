@@ -62,8 +62,7 @@ WITH n:Z, gv:globals, sh:share, ls: list val, xx:Z, orig_head:val
 PRE [ ]
     PROP(0 < n <= PGSIZE)
     PARAMS () GLOBALS(gv)
-    SEP ( mem_mgr K gv sh ls xx orig_head
-    )  
+    SEP ( mem_mgr K gv sh ls xx orig_head )  
 POST [ tptr tvoid ]
     PROP()
     RETURN (orig_head) 
