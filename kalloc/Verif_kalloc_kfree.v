@@ -51,25 +51,20 @@ forward_if (
     )
 )%assert.
 - destruct H1 as [[H0011 H0012] | [H0021 H0022]].
-+ rewrite H0012 in H2; auto_contradict.
-+ destruct ls; auto_contradict.
-refold_freelistrep. Intros.
-forward. forward.
-entailer.
-rewrite mem_mgr_split. Intros. 
-refold_freelistrep. if_tac.
-* rewrite H13 in H0022; auto_contradict.
-* entailer. Exists v ls. entailer. 
-rewrite kalloc_token_sz_split. rewrite mem_mgr_split. entailer.
-unfold pointer_within_size_range. entailer!.
--- destruct ls.
-    ++ left; split; auto. rewrite <- H11. auto.
-    ++ right. split.
-        **  unfold not. intros; auto_contradict.
-        ** rewrite <- H12. unfold not; intros; auto_contradict.
--- apply data_at_memory_block.
--forward. destruct (eq_dec orig_head nullval) eqn:e1; auto_contradict. entailer.
-rewrite mem_mgr_split. entailer.
+    + rewrite H0012 in H2; auto_contradict.
+    + destruct ls; auto_contradict.
+        refold_freelistrep. Intros.
+        forward. forward.
+        if_tac.
+        * entailer.
+        * Exists v ls. entailer. 
+            rewrite mem_mgr_split. entailer!.
+            -- destruct ls.
+                ++ left; split; auto. rewrite <- H12; auto.
+                ++ right. split; unfold not; intros; auto_contradict.
+                rewrite <- H13. auto_contradict.
+            -- rewrite kalloc_token_sz_split. entailer!. apply data_at_memory_block.
+- forward. if_tac_auto_contradict. entailer. rewrite mem_mgr_split. entailer.
 - if_tac; forward.
 Qed.
 
