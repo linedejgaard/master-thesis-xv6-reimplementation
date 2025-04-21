@@ -34,9 +34,35 @@ void *kalloc(void)
 }
 
 
-/// clients usage
+/// clients usage - allocation
 
-#define PGSIZE 4096 // bytes per page - original saved in risc.h
+int kalloc_write_42(void) {
+
+  int *pa;
+  pa = 0;
+  pa = (int*)kalloc();           // cast to int pointer
+  if (pa) {
+    *pa = 42;
+    int X = *pa;
+    return X;
+  }
+  return 0;
+}
+
+int* kalloc_int_array(int n) {
+  int *pa;
+  pa = 0;
+  pa = (int*)kalloc();           // cast to int pointer
+  if (pa) {
+    for (int i = 0; i < n; i++) {
+      pa[i] = 42;
+    }  
+    return pa; // Return the array to the allocated array
+  }
+  return 0;
+}
+
+#define PGSIZE 4096 // Page size in bytes (originally defined in risc.h)
 #define PIPESIZE 512
 typedef unsigned int uint;
 
@@ -48,7 +74,9 @@ struct pipe {
   int writeopen;  // write fd is still open
 };
 
-// very simple - just to check if it can be used for a composed structure such as a pipe..
+
+// Simple test function to verify if kalloc can be used to allocate 
+// memory for a composed structure like 'struct pipe'
 
 void kalloc_write_pipe()
 {
@@ -64,20 +92,12 @@ void kalloc_write_pipe()
   }
 }
 
+/// clients usage - allocation and deallocation
 
-int kalloc_write_42(void) {
-
-  int *pa;
-  pa = 0;
-  pa = (int*)kalloc();           // cast to int pointer
-  if (pa) {
-    *pa = 42;
-    int X = *pa;
-    return X;
-  }
-  return 0;
+void *kfree_kalloc(void *pa) {
+  kfree(pa);
+  return kalloc();
 }
-
 
 int kalloc_write_42_kfree(void) {
   int *pa;
@@ -106,17 +126,6 @@ int kalloc_write_42_kfree_kfree(void) {
   return 0;
 }
 
-
-
-
-
-
-// should return pa
-void *kfree_kalloc(void *pa) {
-  kfree(pa);
-  return kalloc();
-}
-
 void *kfree_kalloc_twice(void *pa1, void *pa2) {
   kfree_kalloc(pa1);
   return kfree_kalloc(pa2);
@@ -130,12 +139,29 @@ void *kfree_kalloc_kfree_kalloc(void *pa1, void *pa2) {
 }
 
 // should return pa2 if they are both pointers
+
 void *kfree_kfree_kalloc(void *pa1, void *pa2) { 
   kfree(pa1);
   kfree(pa2);
   return kalloc();
 }
 
+
+void *kfree_kfree_kalloc_kalloc(void *pa1, void *pa2) { 
+  kfree(pa1);
+  kfree(pa2);
+  kalloc();
+  return kalloc();
+}
+
+void kfree_kfree_same_pointer(void *pa1) { 
+  kfree(pa1);
+  kfree(pa1);
+}
+
+
+
+/// clients usage - loops
 
 void *kfree_kfree_kalloc_loop(void *pa_start) { 
   int i = 0;
@@ -158,34 +184,9 @@ void kfree_loop(void *pa_start, int n) {
 
 void* kfree_loop_kalloc(void *pa_start, int n) {
   kfree_loop(pa_start, n);
-  return kalloc(); // type problem in verification here
-}
-
-
-
-int* kalloc_int_array(int n) {
-  int *pa;
-  pa = 0;
-  pa = (int*)kalloc();           // cast to int pointer
-  if (pa) {
-    for (int i = 0; i < n; i++) {
-      pa[i] = 42;
-    }  
-    return pa; // Return the array to the allocated array
-  }
-  return 0;
-}
-
-// working in progress
-
-void *kfree_kfree_kalloc_kalloc(void *pa1, void *pa2) { 
-  kfree(pa1);
-  kfree(pa2);
-  kalloc();
   return kalloc();
 }
 
-void kfree_kfree_same_pointer(void *pa1) { 
-  kfree(pa1);
-  kfree(pa1);
-}
+
+
+
