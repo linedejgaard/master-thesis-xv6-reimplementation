@@ -99,6 +99,12 @@ void *kfree_kalloc(void *pa) {
   return kalloc();
 }
 
+void kalloc_kfree() {
+  void *p;
+  p = kalloc();
+  kfree(p);
+}
+
 int kalloc_write_42_kfree(void) {
   int *pa;
   pa = 0;
@@ -139,7 +145,6 @@ void *kfree_kalloc_kfree_kalloc(void *pa1, void *pa2) {
 }
 
 // should return pa2 if they are both pointers
-
 void *kfree_kfree_kalloc(void *pa1, void *pa2) { 
   kfree(pa1);
   kfree(pa2);

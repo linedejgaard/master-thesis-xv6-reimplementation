@@ -80,6 +80,7 @@ Definition _freelist : ident := $"freelist".
 Definition _i : ident := $"i".
 Definition _kalloc : ident := $"kalloc".
 Definition _kalloc_int_array : ident := $"kalloc_int_array".
+Definition _kalloc_kfree : ident := $"kalloc_kfree".
 Definition _kalloc_write_42 : ident := $"kalloc_write_42".
 Definition _kalloc_write_42_kfree : ident := $"kalloc_write_42_kfree".
 Definition _kalloc_write_42_kfree_kfree : ident := $"kalloc_write_42_kfree_kfree".
@@ -100,6 +101,7 @@ Definition _n : ident := $"n".
 Definition _next : ident := $"next".
 Definition _nread : ident := $"nread".
 Definition _nwrite : ident := $"nwrite".
+Definition _p : ident := $"p".
 Definition _pa : ident := $"pa".
 Definition _pa1 : ident := $"pa1".
 Definition _pa2 : ident := $"pa2".
@@ -302,6 +304,23 @@ Definition f_kfree_kalloc := {|
     (Scall (Some _t'1) (Evar _kalloc (Tfunction nil (tptr tvoid) cc_default))
       nil)
     (Sreturn (Some (Etempvar _t'1 (tptr tvoid))))))
+|}.
+
+Definition f_kalloc_kfree := {|
+  fn_return := tvoid;
+  fn_callconv := cc_default;
+  fn_params := nil;
+  fn_vars := nil;
+  fn_temps := ((_p, (tptr tvoid)) :: (_t'1, (tptr tvoid)) :: nil);
+  fn_body :=
+(Ssequence
+  (Ssequence
+    (Scall (Some _t'1) (Evar _kalloc (Tfunction nil (tptr tvoid) cc_default))
+      nil)
+    (Sset _p (Etempvar _t'1 (tptr tvoid))))
+  (Scall None
+    (Evar _kfree (Tfunction ((tptr tvoid) :: nil) tvoid cc_default))
+    ((Etempvar _p (tptr tvoid)) :: nil)))
 |}.
 
 Definition f_kalloc_write_42_kfree := {|
@@ -818,6 +837,7 @@ Definition global_definitions : list (ident * globdef fundef type) :=
  (_kalloc_int_array, Gfun(Internal f_kalloc_int_array)) ::
  (_kalloc_write_pipe, Gfun(Internal f_kalloc_write_pipe)) ::
  (_kfree_kalloc, Gfun(Internal f_kfree_kalloc)) ::
+ (_kalloc_kfree, Gfun(Internal f_kalloc_kfree)) ::
  (_kalloc_write_42_kfree, Gfun(Internal f_kalloc_write_42_kfree)) ::
  (_kalloc_write_42_kfree_kfree, Gfun(Internal f_kalloc_write_42_kfree_kfree)) ::
  (_kfree_kalloc_twice, Gfun(Internal f_kfree_kalloc_twice)) ::
@@ -833,28 +853,28 @@ Definition public_idents : list ident :=
 (_kfree_loop_kalloc :: _kfree_loop :: _kfree_kfree_kalloc_loop ::
  _kfree_kfree_same_pointer :: _kfree_kfree_kalloc_kalloc ::
  _kfree_kfree_kalloc :: _kfree_kalloc_kfree_kalloc :: _kfree_kalloc_twice ::
- _kalloc_write_42_kfree_kfree :: _kalloc_write_42_kfree :: _kfree_kalloc ::
- _kalloc_write_pipe :: _kalloc_int_array :: _kalloc_write_42 :: _kalloc ::
- _kfree :: _kmem :: ___builtin_debug :: ___builtin_write32_reversed ::
- ___builtin_write16_reversed :: ___builtin_read32_reversed ::
- ___builtin_read16_reversed :: ___builtin_fnmsub :: ___builtin_fnmadd ::
- ___builtin_fmsub :: ___builtin_fmadd :: ___builtin_fmin ::
- ___builtin_fmax :: ___builtin_expect :: ___builtin_unreachable ::
- ___builtin_va_end :: ___builtin_va_copy :: ___builtin_va_arg ::
- ___builtin_va_start :: ___builtin_membar :: ___builtin_annot_intval ::
- ___builtin_annot :: ___builtin_sel :: ___builtin_memcpy_aligned ::
- ___builtin_sqrt :: ___builtin_fsqrt :: ___builtin_fabsf ::
- ___builtin_fabs :: ___builtin_ctzll :: ___builtin_ctzl :: ___builtin_ctz ::
- ___builtin_clzll :: ___builtin_clzl :: ___builtin_clz ::
- ___builtin_bswap16 :: ___builtin_bswap32 :: ___builtin_bswap ::
- ___builtin_bswap64 :: ___compcert_i64_umulh :: ___compcert_i64_smulh ::
- ___compcert_i64_sar :: ___compcert_i64_shr :: ___compcert_i64_shl ::
- ___compcert_i64_umod :: ___compcert_i64_smod :: ___compcert_i64_udiv ::
- ___compcert_i64_sdiv :: ___compcert_i64_utof :: ___compcert_i64_stof ::
- ___compcert_i64_utod :: ___compcert_i64_stod :: ___compcert_i64_dtou ::
- ___compcert_i64_dtos :: ___compcert_va_composite ::
- ___compcert_va_float64 :: ___compcert_va_int64 :: ___compcert_va_int32 ::
- nil).
+ _kalloc_write_42_kfree_kfree :: _kalloc_write_42_kfree :: _kalloc_kfree ::
+ _kfree_kalloc :: _kalloc_write_pipe :: _kalloc_int_array ::
+ _kalloc_write_42 :: _kalloc :: _kfree :: _kmem :: ___builtin_debug ::
+ ___builtin_write32_reversed :: ___builtin_write16_reversed ::
+ ___builtin_read32_reversed :: ___builtin_read16_reversed ::
+ ___builtin_fnmsub :: ___builtin_fnmadd :: ___builtin_fmsub ::
+ ___builtin_fmadd :: ___builtin_fmin :: ___builtin_fmax ::
+ ___builtin_expect :: ___builtin_unreachable :: ___builtin_va_end ::
+ ___builtin_va_copy :: ___builtin_va_arg :: ___builtin_va_start ::
+ ___builtin_membar :: ___builtin_annot_intval :: ___builtin_annot ::
+ ___builtin_sel :: ___builtin_memcpy_aligned :: ___builtin_sqrt ::
+ ___builtin_fsqrt :: ___builtin_fabsf :: ___builtin_fabs ::
+ ___builtin_ctzll :: ___builtin_ctzl :: ___builtin_ctz :: ___builtin_clzll ::
+ ___builtin_clzl :: ___builtin_clz :: ___builtin_bswap16 ::
+ ___builtin_bswap32 :: ___builtin_bswap :: ___builtin_bswap64 ::
+ ___compcert_i64_umulh :: ___compcert_i64_smulh :: ___compcert_i64_sar ::
+ ___compcert_i64_shr :: ___compcert_i64_shl :: ___compcert_i64_umod ::
+ ___compcert_i64_smod :: ___compcert_i64_udiv :: ___compcert_i64_sdiv ::
+ ___compcert_i64_utof :: ___compcert_i64_stof :: ___compcert_i64_utod ::
+ ___compcert_i64_stod :: ___compcert_i64_dtou :: ___compcert_i64_dtos ::
+ ___compcert_va_composite :: ___compcert_va_float64 ::
+ ___compcert_va_int64 :: ___compcert_va_int32 :: nil).
 
 Definition prog : Clight.program := 
   mkprogram composites global_definitions public_idents _main Logic.I.
