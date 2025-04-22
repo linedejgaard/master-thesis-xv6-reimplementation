@@ -124,17 +124,10 @@ forward_call (kalloc_spec_sub KAF_APD tint) (gv, sh , ls, xx, orig_head ). (* ka
         { Intros. entailer!. }
         rewrite token_merge with (b:= b) (i:= i); auto; try rep_lia.
         Intros.
-        assert (sizeof tint + (PGSIZE - sizeof tint) = PGSIZE) as HH14. { try rep_lia. }
-        rewrite <- HH14.
-        destruct orig_head; auto_contradict.
-        assert (i = Ptrofs.repr (Ptrofs.unsigned i)) as HH15. { rewrite Ptrofs.repr_unsigned. auto. }
-        rewrite HH15 at 2.
-        rewrite memory_block_split with (sh := sh) (n:=(sizeof tint)) (m :=(PGSIZE - sizeof tint)) (b := b); try rep_lia.
+        rewrite <- token_merge_size with (b:= b) (i:= i) (sz:=sizeof tint); auto; try rep_lia.
         rewrite memory_block_data_at_; auto. rewrite data_at__eq. Intros.
-        rewrite <- HH15.
-        forward. forward. forward.
+        repeat forward.
         Exists (Vint(Int.repr 42)) (fst ab) (snd ab). entailer.
-        rewrite <- HH15. auto.
         -- forward.
 Qed.
 
@@ -146,61 +139,55 @@ forward.
 - forward_call (kalloc_spec_sub KAF_APD (tarray tint n)) (gv, sh , ls, xx, orig_head ). (* kalloc *)
     + unfold KAF_globals. entailer!.
     + if_tac_auto_contradict. 
-        --forward_if.
-        ++ rewrite H0 in H1; auto_contradict.
-        ++ forward. Exists nullval. unfold KAF_globals. entailer!.
-        --forward_if; auto_contradict.    
+        * forward_if.
+        -- rewrite H0 in H1; auto_contradict.
+        -- forward. Exists nullval. unfold KAF_globals. entailer!.
+        * forward_if; auto_contradict.    
     Intros ab.
       destruct ls; auto_contradict.
-        * unfold type_kalloc_token. rewrite kalloc_token_sz_split. Intros.
-        assert (sizeof (tarray tint n) + (PGSIZE - sizeof (tarray tint n)) = PGSIZE). { try rep_lia. }
+        unfold type_kalloc_token. rewrite kalloc_token_sz_split. Intros.
+        assert (sizeof (tarray tint n) + (PGSIZE - sizeof (tarray tint n)) = PGSIZE) by rep_lia.
         forward_for_simple_bound n
         (EX i:Z,
-        PROP  ()
-        LOCAL (
-            temp _pa orig_head; gvars gv;
-            temp _n (Vint (Int.repr n))
-            ) 
-        SEP (
-            (
-                tmp_array_42_rep sh n orig_head i *
-                memory_block sh (PGSIZE - sizeof (tarray tint n))
-                        (offset_val (sizeof (tarray tint n)) orig_head) *
-                KAF_globals gv sh ls xx v
-            )
-            )
-        )%assert;destruct H as [HH1 HH2].
-        ++ destruct HH2 as [HH2 HH3]. unfold tarray in HH3. rewrite sizeof_Tarray in HH3. 
+            PROP  ()
+            LOCAL (
+                temp _pa orig_head; gvars gv;
+                temp _n (Vint (Int.repr n))
+                ) 
+            SEP (
+                (
+                    tmp_array_42_rep sh n orig_head i *
+                    memory_block sh (PGSIZE - sizeof (tarray tint n))
+                            (offset_val (sizeof (tarray tint n)) orig_head) *
+                    KAF_globals gv sh ls xx v
+                )
+                )
+            )%assert;destruct H as [HH1 HH2]; destruct HH2 as [HH2 HH3].
+        ++ unfold tarray in HH3. rewrite sizeof_Tarray in HH3. 
         assert (Z.max 0 n <= PGSIZE / (sizeof tint)). {  apply Zdiv_le_lower_bound. simpl; try rep_lia. auto. rewrite Z.mul_comm. auto. }
-        assert (n <= PGSIZE / (sizeof tint)); try rep_lia. apply (Z.le_trans) with (PGSIZE / sizeof tint). try rep_lia.
-        unfold PGSIZE; simpl; try rep_lia.
-        ++ entailer. unfold tmp_array_42_rep. unfold KAF_globals. entailer. inversion H2; entailer.
+        assert (n <= PGSIZE / (sizeof tint)); try rep_lia. apply (Z.le_trans) with (PGSIZE / sizeof tint); try rep_lia.
+        simpl; try rep_lia.
+        ++ unfold tmp_array_42_rep, KAF_globals. inversion H2; entailer.
         destruct orig_head; auto_contradict.
-        assert (i = Ptrofs.repr (Ptrofs.unsigned i)) as HH12. { rewrite Ptrofs.repr_unsigned. auto. }
-        assert (Zrepeat (default_val tint) n = default_val (tarray tint n)) as Hdefault. {
-            apply Zrepeat_default_val_array. 
-        }
+        assert (Zrepeat (default_val tint) n = default_val (tarray tint n)) as Hdefault by (apply Zrepeat_default_val_array). 
         rewrite token_merge with (b:=b) (i:=i); auto; try rep_lia.
-        rewrite HH12 at 1.
         rewrite <- Hdefault at 1.
         rewrite <- token_merge_size with (b:=b) (i:=i) (sz:=sizeof (tarray tint n)); auto; try rep_lia.
-        2: { rewrite <- HH12. auto. }
-        rewrite <- HH12.
-        rewrite memory_block_data_at_; auto. rewrite data_at__eq. 
+        rewrite memory_block_data_at_, data_at__eq; auto.
         entailer!.
         ++ Intros.
         assert (Int.min_signed <= i <= Int.max_signed). { 
             assert (n <= Int.max_signed). {
-            destruct HH2 as [HH2 HH3]. 
-            unfold tarray in HH3. unfold tarray in HH3. rewrite sizeof_Tarray in HH3. 
+            unfold tarray in HH3; rewrite sizeof_Tarray in HH3. 
             assert (Z.max 0 n <= PGSIZE / (sizeof tint)). {  apply Zdiv_le_lower_bound. simpl; try rep_lia. auto. rewrite Z.mul_comm. auto. }
             assert (n <= PGSIZE / (sizeof tint)); try rep_lia. apply (Z.le_trans) with (PGSIZE / sizeof tint). try rep_lia.
             unfold PGSIZE; simpl; try rep_lia.
             }
             split; try rep_lia.
         } unfold tmp_array_42_rep.
-        forward. entailer.
-        unfold tmp_array_42_rep. entailer!. 
+        forward. unfold tmp_array_42_rep. entailer!. 
+        (* Rewrite the first array to match the form of the second (they are identical),
+                enabling the entailer to resolve the rest. *)
         rewrite upd_Znth_unfold.
         ** rewrite sublist_firstn. 
         rewrite firstn_app1.
@@ -255,39 +242,26 @@ Intros.
 forward.
 forward_call (kalloc_spec_sub KAF_APD t_struct_pipe) (gv, sh , ls, xx, orig_head ). (* kalloc *)
 - unfold KAF_globals. entailer!. 
-- if_tac. (*destruct (eq_dec orig_head nullval) eqn:e0.*)
+- if_tac. 
     + forward_if.
         * rewrite H in H0; auto_contradict.
         * forward. entailer.
     + Intros ab. forward_if.
-        *
-        rewrite mem_mgr_split. rewrite type_kalloc_token_split. rewrite kalloc_token_sz_split.
+        * rewrite mem_mgr_split, type_kalloc_token_split, kalloc_token_sz_split.
         destruct orig_head; auto_contradict.
-        assert_PROP (Ptrofs.unsigned i + PGSIZE < Ptrofs.modulus) as HH11.
-        {
-        Intros. entailer!.
-        }
+        assert_PROP (Ptrofs.unsigned i + PGSIZE < Ptrofs.modulus) as HH11. { Intros. entailer!. }
         rewrite token_merge with (b:= b) (i:= i); auto.
         2: { try rep_lia. }
         Intros.
-        assert (sizeof (t_struct_pipe) + (PGSIZE - sizeof (t_struct_pipe)) = PGSIZE) as HH12. { try rep_lia. }
-        rewrite <- HH12.
-        assert (i = Ptrofs.repr (Ptrofs.unsigned i)) as HHH12. { rewrite Ptrofs.repr_unsigned. auto. }
-        rewrite HHH12.
-        rewrite memory_block_split with (m:=(PGSIZE - sizeof t_struct_pipe)); try rep_lia.
+        rewrite <- token_merge_size with (b:= b) (i:= i) (sz:=sizeof t_struct_pipe); auto; try rep_lia.
+        3: { simpl; unfold PGSIZE; try rep_lia. }
+        2: { simpl; try rep_lia. } 
         rewrite memory_block_data_at_; auto. rewrite data_at__eq. Intros.
-        forward. forward. forward. forward.
-        entailer.
+        repeat forward. 
         Exists  (fst ab) (snd ab). entailer.
-        unfold KAF_globals. unfold pipe_rep.  Exists (fst (default_val t_struct_pipe)). entailer!.
-        rewrite mem_mgr_split. 
-        assert (i = Ptrofs.repr (Ptrofs.unsigned i)) as HH0. { rewrite Ptrofs.repr_unsigned. auto. }
-        rewrite <- HH0.
+        unfold KAF_globals. unfold pipe_rep. Exists (fst (default_val t_struct_pipe)). entailer!.
+        rewrite mem_mgr_split.
         entailer!.
-        assert (i = Ptrofs.repr (Ptrofs.unsigned i)) as HH0. { rewrite Ptrofs.repr_unsigned. auto. }
-        rewrite <- HH0.
-        auto. try simpl; rep_lia.
-        try simpl; rep_lia.
         * forward.
         entailer!.
 Qed.
