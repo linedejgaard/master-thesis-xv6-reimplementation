@@ -216,9 +216,9 @@ forward.
         rewrite HH21; auto.
         ** rewrite Zlength_app. rewrite array_42_length. rewrite Zlength_Zrepeat; try rep_lia.
         ++ forward. (* the loop invariant (and negation of the loop condition) is a strong enough precondition to proceed and complete the proof after the loop. *)
-        Exists orig_head v ls. entailer!. unfold tmp_array_42_rep. unfold array_42_rep. 
+        Exists orig_head v ls. entailer!. unfold tmp_array_42_rep, array_42_rep. 
         replace (n - n) with 0; try rep_lia. 
-        rewrite Zrepeat_0. rewrite app_nil_r. entailer!.
+        rewrite Zrepeat_0, app_nil_r. entailer!.
 Qed.
 
 Lemma body_kalloc_int_array_fail: semax_body KAFVprog KAFGprog f_kalloc_int_array kalloc_int_array_spec_fail.
