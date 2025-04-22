@@ -45,7 +45,8 @@ Definition kalloc_int_array_spec : ident * funspec :=
     PARAMS(Vint (Int.repr n)) GLOBALS(gv) 
     SEP (KAF_globals gv sh ls xx orig_head)
     POST [ tptr tint ]
-    PROP ( ) RETURN () SEP (
+    EX r,
+    PROP ( r = orig_head ) RETURN ( r ) SEP (
         (if eq_dec orig_head nullval then
             KAF_globals gv  sh ls xx orig_head * emp
         else
@@ -88,7 +89,8 @@ Definition kalloc_int_array_spec_fail : ident * funspec :=
     PARAMS(Vint (Int.repr n)) GLOBALS(gv) 
     SEP (KAF_globals gv sh ls xx orig_head)
     POST [ tptr tint ]
-    PROP ( ) RETURN () SEP (
+    EX r,
+    PROP ( r = orig_head ) RETURN ( r ) SEP (
         (if eq_dec orig_head nullval then
             KAF_globals gv  sh ls xx orig_head * emp
         else
@@ -146,7 +148,7 @@ forward.
     + if_tac_auto_contradict. 
         --forward_if.
         ++ rewrite H0 in H1; auto_contradict.
-        ++ forward.
+        ++ forward. Exists nullval. unfold KAF_globals. entailer!.
         --forward_if; auto_contradict.    
     Intros ab.
       destruct ls; auto_contradict.
@@ -227,7 +229,7 @@ forward.
         }
         rewrite HH21; auto.
         ** rewrite Zlength_app. rewrite array_42_length. rewrite Zlength_Zrepeat; try rep_lia.
-        ++ forward. Exists v ls. entailer!. unfold tmp_array_42_rep. unfold array_42_rep. 
+        ++ forward. Exists orig_head v ls. entailer!. unfold tmp_array_42_rep. unfold array_42_rep. 
         replace (n - n) with 0; try rep_lia. 
         rewrite Zrepeat_0. rewrite app_nil_r. entailer!.
 Qed.
