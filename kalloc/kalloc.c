@@ -57,19 +57,17 @@ int* kalloc_int_array(int n) {
     for (int i = 0; i < n; i++) {
       pa[i] = 42;
     }  
-    return pa; // Return the array to the allocated array
+    return pa; // Return the pointer to the allocated array
   }
   return 0;
 }
 
-#define PGSIZE 4096 // Page size in bytes (originally defined in risc.h)
 #define PIPESIZE 512
-typedef unsigned int uint;
 
 struct pipe {
   char data[PIPESIZE];
-  uint nread;     // number of bytes read
-  uint nwrite;    // number of bytes written
+  int nread;     // number of bytes read
+  int nwrite;    // number of bytes written
   int readopen;   // read fd is still open
   int writeopen;  // write fd is still open
 };
@@ -167,6 +165,9 @@ void kfree_kfree_same_pointer(void *pa1) {
 
 
 /// clients usage - loops
+
+#define PGSIZE 4096 // Page size in bytes (originally defined in risc.h)
+
 
 void *kfree_kfree_kalloc_loop(void *pa_start) { 
   int i = 0;

@@ -30,10 +30,9 @@ Definition kfree_kfree_kalloc_loop_spec :=
             RETURN (offset_val PGSIZE pa1) (* we return the head like in the pop function*)
             SEP 
             (
-                (*data_at sh t_run pa1 (offset_val PGSIZE pa1) **)
                 kalloc_token' KAF_APD sh (sizeof t_run) (offset_val PGSIZE pa1) *
                 KAF_globals gv sh (orig_head::ls) xx pa1
-                ).
+            ).
 
 Definition kfree_loop_spec := 
     DECLARE _kfree_loop

@@ -279,12 +279,12 @@ Definition f_kalloc_write_pipe := {|
             (Sassign
               (Efield
                 (Ederef (Etempvar _pi (tptr (Tstruct _pipe noattr)))
-                  (Tstruct _pipe noattr)) _nwrite tuint)
+                  (Tstruct _pipe noattr)) _nwrite tint)
               (Econst_int (Int.repr 0) tint))
             (Sassign
               (Efield
                 (Ederef (Etempvar _pi (tptr (Tstruct _pipe noattr)))
-                  (Tstruct _pipe noattr)) _nread tuint)
+                  (Tstruct _pipe noattr)) _nread tint)
               (Econst_int (Int.repr 0) tint)))))
       Sskip)))
 |}.
@@ -575,8 +575,8 @@ Definition composites : list composite_definition :=
     Member_plain _freelist (tptr (Tstruct _run noattr)) :: nil)
    noattr ::
  Composite _pipe Struct
-   (Member_plain _data (tarray tschar 512) :: Member_plain _nread tuint ::
-    Member_plain _nwrite tuint :: Member_plain _readopen tint ::
+   (Member_plain _data (tarray tschar 512) :: Member_plain _nread tint ::
+    Member_plain _nwrite tint :: Member_plain _readopen tint ::
     Member_plain _writeopen tint :: nil)
    noattr :: nil).
 
