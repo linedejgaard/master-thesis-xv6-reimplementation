@@ -109,9 +109,9 @@ Proof.
 start_function.
 Intros.
 forward.
-forward_call (kalloc_spec_sub KAF_APD tint) (gv, sh , ls, xx, orig_head ). (* kalloc *)
-+ unfold KAF_globals. entailer!.
-+ if_tac_auto_contradict.
+forward_call (kalloc_spec_sub KAF_APD tint) (gv, sh , ls, xx, orig_head). (* kalloc *)
++ (* The pre-conditions are met *) unfold KAF_globals. entailer!.
++ (* The proof continues *) if_tac_auto_contradict.
     * forward_if.
         -- rewrite H in H0; auto_contradict.
         -- forward. Exists (Vint(Int.repr 0)). entailer.
@@ -146,7 +146,6 @@ forward.
     Intros ab.
       destruct ls; auto_contradict.
         unfold type_kalloc_token. rewrite kalloc_token_sz_split. Intros.
-        assert (sizeof (tarray tint n) + (PGSIZE - sizeof (tarray tint n)) = PGSIZE) by rep_lia.
         forward_for_simple_bound n
         (EX i:Z,
             PROP  ()
@@ -163,11 +162,11 @@ forward.
                 )
                 )
             )%assert;destruct H as [HH1 HH2]; destruct HH2 as [HH2 HH3].
-        ++ unfold tarray in HH3. rewrite sizeof_Tarray in HH3. 
+        ++ unfold tarray in HH3. rewrite sizeof_Tarray in HH3.
         assert (Z.max 0 n <= PGSIZE / (sizeof tint)). {  apply Zdiv_le_lower_bound. simpl; try rep_lia. auto. rewrite Z.mul_comm. auto. }
         assert (n <= PGSIZE / (sizeof tint)); try rep_lia. apply (Z.le_trans) with (PGSIZE / sizeof tint); try rep_lia.
         simpl; try rep_lia.
-        ++ unfold tmp_array_42_rep, KAF_globals. inversion H2; entailer.
+        ++ unfold tmp_array_42_rep, KAF_globals. inversion H2; entailer. (* ensure the pre-conditions for the loop is met *)
         destruct orig_head; auto_contradict.
         assert (Zrepeat (default_val tint) n = default_val (tarray tint n)) as Hdefault by (apply Zrepeat_default_val_array). 
         rewrite token_merge with (b:=b) (i:=i); auto; try rep_lia.
@@ -175,7 +174,7 @@ forward.
         rewrite <- token_merge_size with (b:=b) (i:=i) (sz:=sizeof (tarray tint n)); auto; try rep_lia.
         rewrite memory_block_data_at_, data_at__eq; auto.
         entailer!.
-        ++ Intros.
+        ++ Intros. (* the postcondition of the loop body implies the loop invariant *)
         assert (Int.min_signed <= i <= Int.max_signed). { 
             assert (n <= Int.max_signed). {
             unfold tarray in HH3; rewrite sizeof_Tarray in HH3. 
@@ -216,7 +215,8 @@ forward.
         }
         rewrite HH21; auto.
         ** rewrite Zlength_app. rewrite array_42_length. rewrite Zlength_Zrepeat; try rep_lia.
-        ++ forward. Exists orig_head v ls. entailer!. unfold tmp_array_42_rep. unfold array_42_rep. 
+        ++ forward. (* the loop invariant (and negation of the loop condition) is a strong enough precondition to proceed and complete the proof after the loop. *)
+        Exists orig_head v ls. entailer!. unfold tmp_array_42_rep. unfold array_42_rep. 
         replace (n - n) with 0; try rep_lia. 
         rewrite Zrepeat_0. rewrite app_nil_r. entailer!.
 Qed.
