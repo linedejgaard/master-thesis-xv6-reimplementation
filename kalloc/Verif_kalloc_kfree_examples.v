@@ -465,36 +465,22 @@ forward.
     forward_if.
       -- unfold type_kalloc_token. rewrite kalloc_token_sz_split.
       destruct orig_head eqn:eo; inversion H0; auto_contradict.
-      assert_PROP (Ptrofs.unsigned i + PGSIZE < Ptrofs.modulus).
-      {
-      Intros. entailer!.
-      }
+      assert_PROP (Ptrofs.unsigned i + PGSIZE < Ptrofs.modulus). { Intros. entailer!. }
       rewrite token_merge with (b:= b) (i:= i); auto.
       2: { try rep_lia. }
       Intros.
-      assert (sizeof tint + (PGSIZE - sizeof tint) = PGSIZE) as HH11. { try rep_lia. }
-      rewrite <- HH11.
-      destruct orig_head; auto_contradict.
-      assert (i = Ptrofs.repr (Ptrofs.unsigned i)). { rewrite Ptrofs.repr_unsigned. auto. }
-      rewrite H12 at 2.
-      rewrite memory_block_split with (sh := sh) (n:=(sizeof tint)) (m :=(PGSIZE - sizeof tint)) (b := b); try rep_lia.
+      rewrite <- token_merge_size with (b:= b) (i:= i) (sz:=sizeof tint); auto; try rep_lia.
       rewrite memory_block_data_at_; auto. rewrite data_at__eq. Intros.
-      rewrite <- H12.
-      forward. forward.
+      repeat forward.
       forward_call (kfree_spec_sub KAF_APD tint) (Vptr b i, gv, sh , snd ab, xx, (fst ab)). (* call kfree *)
         ++ if_tac_auto_contradict.
             unfold type_kalloc_token. rewrite kalloc_token_sz_split. entailer!.
             sep_apply data_at_memory_block. 
             rewrite token_merge with (b:= b) (i:= i); auto; try rep_lia.
-            assert (sizeof tint + (PGSIZE - sizeof tint) = PGSIZE) as Hpgsizetint; try rep_lia.
-            rewrite <- Hpgsizetint at 2.
-            rewrite H12 at 3.
-            rewrite memory_block_split with (n := sizeof tint) (m:= PGSIZE - sizeof tint ); try rep_lia.
-            rewrite <- H12.
+            rewrite <- token_merge_size with (b:= b) (i:= i) (sz:=sizeof tint); auto; try rep_lia.
             entailer!.
         ++ if_tac_auto_contradict.
-            forward. Exists (Vint (Int.repr 42)). inversion H0. unfold KAF_globals. entailer.
-        ++ rewrite <- H12. auto.
+            forward. Exists (Vint (Int.repr 42)). unfold KAF_globals. entailer.
         -- forward.
 Qed.
         
@@ -706,42 +692,24 @@ forward.
     forward_if.
       -- unfold type_kalloc_token. rewrite kalloc_token_sz_split.
       destruct orig_head eqn:eo; inversion H0; auto_contradict.
-      assert_PROP (Ptrofs.unsigned i + PGSIZE < Ptrofs.modulus).
-      {
-      Intros. entailer!.
-      }
+      assert_PROP (Ptrofs.unsigned i + PGSIZE < Ptrofs.modulus). { Intros. entailer!. }
       rewrite token_merge with (b:= b) (i:= i); auto.
       2: { try rep_lia. }
       Intros.
-      assert (sizeof tint + (PGSIZE - sizeof tint) = PGSIZE) as HH11. { try rep_lia. }
-      rewrite <- HH11.
-      destruct orig_head; auto_contradict.
-      assert (i = Ptrofs.repr (Ptrofs.unsigned i)). { rewrite Ptrofs.repr_unsigned. auto. }
-      rewrite H12 at 2.
-      rewrite memory_block_split with (sh := sh) (n:=(sizeof tint)) (m :=(PGSIZE - sizeof tint)) (b := b); try rep_lia.
+      rewrite <- token_merge_size with (b:= b) (i:= i) (sz:=sizeof tint); auto; try rep_lia.
       rewrite memory_block_data_at_; auto. rewrite data_at__eq. Intros.
-      rewrite <- H12.
-      forward. forward.
+      repeat forward.
       forward_call (kfree_spec_sub KAF_APD tint) (Vptr b i, gv, sh , snd ab, xx, (fst ab)). (* call kfree *)
         ++ if_tac_auto_contradict.
             unfold type_kalloc_token. rewrite kalloc_token_sz_split. entailer!.
             sep_apply data_at_memory_block. 
             rewrite token_merge with (b:= b) (i:= i); auto; try rep_lia.
-            assert (sizeof tint + (PGSIZE - sizeof tint) = PGSIZE) as Hpgsizetint; try rep_lia.
-            rewrite <- Hpgsizetint at 2.
-            rewrite H12 at 3.
-            rewrite memory_block_split with (n := sizeof tint) (m:= PGSIZE - sizeof tint ); try rep_lia.
-            rewrite <- H12.
+            rewrite <- token_merge_size with (b:= b) (i:= i) (sz:=sizeof tint); auto; try rep_lia.
             entailer!.
         ++ if_tac_auto_contradict.
-            forward. Exists (Vint (Int.repr 42)). inversion H0. unfold KAF_globals. entailer.
-        ++ rewrite <- H12. auto.
-        --  forward_call (kfree_spec_sub KAF_APD tint) (orig_head, gv, sh , snd ab, xx, (fst ab)). (* call kfree *)
-        ++ if_tac_auto_contradict.
-            (*unfold type_kalloc_token. rewrite kalloc_token_sz_split. entailer!.
-            sep_apply data_at_memory_block. entailer!.*)
-        ++ if_tac_auto_contradict. 
-        Unshelve. rewrite H1 in H. auto_contradict.
+        forward. Exists (Vint (Int.repr 42)). unfold KAF_globals. entailer.
+      --  forward_call (kfree_spec_sub KAF_APD tint) (orig_head, gv, sh , snd ab, xx, (fst ab)); if_tac_auto_contradict. (* call kfree *)
+            Unshelve. rewrite H1 in H. auto_contradict.
 Qed.
 
 
