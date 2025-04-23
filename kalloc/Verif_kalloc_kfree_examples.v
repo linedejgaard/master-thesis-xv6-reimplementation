@@ -91,6 +91,25 @@ Definition kfree_kalloc_inverses_spec_t_run :=
             kalloc_token' KAF_APD sh (sizeof t_run) new_head
     ).
 
+Definition kfree_kalloc_inverses_spec_tlong := 
+    DECLARE _kfree_kalloc
+    WITH gv:globals, sh : share, new_head:val, orig_head:val, xx:Z, ls:list val
+    PRE [ tptr tvoid ]
+        PROP(isptr new_head) 
+        PARAMS (new_head) GLOBALS(gv)
+        SEP (
+            KAF_globals gv  sh ls xx orig_head *
+            kalloc_token' KAF_APD sh (sizeof tlong) new_head
+        )
+    POST [ tptr tvoid ]
+        PROP( )
+        RETURN (new_head) (* we return the head like in the pop function*)
+        SEP (
+            KAF_globals gv sh ls xx orig_head *
+            kalloc_token' KAF_APD sh (sizeof tlong) new_head
+    ).
+    
+
 
 Definition kalloc_kfree_inverses_spec : ident * funspec :=
     DECLARE _kalloc_kfree
@@ -459,6 +478,22 @@ forward_call (kfree_spec_sub KAF_APD t_run) (new_head, gv, sh , ls, xx, orig_hea
 - if_tac_auto_contradict.
     + rewrite H0 in H; auto_contradict.
     + forward_call (kalloc_spec_sub KAF_APD t_run) (gv, sh, orig_head::ls, xx, new_head ). (* kalloc *)
+      if_tac_auto_contradict; forward.
+      inversion H2; subst; entailer. unfold KAF_globals. entailer!. simplify_kalloc_token.
+Qed.
+
+
+
+Lemma body_kfree_kalloc_inverses_tlong: semax_body KAFVprog KAFGprog f_kfree_kalloc kfree_kalloc_inverses_spec_tlong.
+Proof.
+start_function.
+forward_call (kfree_spec_sub KAF_APD tlong) (new_head, gv, sh , ls, xx, orig_head). (* call kfree *)
+- if_tac_auto_contradict.
+    + unfold KAF_globals. entailer!.
+    + unfold KAF_globals. entailer!. simplify_kalloc_token. 
+- if_tac_auto_contradict.
+    + rewrite H0 in H; auto_contradict.
+    + forward_call (kalloc_spec_sub KAF_APD tlong) (gv, sh, orig_head::ls, xx, new_head ). (* kalloc *)
       if_tac_auto_contradict; forward.
       inversion H2; subst; entailer. unfold KAF_globals. entailer!. simplify_kalloc_token.
 Qed.
