@@ -421,16 +421,14 @@ Lemma body_kfree_kalloc_inverses: semax_body KAFVprog KAFGprog f_kfree_kalloc kf
 Proof.
 start_function.
 forward_call (kfree_spec_sub KAF_APD t_run) (new_head, gv, sh , ls, xx, orig_head). (* call kfree *)
-    + if_tac_auto_contradict.
-        *unfold KAF_globals. entailer!.
-        * unfold KAF_globals. entailer!. 
-            simplify_kalloc_token. 
-    + if_tac_auto_contradict.
-        *forward_call (kalloc_spec_sub KAF_APD t_run) (gv, sh , ls, xx, orig_head ). (* kalloc *)
-        if_tac; forward.
-        *forward_call (kalloc_spec_sub KAF_APD t_run) (gv, sh, orig_head::ls, xx, new_head ). (* kalloc *)
-        if_tac_auto_contradict; forward.
-        inversion H2; subst; entailer. unfold KAF_globals. entailer!. simplify_kalloc_token.
+- if_tac_auto_contradict.
+    + unfold KAF_globals. entailer!.
+    + unfold KAF_globals. entailer!. simplify_kalloc_token. 
+- if_tac_auto_contradict.
+    + rewrite H0 in H; auto_contradict.
+    + forward_call (kalloc_spec_sub KAF_APD t_run) (gv, sh, orig_head::ls, xx, new_head ). (* kalloc *)
+      if_tac_auto_contradict; forward.
+      inversion H2; subst; entailer. unfold KAF_globals. entailer!. simplify_kalloc_token.
 Qed.
 
 Lemma body_kalloc_kfree_inverses: semax_body KAFVprog KAFGprog f_kalloc_kfree kalloc_kfree_inverses_spec.
