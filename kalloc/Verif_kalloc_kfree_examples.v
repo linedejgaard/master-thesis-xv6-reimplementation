@@ -849,10 +849,10 @@ forward_call (kfree_spec_sub KAF_APD t_run) (pa1, gv, sh , ls, xx, orig_head). (
 - if_tac_auto_contradict. rewrite H0 in H. auto_contradict.
     forward_call (kfree_spec_sub KAF_APD t_run) (pa1, gv, sh , orig_head::ls, xx, pa1).
     + if_tac_auto_contradict. entailer!.
-     (* a token needs to be included in the pre-condition for being able to call kalloc *) admit.
+     (* a token needs to be included in the pre-condition for being able to call kfree *) admit.
     + if_tac_auto_contradict.
       unfold KAF_globals. entailer!. 
-      (* TThe precondition for kalloc is expected to include more information,
-            but it is incomplete in this case. This leads to a wrong call to kalloc,
+      (* TThe precondition for kfree is expected to include more information,
+            but it is incomplete in this case. This leads to a wrong call to kfree,
             causing a wrong memory amanger and leftover memory that should have been freed. *)
 Abort.
