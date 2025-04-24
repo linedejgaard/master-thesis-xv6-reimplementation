@@ -73,7 +73,7 @@ Definition kfree_kalloc_inverses_spec :=
             kalloc_token' KAF_APD sh (sizeof tint) new_head
     ).
 
-Definition kfree_kalloc_inverses_spec_t_run := 
+Definition kfree_kalloc_inverses_t_run_spec := 
     DECLARE _kfree_kalloc
     WITH gv:globals, sh : share, new_head:val, orig_head:val, xx:Z, ls:list val
     PRE [ tptr tvoid ]
@@ -91,7 +91,7 @@ Definition kfree_kalloc_inverses_spec_t_run :=
             kalloc_token' KAF_APD sh (sizeof t_run) new_head
     ).
 
-Definition kfree_kalloc_inverses_spec_tlong := 
+Definition kfree_kalloc_inverses_tlong_spec := 
     DECLARE _kfree_kalloc
     WITH gv:globals, sh : share, new_head:val, orig_head:val, xx:Z, ls:list val
     PRE [ tptr tvoid ]
@@ -346,9 +346,9 @@ Definition kfree_kfree_kalloc_spec :=
             in
             let both_is_pointers_case :=
                 KAF_globals gv sh (orig_head::ls) xx pa1 *
-                (*kalloc_token' KAF_APD sh (sizeof t_run) pa1 *)
                 kalloc_token' KAF_APD sh (sizeof t_run) pa2
             in
+
             if eq_dec pa1 nullval then
                 if eq_dec pa2 nullval then
                     freelist_both_null_case
@@ -358,8 +358,6 @@ Definition kfree_kfree_kalloc_spec :=
                     freelist_only_pa2_null_case
                 else both_is_pointers_case
         ).
-
-
 
 Definition kalloc_write_42_kfree_kfree_spec : ident * funspec :=
     DECLARE _kalloc_write_42_kfree_kfree
@@ -372,10 +370,10 @@ Definition kalloc_write_42_kfree_kfree_spec : ident * funspec :=
         PROP ( ) RETURN (r) SEP (
             (if eq_dec orig_head nullval then
                 (!! (r = Vint (Int.repr 0)) &&
-                KAF_globals gv  sh ls xx orig_head)
+                KAF_globals gv sh ls xx orig_head)
             else
                 (!! ( r = Vint (Int.repr 42) ) &&
-                KAF_globals gv  sh ls xx orig_head)
+                KAF_globals gv sh ls xx orig_head)
             )
         ).
 
@@ -413,7 +411,7 @@ Definition kfree_kfree_same_pointer_wrong_spec :=
         PARAMS (pa1) GLOBALS(gv)
         SEP (
             KAF_globals gv  sh ls xx orig_head *
-            kalloc_token' KAF_APD sh (sizeof t_run) pa1 *
+            kalloc_token' KAF_APD sh (sizeof t_run) pa1 * (* this should never happen! *)
             kalloc_token' KAF_APD sh (sizeof t_run) pa1
             )
     POST [ tvoid ]
@@ -422,6 +420,26 @@ Definition kfree_kfree_same_pointer_wrong_spec :=
             SEP 
             (
                 KAF_globals gv  sh (pa1::orig_head::ls) xx pa1
+            ).
+
+Definition kfree_kfree_same_pointer_spec := 
+    DECLARE _kfree_kfree_same_pointer
+    WITH sh : share, pa1:val, orig_head:val, xx:Z, gv:globals, ls : list val, next:val
+    PRE [ tptr tvoid ]
+        PROP(
+            isptr pa1
+        ) 
+        PARAMS (pa1) GLOBALS(gv)
+        SEP (
+            KAF_globals gv  sh ls xx orig_head *
+            kalloc_token' KAF_APD sh (sizeof t_run) pa1
+            )
+    POST [ tvoid ]
+        PROP( )
+            RETURN () (* we return the head like in the pop function*)
+            SEP 
+            (
+                KAF_globals gv  sh (orig_head::ls) xx pa1
             ).
 
 Definition KAFGprog_clients: funspecs := KAFGprog ++ [kfree_kalloc_spec].
@@ -459,16 +477,16 @@ Proof.
 start_function.
 forward_call (kfree_spec_sub KAF_APD tint) (new_head, gv, sh , ls, xx, orig_head). (* call kfree *)
 - if_tac_auto_contradict.
-    + unfold KAF_globals. entailer!.
+    + rewrite H0 in H; auto_contradict.
     + unfold KAF_globals. entailer!. simplify_kalloc_token. 
 - if_tac_auto_contradict.
     + rewrite H0 in H; auto_contradict.
-    + forward_call (kalloc_spec_sub KAF_APD tint) (gv, sh, orig_head::ls, xx, new_head ). (* kalloc *)
+    + forward_call (kalloc_spec_sub KAF_APD tint) (gv, sh, orig_head::ls, xx, new_head). (* kalloc *)
       if_tac_auto_contradict; forward.
       inversion H2; subst; entailer. unfold KAF_globals. entailer!. simplify_kalloc_token.
 Qed.
 
-Lemma body_kfree_kalloc_inverses_t_run: semax_body KAFVprog KAFGprog f_kfree_kalloc kfree_kalloc_inverses_spec_t_run.
+Lemma body_kfree_kalloc_inverses_t_run: semax_body KAFVprog KAFGprog f_kfree_kalloc kfree_kalloc_inverses_t_run_spec.
 Proof.
 start_function.
 forward_call (kfree_spec_sub KAF_APD t_run) (new_head, gv, sh , ls, xx, orig_head). (* call kfree *)
@@ -482,9 +500,7 @@ forward_call (kfree_spec_sub KAF_APD t_run) (new_head, gv, sh , ls, xx, orig_hea
       inversion H2; subst; entailer. unfold KAF_globals. entailer!. simplify_kalloc_token.
 Qed.
 
-
-
-Lemma body_kfree_kalloc_inverses_tlong: semax_body KAFVprog KAFGprog f_kfree_kalloc kfree_kalloc_inverses_spec_tlong.
+Lemma body_kfree_kalloc_inverses_tlong: semax_body KAFVprog KAFGprog f_kfree_kalloc kfree_kalloc_inverses_tlong_spec.
 Proof.
 start_function.
 forward_call (kfree_spec_sub KAF_APD tlong) (new_head, gv, sh , ls, xx, orig_head). (* call kfree *)
@@ -623,19 +639,18 @@ Proof.
 start_function. Intros.
 if_tac; if_tac; destruct H; 
 forward_call (kfree_spec_sub KAF_APD t_run) (pa1, gv, sh , ls, xx, orig_head). (* call kfree *)
-- if_tac_auto_contradict. unfold KAF_globals. entailer!.
+- if_tac_auto_contradict. unfold KAF_globals. entailer!. (* kfree's precondition is met, when both pa1 and pa2 is null *)
 - forward_call (kalloc_spec_sub KAF_APD t_run) (gv, sh , ls, xx, orig_head). (* kalloc *)
-    + if_tac_auto_contradict. entailer!.
-    + if_tac_auto_contradict. 
+    + if_tac_auto_contradict. entailer!. (* kalloc's preconditions are met, when both pa1 and pa2 is null *)
+    + if_tac_auto_contradict.
         * forward_call (kfree_spec_sub KAF_APD t_run) (pa2, gv, sh , ls, xx, orig_head). (* call kfree *)
-            -- if_tac_auto_contradict. entailer!.
-            -- if_tac_auto_contradict. forward_call (kalloc_spec_sub KAF_APD t_run) (gv, sh , ls, xx, orig_head). (* kalloc *)
-                if_tac.
-                    ++ forward. Exists nullval; unfold KAF_globals. entailer!.
-                    ++ Intros ab. destruct ls; auto_contradict.
-        * Intros ab. destruct ls; auto_contradict. 
+            -- if_tac_auto_contradict. entailer!. (* kfree's precondition is met, when both pa1 and pa2 is null *)
+            -- if_tac_auto_contradict. forward_call (kalloc_spec_sub KAF_APD t_run) (gv, sh , ls, xx, orig_head). (* kalloc, its precondition is automatically met *)
+                if_tac_auto_contradict.
+                forward. Exists nullval; unfold KAF_globals. entailer!.
+        * Intros ab. destruct ls; auto_contradict. (* there are elements in the freelist*)
         forward_call (kfree_spec_sub KAF_APD t_run) (pa2, gv, sh , snd ab, xx, fst ab). (* call kfree *)
-            -- entailer!.
+            -- entailer!. (* the precondition is met *)
             -- if_tac_auto_contradict. forward_call (kalloc_spec_sub KAF_APD t_run) (gv, sh , snd ab, xx, fst ab). (* kalloc *)
                 if_tac.
                     ++ forward. Exists (fst ab) (fst ab) (snd ab). if_tac.
@@ -644,7 +659,7 @@ forward_call (kfree_spec_sub KAF_APD t_run) (pa1, gv, sh , ls, xx, orig_head). (
                     ++ Intros ab0. forward. Exists (fst ab). unfold type_kalloc_token. rewrite mem_mgr_split. 
                         Exists (fst ab) (snd ab). if_tac_auto_contradict. Exists (fst ab0) (snd ab0). rewrite mem_mgr_split; entailer!.
                         repeat right; split; auto.
--if_tac_auto_contradict. unfold KAF_globals. entailer!.
+- if_tac_auto_contradict. unfold KAF_globals. entailer!.
 - forward_call (kalloc_spec_sub KAF_APD t_run) (gv, sh , ls, xx, orig_head). (* kalloc *)
 + if_tac_auto_contradict. entailer!.
 + if_tac_auto_contradict. 
@@ -821,3 +836,23 @@ forward_call (kfree_spec_sub KAF_APD t_run) (pa1, gv, sh , ls, xx, orig_head). (
     + if_tac_auto_contradict.
       entailer. 
 Qed.
+
+Lemma body_kfree_kfree_same_pointer: semax_body KAFVprog KAFGprog f_kfree_kfree_same_pointer kfree_kfree_same_pointer_spec.
+Proof.
+start_function.
+Intros.
+forward_call (kfree_spec_sub KAF_APD t_run) (pa1, gv, sh , ls, xx, orig_head). (* call kfree *)
+- unfold KAF_globals.
+    if_tac.
+    + rewrite H0 in H. auto_contradict.
+    + unfold type_kalloc_token. entailer!. 
+- if_tac_auto_contradict. rewrite H0 in H. auto_contradict.
+    forward_call (kfree_spec_sub KAF_APD t_run) (pa1, gv, sh , orig_head::ls, xx, pa1).
+    + if_tac_auto_contradict. entailer!.
+     (* a token needs to be included in the pre-condition for being able to call kalloc *) admit.
+    + if_tac_auto_contradict.
+      unfold KAF_globals. entailer!. 
+      (* TThe precondition for kalloc is expected to include more information,
+            but it is incomplete in this case. This leads to a wrong call to kalloc,
+            causing a wrong memory amanger and leftover memory that should have been freed. *)
+Abort.
