@@ -91,7 +91,6 @@ Definition kfree_loop_kalloc_spec :=
                 kalloc_token' KAF_APD sh (sizeof t_run) head)
             ).
 
-
 Definition kfree_loop_kalloc_tint_spec := 
     DECLARE _kfree_loop_kalloc
     WITH sh : share, pa1:val, orig_head:val, xx:Z, gv:globals, ls : list val, n:Z
@@ -161,7 +160,7 @@ Definition KAFGprog_clients: funspecs := KAFGprog ++ [kfree_loop_spec].
 Lemma body_kfree_kfree_kalloc_loop: semax_body  KAFVprog KAFGprog f_kfree_kfree_kalloc_loop kfree_kfree_kalloc_loop_spec.
 Proof.
     start_function.
-    Intros. forward. (*forward. unfold abb iate in POSTCONDITION.*)
+    Intros. forward.
     forward_while 
     (EX i:Z, EX p_tmp:val, EX curr_head:val, EX tmp_added_elem : list val,
     PROP  (
@@ -224,7 +223,6 @@ Proof.
                 rewrite H6. rewrite app_comm_cons. entailer!.
     - forward_call (kalloc_spec_sub KAF_APD t_run) (gv, sh , pa1::orig_head::ls, xx, offset_val PGSIZE pa1). (* kalloc *)
         +
-        (*- forward_call (sh, add_offset pa1 PGSIZE, xx, (pa1::orig_head::ls), gv). (* call kalloc *)*)
         entailer. destruct H0 as [H01 [H02 [H03 [H04 H05]]]]; rewrite H04 in H1.
         unfold KAF_globals. rewrite H03.
         rewrite mem_mgr_split.
@@ -254,7 +252,7 @@ Qed.
 Lemma body_kfree_loop: semax_body KAFVprog KAFGprog f_kfree_loop kfree_loop_spec.
 Proof.
 start_function.
-Intros. forward. (*forward. unfold abb iate in POSTCONDITION.*)
+Intros. forward.
     forward_while 
     (EX i:Z, EX p_tmp:val, EX curr_head:val, EX tmp_added_elem : list val,
     PROP  (
@@ -278,76 +276,69 @@ Intros. forward. (*forward. unfold abb iate in POSTCONDITION.*)
             kalloc_tokens Tok_APD sh (Z.to_nat(n-i)) p_tmp (PGSIZE) t_run
         )
     ))%assert; destruct H as [H01 [H02 H03]].
-    - entailer. Exists 0 pa1 orig_head (pointers_with_original_head (Z.to_nat 0) pa1 PGSIZE orig_head). (*entailer. *)
-        rewrite <- pointers_with_head_empty. entailer. destruct (Z.to_nat n).
-            + rewrite <- H0 in H01. try rep_lia.
-            + rewrite app_nil_l. entailer!.
-    - entailer.
-    - Intros. destruct (Z.to_nat (n - i)) eqn:e1.
-        + try rep_lia.
-        + forward_call (kfree_spec_sub KAF_APD t_run) (p_tmp, gv, sh , (tmp_added_elem ++ ls), xx,curr_head). (* call kfree*)
-        (*forward_call (sh, p_tmp, curr_head, xx, gv, (tmp_added_elem ++ ls), PGSIZE). (* call kfree1 *)*)
-            *if_tac; destruct H0 as [H001 [H002 [H003 [H04 H05]]]]. rewrite H04 in H.
-            -- unfold offset_val in H. destruct pa1; auto_contradict.
-            --unfold KAF_globals. unfold type_kalloc_token. rewrite kalloc_token_sz_split. simpl. rewrite kalloc_token_sz_split. Intros.
-            simpl. entailer!. 
-            * destruct H0 as [H001 [H002 [H003 [H04 H05]]]]. rewrite H04.
-                assert ( isptr (offset_val (i * PGSIZE) pa1)). {apply isptr_offset_val'. auto. }
-                auto.
-            * forward. 
-                --entailer!. destruct H0 as [H001 [H002 [H003 [H04 H05]]]]. rewrite H04.
-                assert ( isptr (offset_val (i * PGSIZE) pa1)). {apply isptr_offset_val'. auto. }
-                auto.
-                -- forward. if_tac_auto_contradict.
-                ++ destruct H0 as [H001 [H002 [H003 [H04 H05]]]]. rewrite H04.
-                assert ( isptr (p_tmp)). { rewrite H04. apply isptr_offset_val'. auto. }
-                rewrite H in H0; auto_contradict.
-                ++ Exists ((((i+1)%Z, (offset_val PGSIZE p_tmp):val), p_tmp:val), ((pointers_with_original_head(Z.to_nat (i+1)) pa1 PGSIZE)orig_head):list val).
-                entailer!; destruct H0 as [H001 [H002 [H003 [H04 H05]]]].
-                    **simpl. do 2 split; try rep_lia. split. 
-                        --- right. split. rewrite isptr_offset_val_zero; auto.
-                        rewrite H04. apply isptr_offset_val'. auto.
-                        destruct H002 as [[H0021 H0022] | [H0021 H0022]]; try rep_lia.
-                        --- split.
+- (* the precondition (of the whole loop) implies the loop invariant *)
+    entailer. Exists 0 pa1 orig_head (pointers_with_original_head (Z.to_nat 0) pa1 PGSIZE orig_head). 
+    rewrite <- pointers_with_head_empty. entailer. destruct (Z.to_nat n).
+        + rewrite <- H0 in H01. try rep_lia.
+        + rewrite app_nil_l. entailer!.
+- (* the loop-condition expression type-checks (i.e., guarantees to evaluate successfully); that is, i and n can be compared using "<" *)
+    entailer.
+- (* he postcondition of the loop body implies the loop invariant *) 
+    Intros. destruct (Z.to_nat (n - i)) eqn:e1.
+    + try rep_lia.
+    + destruct H0 as [H001 [H002 [H003 [H04 H05]]]]. forward_call (kfree_spec_sub KAF_APD t_run) (p_tmp, gv, sh , (tmp_added_elem ++ ls), xx,curr_head). (* call kfree *)
+        * (* pre-conditions for calling kfree is met (SEP) *) 
+            if_tac.
+            -- rewrite H04 in H. unfold offset_val in H. destruct pa1; auto_contradict.
+            -- unfold KAF_globals. unfold type_kalloc_token. unfold kalloc_tokens; fold kalloc_tokens. simplify_kalloc_token.
+        * (* pre-conditions for calling kfree is met (PROP) *)  
+            rewrite H04.
+            assert ( isptr (offset_val (i * PGSIZE) pa1)). { apply isptr_offset_val'. auto. }
+            auto.
+        * repeat forward.
+            assert (isptr (p_tmp)). { rewrite H04. apply isptr_offset_val'. auto. }
+            Exists ((((i+1)%Z, (offset_val PGSIZE p_tmp):val), p_tmp:val), ((pointers_with_original_head(Z.to_nat (i+1)) pa1 PGSIZE)orig_head):list val).
+            entailer!.
+                -- do 2 split; try rep_lia.
+                    ++ right. split. assert (i * PGSIZE + PGSIZE + - PGSIZE = (i * PGSIZE)%Z) as Hdelt0; try rep_lia. rewrite Hdelt0. auto. unfold not.
+                    intros; try rep_lia.
+                    ++ split.
+                        ** assert ((i * PGSIZE + PGSIZE) = (i + 1) * PGSIZE)%Z as Heq; try rep_lia. rewrite Heq. auto.
+                        ** split; try rep_lia.
+                            assert (n + 1 <= Int.max_signed); try rep_lia.
+                            rewrite Int.signed_repr in H02; try rep_lia. rewrite Int.signed_repr in H02; try rep_lia.
+                -- if_tac.
+                    ++ rewrite H4 in H. auto_contradict.
+                    ++ unfold KAF_globals.
+                    assert (Z.to_nat (n - (i + 1)) = n0) as HH0; try rep_lia.
+                    rewrite HH0.
+                    assert (curr_head :: pointers_with_original_head (Z.to_nat (i)) pa1 PGSIZE orig_head = pointers_with_original_head (Z.to_nat (i + 1)) pa1 PGSIZE orig_head) as HH5. {
                         destruct (Z.to_nat i) eqn:ei.
+                        - simpl. assert (Z.to_nat (i + 1) = (1)%nat) as Hi0; try rep_lia. rewrite Hi0.
+                        simpl. destruct H002 as [[H0021 H0022] | [H0021 H0022]]; try rep_lia.
+                        rewrite H0021. auto.
+                        - assert ((Z.to_nat (i + 1)) = (Z.to_nat (i) + 1)%nat) as HH5; try rep_lia.
+                        rewrite HH5.
+                        rewrite <- add_to_pointers_with_head; auto; try rep_lia.
                         destruct H002 as [[H0021 H0022] | [H0021 H0022]]; try rep_lia.
-                        rewrite H04. rewrite H0022. unfold PGSIZE; auto. simpl. rewrite isptr_offset_val_zero; auto.
-                         rewrite <- add_add_offset_n; auto; try rep_lia.
-                         rewrite H04. auto.
-                         unfold PGSIZE; rep_lia.
-                        assert (n + 1 <= Int.max_signed); try rep_lia.
-                        rewrite Int.signed_repr in H02; try rep_lia. rewrite Int.signed_repr in H02; try rep_lia.
-                        --- rewrite sem_add_pi'; auto. rewrite H04. apply isptr_offset_val'. auto.
-                        try rep_lia.
-                    ** unfold KAF_globals.
-                    assert (Z.to_nat (n - (i + 1)) = n0); try rep_lia.
-                    rewrite H0.
-                    assert (curr_head :: tmp_added_elem = pointers_with_original_head (Z.to_nat (i + 1)) pa1 PGSIZE orig_head). {
-                        rewrite H003.
-                        destruct H002 as [[H0021 H0022] | [H0021 H0022]].
-                        - rewrite H0022. simpl. rewrite H0021. auto.
-                        - replace (Z.to_nat (i + 1)) with (((Z.to_nat i) + 1)%nat); try rep_lia.
-                        rewrite <- add_to_pointers_with_head; auto.
-                        rewrite H0021; rewrite H04.
-                        rewrite sub_add_offset_n; auto; try rep_lia.
-                        replace (Z.of_nat (Z.to_nat i - 1))%Z with ((i - 1))%Z; try rep_lia.
-                        auto.
-                        unfold PGSIZE; rep_lia.
-                        try rep_lia.
+                        rewrite H0021. rewrite sub_add_offset_n; try rep_lia; auto.
+                        2: { unfold PGSIZE; rep_lia. }
+                        rewrite ei at 2.
+                        replace (Z.of_nat (Z.to_nat i - 1)) with (i - 1); try rep_lia. auto.
                     }
                     rewrite app_comm_cons.
-                    rewrite H5. entailer!.
-    - forward.  Exists curr_head tmp_added_elem. entailer.
-    destruct H0 as [H001 [H002 [H003 [H04 H05]]]].
-    destruct (Z.to_nat (n - i)) eqn:eni; try rep_lia.
-    simpl. entailer!.
-    split. assert (i = n); try rep_lia. rewrite H2. auto.
-    destruct (Z.to_nat n) eqn:en; destruct H002 as [[H0021 H0022] | [H0021 H0022]]; try rep_lia.
-    + simpl. auto.
-    + rewrite <- add_to_pointers_with_head; auto; try rep_lia. simpl.
-    rewrite H0021.  rewrite sub_add_offset_n; auto; try rep_lia.
-    replace (Z.of_nat (n0 - 0)) with (i -1); try rep_lia. auto.
-    unfold PGSIZE; rep_lia.
+                    rewrite HH5. entailer.
+- (* the loop invariant (and negation of the loop condition) is a strong enough precondition to prove *)
+    forward. Exists curr_head tmp_added_elem. 
+    unfold KAF_globals. 
+    destruct H0 as [H001 [[[H0021 H0022] | [H0021 H0022]] [H003 [H04 H05]]]]; destruct (Z.to_nat (n - i)) eqn:eni; try rep_lia.
+    + replace n with 0; try rep_lia. unfold kalloc_tokens. entailer!.
+    + assert (i = n); try rep_lia. unfold kalloc_tokens. rewrite H. entailer!.
+    rewrite <- add_to_pointers_with_head; auto; try rep_lia. 
+    assert ((n * PGSIZE + - PGSIZE)%Z = (n-1) * PGSIZE)%Z; try rep_lia.
+    rewrite H.
+    simpl. assert ((Z.of_nat (Z.to_nat n - 1) * PGSIZE)%Z = ((n - 1) * PGSIZE)%Z). { unfold PGSIZE. try rep_lia. }
+    rewrite H1. auto.
 Qed.
 
 Lemma body_kfree_loop_kalloc: semax_body KAFVprog KAFGprog_clients f_kfree_loop_kalloc kfree_loop_kalloc_spec.
