@@ -51,8 +51,8 @@ Definition kfree_loop_spec :=
     POST [ tvoid ]
         EX head, EX added_elem,
         PROP( 
-            added_elem = (pointers_with_original_head (Z.to_nat n) (pa1) PGSIZE orig_head) /\
-            head = (hd nullval ((pointers_with_original_head (Z.to_nat n+1) (pa1) PGSIZE orig_head)++ls))
+            added_elem = (pages_with_head (Z.to_nat n) (pa1) PGSIZE orig_head) /\
+            head = (hd nullval ((pages_with_head (Z.to_nat n+1) (pa1) PGSIZE orig_head)++ls))
             )
             RETURN () 
             SEP 
@@ -78,8 +78,8 @@ Definition kfree_loop_kalloc_spec :=
         EX head, EX elems, 
         PROP( 
             (* before alloc *)
-            elems = (pointers_with_original_head (Z.to_nat n) (pa1) PGSIZE orig_head) ++ ls /\
-            head = (hd nullval ((pointers_with_original_head (Z.to_nat n+1) (pa1) PGSIZE orig_head)++ls))
+            elems = (pages_with_head (Z.to_nat n) (pa1) PGSIZE orig_head) ++ ls /\
+            head = (hd nullval ((pages_with_head (Z.to_nat n+1) (pa1) PGSIZE orig_head)++ls))
             )
             RETURN (head) (* we return the head like in the kalloc function*)
             SEP 
@@ -109,8 +109,8 @@ Definition kfree_loop_kalloc_tint_spec :=
         EX head, EX elems, 
         PROP( 
             (* before alloc *)
-            elems = (pointers_with_original_head (Z.to_nat n) (pa1) PGSIZE orig_head) ++ ls /\
-            head = (hd nullval ((pointers_with_original_head (Z.to_nat n+1) (pa1) PGSIZE orig_head)++ls))
+            elems = (pages_with_head (Z.to_nat n) (pa1) PGSIZE orig_head) ++ ls /\
+            head = (hd nullval ((pages_with_head (Z.to_nat n+1) (pa1) PGSIZE orig_head)++ls))
             )
             RETURN (head) (* we return the head like in the kalloc function*)
             SEP 
@@ -140,8 +140,8 @@ Definition kfree_loop_kalloc_tlong_spec :=
         EX head, EX elems, 
         PROP( 
             (* before alloc *)
-            elems = (pointers_with_original_head (Z.to_nat n) (pa1) PGSIZE orig_head) ++ ls /\
-            head = (hd nullval ((pointers_with_original_head (Z.to_nat n+1) (pa1) PGSIZE orig_head)++ls))
+            elems = (pages_with_head (Z.to_nat n) (pa1) PGSIZE orig_head) ++ ls /\
+            head = (hd nullval ((pages_with_head (Z.to_nat n+1) (pa1) PGSIZE orig_head)++ls))
             )
             RETURN (head) (* we return the head like in the kalloc function*)
             SEP 
@@ -166,7 +166,7 @@ Proof.
     PROP  (
         0 <= i <= 2 /\
         ((curr_head = orig_head /\ i = 0) \/ (curr_head = (offset_val (-PGSIZE) (p_tmp))  /\ i <> 0)) /\
-        tmp_added_elem = (pointers_with_original_head (Z.to_nat i) (pa1) PGSIZE orig_head) /\
+        tmp_added_elem = (pages_with_head (Z.to_nat i) (pa1) PGSIZE orig_head) /\
         p_tmp = offset_val (i * PGSIZE)%Z pa1 /\
         Int.min_signed <=
         Int.signed (Int.repr i) + Int.signed (Int.repr 1) <=
@@ -184,7 +184,7 @@ Proof.
         )
         )
     )%assert; destruct H as [H H3].
-    - entailer. Exists 0 pa1 orig_head (pointers_with_original_head (Z.to_nat 0) pa1 PGSIZE orig_head). (*entailer. *)
+    - entailer. Exists 0 pa1 orig_head (pages_with_head (Z.to_nat 0) pa1 PGSIZE orig_head). (*entailer. *)
         rewrite <- pointers_with_head_empty. simpl; entailer!; unfold offset_val in H2; destruct pa1; auto_contradict.
     - entailer.
     - Intros. destruct (Z.to_nat (2 - i)) eqn:e.
@@ -201,7 +201,7 @@ Proof.
             unfold offset_val. destruct pa1; auto_contradict; auto.
             forward. if_tac; auto_contradict; destruct H0 as [H01 [H02 [H03 [H04 H05]]]]; rewrite H04 in H1.
                 -- unfold offset_val in H1. destruct pa1; auto_contradict.
-                -- Exists ((((i+1)%Z, (offset_val PGSIZE p_tmp):val), p_tmp:val), (curr_head::(pointers_with_original_head(Z.to_nat (i)) pa1 PGSIZE)orig_head):list val).
+                -- Exists ((((i+1)%Z, (offset_val PGSIZE p_tmp):val), p_tmp:val), (curr_head::(pages_with_head(Z.to_nat (i)) pa1 PGSIZE)orig_head):list val).
                 entailer!. 
                 ++ split; try rep_lia. split.
                     ** right. split; try rep_lia. replace (i * PGSIZE + PGSIZE + - PGSIZE) with (i * PGSIZE)%Z; try rep_lia.
@@ -216,7 +216,7 @@ Proof.
                             rewrite H0221.
                             replace (i - 1) with (Z.of_nat ((Z.to_nat i) - 1)%nat); try rep_lia.
                             replace (Z.to_nat (i + 1)) with (((Z.to_nat i) + 1)%nat); try rep_lia.
-                            rewrite add_to_pointers_with_head; auto; try rep_lia.
+                            rewrite add_to_pages_with_head; auto; try rep_lia.
                         --- replace (i * PGSIZE + PGSIZE) with ((i + 1) * PGSIZE)%Z; try rep_lia; auto.
                 ++ unfold KAF_globals. 
                 assert (Z.to_nat (2 - (i + 1)) = n); try rep_lia.
@@ -232,7 +232,7 @@ Proof.
           rewrite H04 in H031. rewrite sub_add_offset_n in H031; auto; try rep_lia.
           Intros.
           destruct (Z.to_nat 2) eqn:e2; auto_contradict.
-          unfold pointers_with_original_head.
+          unfold pages_with_head.
           destruct n eqn:en; try rep_lia.
           destruct n0 eqn:en0; try rep_lia.
           simpl. rewrite mem_mgr_split. refold_freelistrep. entailer!. entailer!.
@@ -258,7 +258,7 @@ Intros. forward.
     PROP  (
         0 <= i <= n /\
         ((curr_head = orig_head /\ i = 0) \/ (curr_head = (offset_val (-PGSIZE) (p_tmp))  /\ i <> 0)) /\
-        tmp_added_elem = (pointers_with_original_head (Z.to_nat i) (pa1) PGSIZE orig_head) /\
+        tmp_added_elem = (pages_with_head (Z.to_nat i) (pa1) PGSIZE orig_head) /\
         p_tmp = offset_val (i * PGSIZE)%Z pa1 /\
         Int.min_signed <=
         Int.signed (Int.repr i) + Int.signed (Int.repr 1) <=
@@ -277,7 +277,7 @@ Intros. forward.
         )
     ))%assert; destruct H as [H01 [H02 H03]].
 - (* the precondition (of the whole loop) implies the loop invariant *)
-    entailer. Exists 0 pa1 orig_head (pointers_with_original_head (Z.to_nat 0) pa1 PGSIZE orig_head). 
+    entailer. Exists 0 pa1 orig_head (pages_with_head (Z.to_nat 0) pa1 PGSIZE orig_head). 
     rewrite <- pointers_with_head_empty. entailer. destruct (Z.to_nat n).
         + rewrite <- H0 in H01. try rep_lia.
         + rewrite app_nil_l. entailer!.
@@ -297,7 +297,7 @@ Intros. forward.
             auto.
         * repeat forward.
             assert (isptr (p_tmp)). { rewrite H04. apply isptr_offset_val'. auto. }
-            Exists ((((i+1)%Z, (offset_val PGSIZE p_tmp):val), p_tmp:val), ((pointers_with_original_head(Z.to_nat (i+1)) pa1 PGSIZE)orig_head):list val).
+            Exists ((((i+1)%Z, (offset_val PGSIZE p_tmp):val), p_tmp:val), ((pages_with_head(Z.to_nat (i+1)) pa1 PGSIZE)orig_head):list val).
             entailer!.
                 -- do 2 split; try rep_lia.
                     ++ right. split. assert (i * PGSIZE + PGSIZE + - PGSIZE = (i * PGSIZE)%Z) as Hdelt0; try rep_lia. rewrite Hdelt0. auto. unfold not.
@@ -312,14 +312,14 @@ Intros. forward.
                     ++ unfold KAF_globals.
                     assert (Z.to_nat (n - (i + 1)) = n0) as HH0; try rep_lia.
                     rewrite HH0.
-                    assert (curr_head :: pointers_with_original_head (Z.to_nat (i)) pa1 PGSIZE orig_head = pointers_with_original_head (Z.to_nat (i + 1)) pa1 PGSIZE orig_head) as HH5. {
+                    assert (curr_head :: pages_with_head (Z.to_nat (i)) pa1 PGSIZE orig_head = pages_with_head (Z.to_nat (i + 1)) pa1 PGSIZE orig_head) as HH5. {
                         destruct (Z.to_nat i) eqn:ei.
                         - simpl. assert (Z.to_nat (i + 1) = (1)%nat) as Hi0; try rep_lia. rewrite Hi0.
                         simpl. destruct H002 as [[H0021 H0022] | [H0021 H0022]]; try rep_lia.
                         rewrite H0021. auto.
                         - assert ((Z.to_nat (i + 1)) = (Z.to_nat (i) + 1)%nat) as HH5; try rep_lia.
                         rewrite HH5.
-                        rewrite <- add_to_pointers_with_head; auto; try rep_lia.
+                        rewrite <- add_to_pages_with_head; auto; try rep_lia.
                         destruct H002 as [[H0021 H0022] | [H0021 H0022]]; try rep_lia.
                         rewrite H0021. rewrite sub_add_offset_n; try rep_lia; auto.
                         2: { unfold PGSIZE; rep_lia. }
@@ -334,7 +334,7 @@ Intros. forward.
     destruct H0 as [H001 [[[H0021 H0022] | [H0021 H0022]] [H003 [H04 H05]]]]; destruct (Z.to_nat (n - i)) eqn:eni; try rep_lia.
     + replace n with 0; try rep_lia. unfold kalloc_tokens. entailer!.
     + assert (i = n); try rep_lia. unfold kalloc_tokens. rewrite H. entailer!.
-    rewrite <- add_to_pointers_with_head; auto; try rep_lia. 
+    rewrite <- add_to_pages_with_head; auto; try rep_lia. 
     assert ((n * PGSIZE + - PGSIZE)%Z = (n-1) * PGSIZE)%Z; try rep_lia.
     rewrite H.
     simpl. assert ((Z.of_nat (Z.to_nat n - 1) * PGSIZE)%Z = ((n - 1) * PGSIZE)%Z). { unfold PGSIZE. try rep_lia. }

@@ -91,104 +91,104 @@ Qed.
 
 (** ** Pointers list  *)
 
-Fixpoint pointers (n: nat) (p: val) (size: Z) : list val :=
+Fixpoint memory_pages_from (n: nat) (p: val) (size: Z) : list val :=
   match n with
   | O => []
-  | S n' => p :: pointers n' (offset_val size p) size
+  | S n' => p :: memory_pages_from n' (offset_val size p) size
   end.
 
-Definition pointers_rev n p size := rev (pointers n p size).
+Definition reversed_memory_pages_from n p size := rev (memory_pages_from n p size).
 
-Lemma pointers_last_elem:
+Lemma append_last_to_reversed_pages:
   forall n size q,
-  pointers_rev (S n) q size = pointers_rev n (offset_val size q) size ++ [q].
+  reversed_memory_pages_from (S n) q size = reversed_memory_pages_from n (offset_val size q) size ++ [q].
 Proof.
   intros.
-  unfold pointers_rev, pointers. fold pointers. 
+  unfold reversed_memory_pages_from, memory_pages_from. fold memory_pages_from. 
   destruct n.
   - simpl. reflexivity.
   - simpl. auto.
 Qed.
 
-Lemma pointers_offset_eq : 
+Lemma memory_pages_from_unroll_last : 
   forall n p size, 
     isptr p -> 
-    pointers n p size ++ [offset_val (Z.of_nat n * size) p] = 
-    pointers (S n) p size.
+    memory_pages_from n p size ++ [offset_val (Z.of_nat n * size) p] = 
+    memory_pages_from (S n) p size.
 Proof.
   intros n.
   induction n as [| n' IHn'].
   - simpl. intros p size H. rewrite Z.mul_0_l. unfold offset_val; destruct p; auto_contradict.
     rewrite Ptrofs.add_zero.
     reflexivity.
-  - unfold pointers. fold pointers. intros.
+  - unfold memory_pages_from. fold memory_pages_from. intros.
     assert (offset_val (Z.of_nat (S n') * size) p = offset_val (Z.of_nat (n') * size) (offset_val size p)). {
       rewrite offset_offset_val.
       assert (size + Z.of_nat n' * size = (Z.of_nat (S n') * size)%Z). { try rep_lia. }
       rewrite H0. auto.
     }
   rewrite H0. 
-  assert ( (pointers n' (offset_val size p) size) ++
+  assert ( (memory_pages_from n' (offset_val size p) size) ++
         [offset_val (Z.of_nat n' * size) (offset_val size p)] = 
-        pointers (S n') (offset_val size p) size
+        memory_pages_from (S n') (offset_val size p) size
         ). { apply IHn'. auto. }
   rewrite <- app_comm_cons. rewrite H1.
-  unfold pointers. fold pointers. auto.
+  unfold memory_pages_from. fold memory_pages_from. auto.
 Qed.
 
-Lemma add_to_pointers:
+Lemma reversed_memory_pages_from_cons_last:
  forall n p size,
   isptr p ->
-   (offset_val (Z.of_nat n * size)%Z p) :: pointers_rev (n) p size =
-   pointers_rev n (offset_val size p) size ++ [p].
+   (offset_val (Z.of_nat n * size)%Z p) :: reversed_memory_pages_from (n) p size =
+   reversed_memory_pages_from n (offset_val size p) size ++ [p].
 Proof.
   intros.
-  rewrite <- pointers_last_elem.
-  unfold pointers_rev, pointers. fold pointers.
+  rewrite <- append_last_to_reversed_pages.
+  unfold reversed_memory_pages_from, memory_pages_from. fold memory_pages_from.
   rewrite <- rev_unit.
   f_equal.
   induction n.
   - simpl; auto. rewrite Z.mul_0_l. unfold offset_val; destruct p; auto_contradict. rewrite Ptrofs.add_zero; auto.
-  - unfold pointers; fold pointers. rewrite <- app_comm_cons. f_equal. 
+  - unfold memory_pages_from; fold memory_pages_from. rewrite <- app_comm_cons. f_equal. 
   assert (offset_val (Z.of_nat (S n) * size) p = offset_val (Z.of_nat (n) * size) (offset_val size p)). {
     rewrite offset_offset_val.
     assert (size + Z.of_nat n * size = (Z.of_nat (S n) * size)%Z). { try rep_lia. }
     rewrite H0. auto.
   }
   rewrite H0.
-  rewrite pointers_offset_eq; auto.
+  rewrite memory_pages_from_unroll_last; auto.
 Qed.
 
-Definition pointers_with_original_head (n: nat) (p: val) (size: Z) (head:val): list val :=
+Definition pages_with_head (n: nat) (p: val) (size: Z) (head:val): list val :=
    match n with
    | O => nil
    | S O => [head]
-   | S n' => pointers_rev n' p size ++ [head]
+   | S n' => reversed_memory_pages_from n' p size ++ [head]
    end.
 Lemma pointers_with_head_empty :
    forall p size head,
-   nil = pointers_with_original_head 0 p size head.
+   nil = pages_with_head 0 p size head.
 Proof.
-   intros. unfold pointers_with_original_head; auto.
+   intros. unfold pages_with_head; auto.
 Qed.
 
-Lemma add_to_pointers_with_head:
+Lemma add_to_pages_with_head:
  forall n p size hd,
   isptr p ->
   (0 < n)%nat ->
-   (offset_val (Z.of_nat (n-1) * size)%Z p) :: pointers_with_original_head (n) p size hd =
-   pointers_with_original_head (n+1) p size hd.
+   (offset_val (Z.of_nat (n-1) * size)%Z p) :: pages_with_head (n) p size hd =
+   pages_with_head (n+1) p size hd.
 Proof.
   intros.
   induction (n+1)%nat eqn:e; try rep_lia.
   assert (n = n0); try rep_lia. rewrite H1.
   destruct n0; try rep_lia. 
-  unfold pointers_with_original_head.
+  unfold pages_with_head.
   replace ((S n0) - 1)%nat  with (n0); try rep_lia.
   destruct n0; try rep_lia.
   - simpl. rewrite isptr_offset_val_zero; auto.
-  - assert (offset_val (Z.of_nat (S n0) * size) p :: pointers_rev (S n0) p size = pointers_rev (S (S n0)) p size). {
-    rewrite add_to_pointers; auto.
+  - assert (offset_val (Z.of_nat (S n0) * size) p :: reversed_memory_pages_from (S n0) p size = reversed_memory_pages_from (S (S n0)) p size). {
+    rewrite reversed_memory_pages_from_cons_last; auto.
   }
   rewrite <- H2.
   auto.
@@ -251,7 +251,6 @@ Proof.
     - unfold array_42; fold array_42. simpl.
     f_equal. rewrite IHi. auto.
 Qed. 
-
 
 Lemma Zrepeat_default_val_array :
   forall (n:Z),
