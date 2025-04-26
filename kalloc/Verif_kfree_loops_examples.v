@@ -52,7 +52,7 @@ Definition kfree_loop_spec :=
         EX head, EX added_elem,
         PROP( 
             added_elem = (pages_with_head (Z.to_nat n) (pa1) PGSIZE orig_head) /\
-            head = (hd nullval ((pages_with_head (Z.to_nat n+1) (pa1) PGSIZE orig_head)++ls))
+            head = (hd nullval ((pages_with_head (Z.to_nat n+1) (pa1) PGSIZE orig_head)))
             )
             RETURN () 
             SEP 
@@ -79,7 +79,7 @@ Definition kfree_loop_kalloc_spec :=
         PROP( 
             (* before alloc *)
             elems = (pages_with_head (Z.to_nat n) (pa1) PGSIZE orig_head) ++ ls /\
-            head = (hd nullval ((pages_with_head (Z.to_nat n+1) (pa1) PGSIZE orig_head)++ls))
+            head = (hd nullval ((pages_with_head (Z.to_nat n+1) (pa1) PGSIZE orig_head)))
             )
             RETURN (head) (* we return the head like in the kalloc function*)
             SEP 
@@ -110,7 +110,7 @@ Definition kfree_loop_kalloc_tint_spec :=
         PROP( 
             (* before alloc *)
             elems = (pages_with_head (Z.to_nat n) (pa1) PGSIZE orig_head) ++ ls /\
-            head = (hd nullval ((pages_with_head (Z.to_nat n+1) (pa1) PGSIZE orig_head)++ls))
+            head = (hd nullval ((pages_with_head (Z.to_nat n+1) (pa1) PGSIZE orig_head)))
             )
             RETURN (head) (* we return the head like in the kalloc function*)
             SEP 
@@ -141,7 +141,7 @@ Definition kfree_loop_kalloc_tlong_spec :=
         PROP( 
             (* before alloc *)
             elems = (pages_with_head (Z.to_nat n) (pa1) PGSIZE orig_head) ++ ls /\
-            head = (hd nullval ((pages_with_head (Z.to_nat n+1) (pa1) PGSIZE orig_head)++ls))
+            head = (hd nullval ((pages_with_head (Z.to_nat n+1) (pa1) PGSIZE orig_head)))
             )
             RETURN (head) (* we return the head like in the kalloc function*)
             SEP 
