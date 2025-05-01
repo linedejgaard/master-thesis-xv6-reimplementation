@@ -48,8 +48,8 @@ Lemma mem_mgr_split:
       (freelistrep sh ls orig_head)).
 Proof.
   intros. apply pred_ext.
-  - unfold mem_mgr. entailer!.
-  - unfold mem_mgr. entailer!.
+  - unfold mem_mgr. entailer.
+  - unfold mem_mgr. entailer.
 Qed.
 
 Ltac start_function_hint ::= idtac. (* no hint reminder *)

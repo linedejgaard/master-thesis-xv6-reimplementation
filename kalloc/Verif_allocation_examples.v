@@ -121,7 +121,7 @@ forward_call (kalloc_spec_sub KAF_APD tint) (gv, sh , ls, xx, orig_head). (* kal
         -- unfold type_kalloc_token. rewrite kalloc_token_sz_split.
         destruct orig_head eqn:eo; inversion H0; auto_contradict.
         assert_PROP (Ptrofs.unsigned i + PGSIZE < Ptrofs.modulus).
-        { Intros. entailer!. }
+        { Intros. entailer. }
         rewrite token_merge with (b:= b) (i:= i); auto; try rep_lia.
         Intros.
         rewrite <- token_merge_size with (b:= b) (i:= i) (sz:=sizeof tint); auto; try rep_lia.
@@ -173,7 +173,7 @@ forward.
         rewrite <- Hdefault at 1.
         rewrite <- token_merge_size with (b:=b) (i:=i) (sz:=sizeof (tarray tint n)); auto; try rep_lia.
         rewrite memory_block_data_at_, data_at__eq; auto.
-        entailer!.
+        entailer.
         ++ Intros. (* the postcondition of the loop body implies the loop invariant *)
         assert (Int.min_signed <= i <= Int.max_signed). { 
             assert (n <= Int.max_signed). {

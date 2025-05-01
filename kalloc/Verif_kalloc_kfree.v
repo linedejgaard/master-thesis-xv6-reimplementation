@@ -11,7 +11,7 @@ Require Import VC.Spec_kalloc.
 
 Local Open Scope logic.
 
-Lemma body_kfree': semax_body KAFVprog KAFGprog f_kfree (kfree_spec' KAF_APD _kfree).
+Lemma body_kfree: semax_body KAFVprog KAFGprog f_kfree (kfree_spec' KAF_APD _kfree).
 Proof. start_function.
 forward.
 destruct (eq_dec new_head nullval).
@@ -24,11 +24,11 @@ destruct (eq_dec new_head nullval).
     rewrite data_at__eq. forward. forward. 
     entailer. rewrite mem_mgr_split. refold_freelistrep. entailer!.
     right; split; auto. unfold not; auto_contradict.
-    unfold t_run_size. entailer!.
+    unfold t_run_size. entailer.
     * forward. entailer.
 Qed.
 
-Lemma body_kalloc': semax_body KAFVprog KAFGprog f_kalloc (kalloc_spec' (KAF_APD) _kalloc).
+Lemma body_kalloc: semax_body KAFVprog KAFGprog f_kalloc (kalloc_spec' (KAF_APD) _kalloc).
 Proof. start_function.
 rewrite mem_mgr_split. Intros. forward.
 forward_if (
