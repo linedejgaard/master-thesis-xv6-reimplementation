@@ -837,6 +837,50 @@ forward_call (kfree_spec_sub KAF_APD t_run) (pa1, gv, sh , ls, xx, orig_head). (
       entailer. 
 Qed.
 
+Lemma is_writable_implies_nonidentity :
+  forall sh : share,
+  writable_share sh -> 
+    sepalg.nonidentity sh.
+Proof.
+  intros sh H.
+  unfold sepalg.nonidentity.
+  intros Hid.
+  apply identity_share_bot in Hid.
+  subst.
+  unfold writable_share in H.
+  destruct H as [Hglb Hsub].
+  unfold nonempty_share in Hglb.
+  unfold sepalg.nonidentity in Hglb.
+  apply Hglb.
+  rewrite Share.glb_bot.
+  auto.
+Qed.  
+
+Lemma data_at_same_ptr_diff_val :
+  forall (sh : share) (p : val) t v1 v2,
+    writable_share sh -> 
+    0 < sizeof t ->
+    (data_at sh t v1 p * data_at sh t v2 p) |-- FF.
+Proof.
+    intros.
+    apply data_at_conflict.
+    - apply is_writable_implies_nonidentity; auto.
+    - auto.
+Qed. 
+
+Lemma body_kfree_kfree_same_wrong_pointer': semax_body KAFVprog KAFGprog f_kfree_kfree_same_pointer kfree_kfree_same_pointer_wrong_spec.
+Proof.
+    start_function.
+    Intros.
+    rewrite kalloc_token_sz_split. Intros.
+    assert (memory_block sh t_run_size pa1 = data_at_ sh t_run pa1) as HH7. {
+        unfold t_run_size; rewrite memory_block_data_at_ with (sh := sh) (t:= t_run) (p:=pa1); auto.
+    }
+    rewrite data_at__eq in HH7. rewrite HH7.
+    sep_apply data_at_same_ptr_diff_val.
+    repeat (sep_apply FF_sepcon). (* FF in SEP *)
+Abort.
+
 Lemma body_kfree_kfree_same_pointer: semax_body KAFVprog KAFGprog f_kfree_kfree_same_pointer kfree_kfree_same_pointer_spec.
 Proof.
 start_function.
