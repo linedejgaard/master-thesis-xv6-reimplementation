@@ -1,38 +1,47 @@
 (* ----------------------------------------------------------------- *)
 (** *** Standard boilerplate *)
-Require Import VST.floyd.proofauto.
-Require Import VC.sum.
+Require Import VST.floyd.proofauto VC.sum.
 #[export] Instance CompSpecs : compspecs. make_compspecs prog. Defined.
 Definition Vprog : varspecs.  mk_varspecs prog. Defined.
 
 (* ----------------------------------------------------------------- *)
 (** *** Functional model *)
-Definition sum_2_2 : Z := Z.add 2 2.
+Definition sum : Z -> Z -> Z := Z.add.
 
-(*Lemma sum_Z_4:
-    sum_2_2 = 4.
+(*Lemma sum_two_times :
+    forall a b c d, sum (a+b) (c+d) = sum a b + sum c d.
 Proof.
-    unfold sum_2_2. try lia. 
-Qed.*)
+    unfold sum. try lia. 
+Qed. *)
+
+(*Lemma sum_comm :
+    forall a b, sum a b = sum b a.
+Proof.
+    unfold sum. try lia. 
+Qed. *)
 
 (** ** API spec for the sum.c program *)
 
-Definition sum_2_2_spec : ident * funspec :=
-DECLARE _sum_2_2
- WITH u : unit
- PRE [ ]
-  PROP  ()
-  PARAMS ()
+Definition sum_spec : ident * funspec :=
+DECLARE _sum
+ WITH a: Z,  b: Z
+ PRE [ tint, tint ]
+  PROP  (
+         0 <= a + b <= Int.max_signed; (** Fix this... *)
+         0 <= a <= Int.max_signed;
+         0 <= b <= Int.max_signed )
+  PARAMS (Vint (Int.repr a);Vint (Int.repr b))
   SEP   ()
  POST [ tint ]
-  PROP () RETURN (Vint (Int.repr sum_2_2))
+  PROP () RETURN (Vint (Int.repr (sum a b)))
   SEP ().
+
 
 Definition main_spec :=
 DECLARE _main
     WITH gv : globals
-    PRE [] main_pre prog tt gv  (* The main_pre function typically ensures that the global variables are initialized correctly and that any necessary resources are available before executing the main function. *)
-    POST [ tint ] main_post prog gv. (* The main_post function specifies the conditions that must hold after the main function has executed. This typically includes the expected return value of the main function and the final state of the global variables. *)
+    PRE [] main_pre prog tt gv
+    POST [ tint ] main_post prog gv.
 
 Definition main_spec' :=
     DECLARE _main
@@ -40,15 +49,15 @@ Definition main_spec' :=
         PRE [] main_pre prog tt gv
         POST [ tint ]
         PROP()
-        RETURN (Vint (Int.repr (sum_2_2)))
+        RETURN (Vint (Int.repr (sum 2 2)))
         SEP(TT).
         
 
 (** ** Prove that the c-code satisfies the specification *)
-Definition Gprog := [sum_2_2_spec; main_spec']. (* Packaging the Gprog and Vprog *)
+Definition Gprog := [sum_spec; main_spec']. (* Packaging the Gprog and Vprog *)
 (* OBS: main_spec also works *)
 
-Lemma body_sum_2_2: semax_body Vprog Gprog f_sum_2_2 sum_2_2_spec.
+Lemma body_sum: semax_body Vprog Gprog f_sum sum_spec.
 Proof.
     start_function.
     repeat forward.
@@ -64,7 +73,7 @@ Qed.
 
 Lemma prog_correct: semax_prog prog tt Vprog Gprog.
 Proof.
-prove_semax_prog.
-semax_func_cons body_sum_2_2.
-semax_func_cons body_main.
+    prove_semax_prog.
+    semax_func_cons body_sum.
+    semax_func_cons body_main.
 Qed.

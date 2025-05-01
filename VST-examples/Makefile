@@ -1,7 +1,7 @@
 COQMFFLAGS := -Q . VC \
 			-Q /Users/linemeitongmaodejgaard/.opam/coq-8.17.1/lib/coq/user-contrib/iris iris 
 
-ALLVFILES := sum.v sum_inputs_ints.v
+ALLVFILES := sum.v
 build: Makefile.coq
 	$(MAKE) -f Makefile.coq
 

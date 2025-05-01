@@ -1,13 +1,11 @@
 #include <stdio.h>
 
-int sum_2_2(void) {
-    int a = 2;
-    int b = 2;
+int sum(int a, int b) {
     int result = a + b;
     return (int)result;
 }
 
 int main(void) {
-    int result = sum_2_2();
+    int result = sum(2, 2);
     return result;
 }

@@ -78,23 +78,19 @@ Definition _a : ident := $"a".
 Definition _b : ident := $"b".
 Definition _main : ident := $"main".
 Definition _result : ident := $"result".
-Definition _sum_2_2 : ident := $"sum_2_2".
+Definition _sum : ident := $"sum".
 Definition _t'1 : ident := 128%positive.
 
-Definition f_sum_2_2 := {|
+Definition f_sum := {|
   fn_return := tint;
   fn_callconv := cc_default;
-  fn_params := nil;
+  fn_params := ((_a, tint) :: (_b, tint) :: nil);
   fn_vars := nil;
-  fn_temps := ((_a, tint) :: (_b, tint) :: (_result, tint) :: nil);
+  fn_temps := ((_result, tint) :: nil);
   fn_body :=
 (Ssequence
-  (Sset _a (Econst_int (Int.repr 2) tint))
-  (Ssequence
-    (Sset _b (Econst_int (Int.repr 2) tint))
-    (Ssequence
-      (Sset _result (Ebinop Oadd (Etempvar _a tint) (Etempvar _b tint) tint))
-      (Sreturn (Some (Ecast (Etempvar _result tint) tint))))))
+  (Sset _result (Ebinop Oadd (Etempvar _a tint) (Etempvar _b tint) tint))
+  (Sreturn (Some (Ecast (Etempvar _result tint) tint))))
 |}.
 
 Definition f_main := {|
@@ -107,7 +103,10 @@ Definition f_main := {|
 (Ssequence
   (Ssequence
     (Ssequence
-      (Scall (Some _t'1) (Evar _sum_2_2 (Tfunction nil tint cc_default)) nil)
+      (Scall (Some _t'1)
+        (Evar _sum (Tfunction (tint :: tint :: nil) tint cc_default))
+        ((Econst_int (Int.repr 2) tint) :: (Econst_int (Int.repr 2) tint) ::
+         nil))
       (Sset _result (Etempvar _t'1 tint)))
     (Sreturn (Some (Etempvar _result tint))))
   (Sreturn (Some (Econst_int (Int.repr 0) tint))))
@@ -367,11 +366,10 @@ Definition global_definitions : list (ident * globdef fundef type) :=
                      {|cc_vararg:=(Some 1); cc_unproto:=false; cc_structret:=false|}))
      (tint :: nil) tvoid
      {|cc_vararg:=(Some 1); cc_unproto:=false; cc_structret:=false|})) ::
- (_sum_2_2, Gfun(Internal f_sum_2_2)) :: (_main, Gfun(Internal f_main)) ::
- nil).
+ (_sum, Gfun(Internal f_sum)) :: (_main, Gfun(Internal f_main)) :: nil).
 
 Definition public_idents : list ident :=
-(_main :: _sum_2_2 :: ___builtin_debug :: ___builtin_write32_reversed ::
+(_main :: _sum :: ___builtin_debug :: ___builtin_write32_reversed ::
  ___builtin_write16_reversed :: ___builtin_read32_reversed ::
  ___builtin_read16_reversed :: ___builtin_fnmsub :: ___builtin_fnmadd ::
  ___builtin_fmsub :: ___builtin_fmadd :: ___builtin_fmin ::
