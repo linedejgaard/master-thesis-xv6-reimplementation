@@ -37,6 +37,14 @@
         "thread": "c",
         "utility": "c",
         "types.h": "c",
-        "stat.h": "c"
+        "stat.h": "c",
+        "atomic": "c",
+        "condition_variable": "c",
+        "semaphore": "c",
+        "mutex": "c",
+        "memory_resource": "c",
+        "iosfwd": "c",
+        "new": "c",
+        "stop_token": "c"
     }
 }

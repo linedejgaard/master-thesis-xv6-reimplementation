@@ -16,16 +16,16 @@ Proof. start_function.
 forward.
 destruct (eq_dec new_head nullval).
 - forward_if.
-    * rewrite e in H0; auto_contradict.
-    * forward. entailer. 
+    * forward.
+    *  rewrite e in H0; auto_contradict.
 - forward_if.
+    * forward. 
     * rewrite mem_mgr_split. Intros. forward. rewrite kalloc_token_sz_split. Intros. 
     unfold t_run_size. rewrite memory_block_data_at_; auto. 
     rewrite data_at__eq. forward. forward. 
     entailer. rewrite mem_mgr_split. refold_freelistrep. entailer!.
     right; split; auto. unfold not; auto_contradict.
     unfold t_run_size. entailer.
-    * forward. entailer.
 Qed.
 
 Lemma body_kalloc: semax_body KAFVprog KAFGprog f_kalloc (kalloc_spec' (KAF_APD) _kalloc).

@@ -11,16 +11,15 @@ struct struct_kmem { // Rocq wants it to be named
 // which normally should have been returned by a
 // call to kalloc().  (The exception is when
 // initializing the allocator; see kinit above.)
-void kfree(void *pa) 
+void kfree(void *pa)
 {
   struct run *r;
   r = (struct run*)pa;
-  if (r) {
-    r->next = kmem.freelist;
-    kmem.freelist = r;
-  }
+  if(!r)
+    return;
+  r->next = kmem.freelist;
+  kmem.freelist = r;
 }
-
 // Allocate one 4096-byte page of physical memory.
 // Returns a pointer that the kernel can use.
 // Returns 0 if the memory cannot be allocated.

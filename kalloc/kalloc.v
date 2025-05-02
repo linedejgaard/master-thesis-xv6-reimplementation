@@ -133,7 +133,11 @@ Definition f_kfree := {|
   fn_body :=
 (Ssequence
   (Sset _r (Ecast (Etempvar _pa (tptr tvoid)) (tptr (Tstruct _run noattr))))
-  (Sifthenelse (Etempvar _r (tptr (Tstruct _run noattr)))
+  (Ssequence
+    (Sifthenelse (Eunop Onotbool (Etempvar _r (tptr (Tstruct _run noattr)))
+                   tint)
+      (Sreturn None)
+      Sskip)
     (Ssequence
       (Ssequence
         (Sset _t'1
@@ -147,8 +151,7 @@ Definition f_kfree := {|
       (Sassign
         (Efield (Evar _kmem (Tstruct _struct_kmem noattr)) _freelist
           (tptr (Tstruct _run noattr)))
-        (Etempvar _r (tptr (Tstruct _run noattr)))))
-    Sskip))
+        (Etempvar _r (tptr (Tstruct _run noattr)))))))
 |}.
 
 Definition f_kalloc := {|
