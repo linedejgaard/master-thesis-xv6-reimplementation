@@ -132,12 +132,12 @@ Definition f_kfree := {|
                (_t'1, (tptr (Tstruct _run noattr))) :: nil);
   fn_body :=
 (Ssequence
-  (Sset _r (Ecast (Etempvar _pa (tptr tvoid)) (tptr (Tstruct _run noattr))))
+  (Sifthenelse (Eunop Onotbool (Etempvar _pa (tptr tvoid)) tint)
+    (Sreturn None)
+    Sskip)
   (Ssequence
-    (Sifthenelse (Eunop Onotbool (Etempvar _r (tptr (Tstruct _run noattr)))
-                   tint)
-      (Sreturn None)
-      Sskip)
+    (Sset _r
+      (Ecast (Etempvar _pa (tptr tvoid)) (tptr (Tstruct _run noattr))))
     (Ssequence
       (Ssequence
         (Sset _t'1

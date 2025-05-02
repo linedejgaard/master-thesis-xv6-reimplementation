@@ -13,7 +13,6 @@ Local Open Scope logic.
 
 Lemma body_kfree: semax_body KAFVprog KAFGprog f_kfree (kfree_spec' KAF_APD _kfree).
 Proof. start_function.
-forward.
 destruct (eq_dec new_head nullval).
 - forward_if.
     * forward.
@@ -22,7 +21,7 @@ destruct (eq_dec new_head nullval).
     * forward. 
     * rewrite mem_mgr_split. Intros. forward. rewrite kalloc_token_sz_split. Intros. 
     unfold t_run_size. rewrite memory_block_data_at_; auto. 
-    rewrite data_at__eq. forward. forward. 
+    rewrite data_at__eq. forward. forward. forward. 
     entailer. rewrite mem_mgr_split. refold_freelistrep. entailer!.
     right; split; auto. unfold not; auto_contradict.
     unfold t_run_size. entailer.

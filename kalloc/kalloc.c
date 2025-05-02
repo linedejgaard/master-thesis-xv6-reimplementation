@@ -13,10 +13,11 @@ struct struct_kmem { // Rocq wants it to be named
 // initializing the allocator; see kinit above.)
 void kfree(void *pa)
 {
+  if(!pa)
+    return;
+
   struct run *r;
   r = (struct run*)pa;
-  if(!r)
-    return;
   r->next = kmem.freelist;
   kmem.freelist = r;
 }
