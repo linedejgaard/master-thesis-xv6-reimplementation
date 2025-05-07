@@ -446,7 +446,7 @@ Definition KAFGprog_clients: funspecs := KAFGprog ++ [kfree_kalloc_spec].
 
 Ltac simplify_kalloc_token :=
     repeat (
-    rewrite kalloc_token_sz_split;
+    rewrite kalloc_token_sz_unfold;
     unfold type_kalloc_token
     );
 entailer!.
@@ -544,7 +544,7 @@ forward.
     * Intros ab.
     destruct ls; auto_contradict.
     forward_if.
-      -- unfold type_kalloc_token. rewrite kalloc_token_sz_split.
+      -- unfold type_kalloc_token. rewrite kalloc_token_sz_unfold.
       destruct orig_head eqn:eo; inversion H0; auto_contradict.
       assert_PROP (Ptrofs.unsigned i + PGSIZE < Ptrofs.modulus). { Intros. entailer!. }
       rewrite token_merge with (b:= b) (i:= i); auto.
@@ -555,7 +555,7 @@ forward.
       repeat forward.
       forward_call (kfree_spec_sub KAF_APD tint) (Vptr b i, gv, sh , snd ab, xx, (fst ab)). (* call kfree *)
         ++ if_tac_auto_contradict.
-            unfold type_kalloc_token. rewrite kalloc_token_sz_split. entailer!.
+            unfold type_kalloc_token. rewrite kalloc_token_sz_unfold. entailer!.
             sep_apply data_at_memory_block. 
             rewrite token_merge with (b:= b) (i:= i); auto; try rep_lia.
             rewrite <- token_merge_size with (b:= b) (i:= i) (sz:=sizeof tint); auto; try rep_lia.
@@ -656,8 +656,8 @@ forward_call (kfree_spec_sub KAF_APD t_run) (pa1, gv, sh , ls, xx, orig_head). (
                     ++ forward. Exists (fst ab) (fst ab) (snd ab). if_tac.
                         ** unfold KAF_globals. unfold type_kalloc_token. entailer!. repeat right. split; auto.
                         ** entailer.
-                    ++ Intros ab0. forward. Exists (fst ab). unfold type_kalloc_token. rewrite mem_mgr_split. 
-                        Exists (fst ab) (snd ab). if_tac_auto_contradict. Exists (fst ab0) (snd ab0). rewrite mem_mgr_split; entailer!.
+                    ++ Intros ab0. forward. Exists (fst ab). unfold type_kalloc_token. rewrite mem_mgr_unfold. 
+                        Exists (fst ab) (snd ab). if_tac_auto_contradict. Exists (fst ab0) (snd ab0). rewrite mem_mgr_unfold; entailer!.
                         repeat right; split; auto.
 - if_tac_auto_contradict. unfold KAF_globals. entailer!.
 - forward_call (kalloc_spec_sub KAF_APD t_run) (gv, sh , ls, xx, orig_head). (* kalloc *)
@@ -673,12 +673,12 @@ forward_call (kfree_spec_sub KAF_APD t_run) (pa1, gv, sh , ls, xx, orig_head). (
                     do 4 right; left; split; auto.
     * Intros ab. destruct ls; auto_contradict.  
     forward_call (kfree_spec_sub KAF_APD t_run) (pa2, gv, sh , snd ab, xx, fst ab). (* call kfree *)
-        -- if_tac_auto_contradict. unfold type_kalloc_token at 2. rewrite kalloc_token_sz_split. entailer!.
-        -- if_tac_auto_contradict. rewrite mem_mgr_split. Intros. forward_call (kalloc_spec_sub KAF_APD t_run) (gv, sh , fst ab::snd ab, xx, pa2). (* kalloc *)
-            ++ unfold type_kalloc_token. rewrite mem_mgr_split.  entailer!.
-            ++ forward. if_tac_auto_contradict. Intros ab0. Exists pa2 (fst ab0) (snd ab0). rewrite mem_mgr_split. unfold KAF_globals, type_kalloc_token. rewrite mem_mgr_split. entailer!.
+        -- if_tac_auto_contradict. unfold type_kalloc_token at 2. rewrite kalloc_token_sz_unfold. entailer!.
+        -- if_tac_auto_contradict. rewrite mem_mgr_unfold. Intros. forward_call (kalloc_spec_sub KAF_APD t_run) (gv, sh , fst ab::snd ab, xx, pa2). (* kalloc *)
+            ++ unfold type_kalloc_token. rewrite mem_mgr_unfold.  entailer!.
+            ++ forward. if_tac_auto_contradict. Intros ab0. Exists pa2 (fst ab0) (snd ab0). rewrite mem_mgr_unfold. unfold KAF_globals, type_kalloc_token. rewrite mem_mgr_unfold. entailer!.
                 do 4 right. left; split; auto.
-- if_tac_auto_contradict. unfold KAF_globals. rewrite kalloc_token_sz_split. unfold type_kalloc_token. rewrite kalloc_token_sz_split. entailer!.
+- if_tac_auto_contradict. unfold KAF_globals. rewrite kalloc_token_sz_unfold. unfold type_kalloc_token. rewrite kalloc_token_sz_unfold. entailer!.
 - if_tac_auto_contradict.
     forward_call (kalloc_spec_sub KAF_APD t_run) (gv, sh , orig_head::ls, xx, pa1). (* kalloc *)
     if_tac_auto_contradict.
@@ -770,7 +770,7 @@ forward.
     * Intros ab.
     destruct ls; auto_contradict.
     forward_if.
-      -- unfold type_kalloc_token. rewrite kalloc_token_sz_split.
+      -- unfold type_kalloc_token. rewrite kalloc_token_sz_unfold.
       destruct orig_head eqn:eo; inversion H0; auto_contradict.
       assert_PROP (Ptrofs.unsigned i + PGSIZE < Ptrofs.modulus). { Intros. entailer!. }
       rewrite token_merge with (b:= b) (i:= i); auto.
@@ -781,7 +781,7 @@ forward.
       repeat forward.
       forward_call (kfree_spec_sub KAF_APD tint) (Vptr b i, gv, sh , snd ab, xx, (fst ab)). (* call kfree *)
         ++ if_tac_auto_contradict.
-            unfold type_kalloc_token. rewrite kalloc_token_sz_split. entailer!.
+            unfold type_kalloc_token. rewrite kalloc_token_sz_unfold. entailer!.
             sep_apply data_at_memory_block. 
             rewrite token_merge with (b:= b) (i:= i); auto; try rep_lia.
             rewrite <- token_merge_size with (b:= b) (i:= i) (sz:=sizeof tint); auto; try rep_lia.
@@ -872,7 +872,7 @@ Lemma body_kfree_kfree_same_wrong_pointer': semax_body KAFVprog KAFGprog f_kfree
 Proof.
     start_function.
     Intros.
-    rewrite kalloc_token_sz_split. Intros.
+    rewrite kalloc_token_sz_unfold. Intros.
     assert (memory_block sh t_run_size pa1 = data_at_ sh t_run pa1) as HH7. {
         unfold t_run_size; rewrite memory_block_data_at_ with (sh := sh) (t:= t_run) (p:=pa1); auto.
     }

@@ -118,7 +118,7 @@ forward_call (kalloc_spec_sub KAF_APD tint) (gv, sh , ls, xx, orig_head). (* kal
     * Intros ab.
     destruct ls; auto_contradict.
       forward_if.
-        -- unfold type_kalloc_token. rewrite kalloc_token_sz_split.
+        -- unfold type_kalloc_token. rewrite kalloc_token_sz_unfold.
         destruct orig_head eqn:eo; inversion H0; auto_contradict.
         assert_PROP (Ptrofs.unsigned i + PGSIZE < Ptrofs.modulus).
         { entailer. }
@@ -145,7 +145,7 @@ forward.
         * forward_if; auto_contradict.    
     Intros ab.
       destruct ls; auto_contradict.
-        unfold type_kalloc_token. rewrite kalloc_token_sz_split. Intros.
+        unfold type_kalloc_token. rewrite kalloc_token_sz_unfold. Intros.
         forward_for_simple_bound n
         (EX i:Z,
             PROP  ()
@@ -247,7 +247,7 @@ forward_call (kalloc_spec_sub KAF_APD t_struct_pipe) (gv, sh , ls, xx, orig_head
         * rewrite H in H0; auto_contradict.
         * forward. entailer.
     + Intros ab. forward_if.
-        * rewrite mem_mgr_split, type_kalloc_token_split, kalloc_token_sz_split.
+        * rewrite mem_mgr_unfold, type_kalloc_token_split, kalloc_token_sz_unfold.
         destruct orig_head; auto_contradict.
         assert_PROP (Ptrofs.unsigned i + PGSIZE < Ptrofs.modulus) as HH11. { Intros. entailer!. }
         rewrite token_merge with (b:= b) (i:= i); auto.
@@ -260,7 +260,7 @@ forward_call (kalloc_spec_sub KAF_APD t_struct_pipe) (gv, sh , ls, xx, orig_head
         repeat forward. 
         Exists  (fst ab) (snd ab). entailer.
         unfold KAF_globals. unfold pipe_rep. Exists (fst (default_val t_struct_pipe)). entailer!.
-        rewrite mem_mgr_split.
+        rewrite mem_mgr_unfold.
         entailer!.
         * forward.
         entailer!.

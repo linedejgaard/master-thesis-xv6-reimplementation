@@ -192,7 +192,7 @@ Proof.
         + forward_call (kfree_spec_sub KAF_APD t_run) (p_tmp, gv, sh , (tmp_added_elem ++ ls), xx,curr_head). (* call kfree*)
             * if_tac; destruct H0 as [H01 [H02 [H03 [H04 H05]]]]; rewrite H04 in H1.
                 -- unfold offset_val in H1. destruct pa1; auto_contradict.
-                --unfold KAF_globals. unfold type_kalloc_token. rewrite kalloc_token_sz_split. simpl. rewrite kalloc_token_sz_split. Intros.
+                --unfold KAF_globals. unfold type_kalloc_token. rewrite kalloc_token_sz_unfold. simpl. rewrite kalloc_token_sz_unfold. Intros.
                 simpl. 
                 entailer!.
             * destruct H0 as [H01 [H02 [H03 [H04 H05]]]]; rewrite H04. unfold is_pointer_or_null.
@@ -225,7 +225,7 @@ Proof.
         +
         entailer. destruct H0 as [H01 [H02 [H03 [H04 H05]]]]; rewrite H04 in H1.
         unfold KAF_globals. rewrite H03.
-        rewrite mem_mgr_split.
+        rewrite mem_mgr_unfold.
          
         assert (i = 2); try rep_lia. rewrite H0. destruct (0 <? Z.to_nat 2)%nat eqn:ei; try rep_lia.
         * destruct H02 as [[H021 H022] | [H031 H032]]; try rep_lia.
@@ -235,7 +235,7 @@ Proof.
           unfold pages_with_head.
           destruct n eqn:en; try rep_lia.
           destruct n0 eqn:en0; try rep_lia.
-          simpl. rewrite mem_mgr_split. refold_freelistrep. entailer!. entailer!.
+          simpl. rewrite mem_mgr_unfold. refold_freelistrep. entailer!. entailer!.
           unfold PGSIZE; rep_lia.
         * rewrite Nat.ltb_ge in ei. try rep_lia.
         + destruct H0 as [H01 [H02 [H03 [H04 H05]]]].

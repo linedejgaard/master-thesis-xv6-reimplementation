@@ -35,7 +35,7 @@ Definition KAFGprog: funspecs := KAF_internal_specs.
 (* ================================================================= *)
 (** ** Lemma to unfold mem_mgr *)
 
-Lemma mem_mgr_split: 
+Lemma mem_mgr_unfold: 
  forall (gv:globals) (sh:share) (ls: list val) (xx:Z) (orig_head:val),
   mem_mgr gv sh ls xx orig_head
   = 

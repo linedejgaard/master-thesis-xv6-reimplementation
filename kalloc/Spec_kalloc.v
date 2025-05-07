@@ -186,7 +186,7 @@ Qed.
 
 Ltac simplify_kalloc_token :=
   repeat (
-    rewrite kalloc_token_sz_split;
+    rewrite kalloc_token_sz_unfold;
     unfold type_kalloc_token
   );
   entailer!.

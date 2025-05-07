@@ -55,7 +55,7 @@ Proof.
   auto. 
 Qed.
 
-Lemma kalloc_token_sz_split:
+Lemma kalloc_token_sz_unfold:
 forall  (sh: share) (n: Z) (p: val),
   kalloc_token_sz sh n p =
   !! (

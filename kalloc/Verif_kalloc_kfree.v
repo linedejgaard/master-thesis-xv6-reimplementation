@@ -19,17 +19,17 @@ destruct (eq_dec new_head nullval).
     *  rewrite e in H0; auto_contradict.
 - forward_if.
     * forward. 
-    * rewrite mem_mgr_split. Intros. forward. rewrite kalloc_token_sz_split. Intros. 
+    * rewrite mem_mgr_unfold. Intros. forward. rewrite kalloc_token_sz_unfold. Intros. 
     unfold t_run_size. rewrite memory_block_data_at_; auto. 
     rewrite data_at__eq. forward. forward. forward. 
-    entailer. rewrite mem_mgr_split. refold_freelistrep. entailer!.
+    entailer. rewrite mem_mgr_unfold. refold_freelistrep. entailer!.
     right; split; auto. unfold not; auto_contradict.
     unfold t_run_size. entailer.
 Qed.
 
 Lemma body_kalloc: semax_body KAFVprog KAFGprog f_kalloc (kalloc_spec' (KAF_APD) _kalloc).
 Proof. start_function.
-rewrite mem_mgr_split. Intros. forward.
+rewrite mem_mgr_unfold. Intros. forward.
 forward_if (
     PROP  ( )
     LOCAL (
@@ -57,13 +57,13 @@ forward_if (
         if_tac.
         * entailer.
         * Exists v ls. entailer. 
-            rewrite mem_mgr_split. entailer!.
+            rewrite mem_mgr_unfold. entailer!.
             -- destruct ls.
                 ++ left; split; auto. rewrite <- H12; auto.
                 ++ right. split; unfold not; intros; auto_contradict.
                 rewrite <- H13. auto_contradict.
-            -- rewrite kalloc_token_sz_split. entailer!. apply data_at_memory_block.
-- forward. if_tac_auto_contradict. entailer. rewrite mem_mgr_split. entailer.
+            -- rewrite kalloc_token_sz_unfold. entailer!. apply data_at_memory_block.
+- forward. if_tac_auto_contradict. entailer. rewrite mem_mgr_unfold. entailer.
 - if_tac; forward.
 Qed.
 
