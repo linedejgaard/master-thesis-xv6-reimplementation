@@ -18,7 +18,7 @@ Definition t_run_size := sizeof t_run.
 (** ** Size-based kalloc tokens *)
 
 Definition pointer_within_size_range p : Prop :=
-  (forall n : Z, (0 < n <= PGSIZE /\ ((isptr p /\ 0 < n <= PGSIZE /\ malloc_compatible (n) p)))).
+  (forall n : Z,(isptr p /\ malloc_compatible (n) p)).
 
 Definition kalloc_token_sz (sh: share) (n: Z) (p: val) : mpred :=
   !! (
@@ -47,7 +47,7 @@ Proof.
   intros. 
   unfold kalloc_token_sz. Intros. entailer. unfold pointer_within_size_range in H0.
   specialize (H0 n). entailer!.
-  destruct H0 as [HH0 [HH1 [HH2 HH3]]].
+  destruct H0 as [HH0 HH1].
   auto. 
 Qed.
 
@@ -74,8 +74,8 @@ Proof.
   - unfold kalloc_token_sz. entailer. 
      unfold pointer_within_size_range in H0. 
      specialize (H0 PGSIZE). 
-     unfold malloc_compatible in H0. destruct H0 as [H0 [HH1 [HH2 HH3]]].
-     entailer!. destruct p; auto_contradict. destruct HH3. auto.
+     unfold malloc_compatible in H0. destruct H0 as [H0 HH1].
+     entailer!. destruct p; auto_contradict. destruct HH1. auto.
   - unfold kalloc_token_sz. entailer!.
 Qed.
 
