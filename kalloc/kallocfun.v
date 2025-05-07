@@ -17,13 +17,13 @@ Definition t_run_size := sizeof t_run.
 (* ================================================================= *)
 (** ** Size-based kalloc tokens *)
 
-Definition pointer_within_size_range p : Prop :=
-  (forall n : Z,(isptr p /\ malloc_compatible (n) p)).
+Definition pointer_malloc_compatible_for_n_and_page p n: Prop :=
+  (isptr p /\ malloc_compatible (n) p /\ malloc_compatible (PGSIZE) p).
 
 Definition kalloc_token_sz (sh: share) (n: Z) (p: val) : mpred :=
   !! (
       0 < n <= PGSIZE 
-      /\ pointer_within_size_range p
+      /\ pointer_malloc_compatible_for_n_and_page p n
       /\ writable_share sh
       /\ field_compatible t_run [] p (* ensure p is compatible with the layout of t_run *)
       /\ malloc_compatible (sizeof t_run) p 
@@ -45,9 +45,9 @@ Lemma  kalloc_token_sz_local_facts :
    kalloc_token_sz sh n p |-- !! malloc_compatible n p.
 Proof.
   intros. 
-  unfold kalloc_token_sz. Intros. entailer. unfold pointer_within_size_range in H0.
-  specialize (H0 n). entailer!.
-  destruct H0 as [HH0 HH1].
+  unfold kalloc_token_sz. Intros. entailer. unfold pointer_malloc_compatible_for_n_and_page in H0.
+  entailer!. 
+  destruct H0 as [HH0 [HH1 HH2]].
   auto. 
 Qed.
 
@@ -56,7 +56,7 @@ forall  (sh: share) (n: Z) (p: val),
   kalloc_token_sz sh n p =
   !! (
       0 < n <= PGSIZE 
-      /\ pointer_within_size_range p
+      /\ pointer_malloc_compatible_for_n_and_page p n
       /\ writable_share sh
       /\ field_compatible t_run [] p (* make sure t_run fits*)
       /\ malloc_compatible (sizeof t_run) p 
@@ -72,10 +72,9 @@ forall  (sh: share) (n: Z) (p: val),
 Proof.
   intros. apply pred_ext.
   - unfold kalloc_token_sz. entailer. 
-     unfold pointer_within_size_range in H0. 
-     specialize (H0 PGSIZE). 
+     unfold pointer_malloc_compatible_for_n_and_page in H0. 
      unfold malloc_compatible in H0. destruct H0 as [H0 HH1].
-     entailer!. destruct p; auto_contradict. destruct HH1. auto.
+     entailer!. destruct p; auto_contradict. destruct HH1 as [HH11 [HH2 HH3]]. auto.
   - unfold kalloc_token_sz. entailer!.
 Qed.
 
@@ -141,13 +140,7 @@ Fixpoint freelistrep (sh: share) (il: list val) (p: val) : mpred :=
   (* The list contains the next pointer in the freelist *)
   match il with
   | next::il' =>
-      (!!(malloc_compatible (sizeof t_run) p 
-         /\ match p with
-            | Vptr _ ofs => Ptrofs.unsigned ofs + PGSIZE < Ptrofs.modulus
-            | _ => True
-            end
-         /\ pointer_within_size_range p
-        ) 
+      (!!(malloc_compatible (sizeof t_run) p ) 
       && (
         (* Ensure that at location p, there is a t_run structure with value next *)
         sepcon (sepcon (data_at sh t_run next p) 
@@ -172,7 +165,7 @@ Proof.
     + split; auto.
     + split; try lia. intros. simpl in *. auto_contradict. intros; auto_contradict.
   - unfold freelistrep. fold freelistrep. destruct p; entailer!. split.
-    + split; intros; inversion H5.
+    + split; intros; inversion H3.
     + split; intros; auto. unfold not; intros. auto_contradict.
    Qed.
 #[export] Hint Resolve freelistrep_local_prop : saturate_local.
