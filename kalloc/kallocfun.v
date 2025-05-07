@@ -28,10 +28,6 @@ Definition kalloc_token_sz (sh: share) (n: Z) (p: val) : mpred :=
       /\ field_compatible t_run [] p (* ensure p is compatible with the layout of t_run *)
       /\ malloc_compatible (sizeof t_run) p 
       /\ 0 < (sizeof t_run) <= PGSIZE 
-      /\ match p with
-         | Vptr _ ofs => Ptrofs.unsigned ofs + PGSIZE < Ptrofs.modulus
-         | _ => True (* we don't reach this, because p must be a pointer according to pointer_within_size_range *)
-         end
   ) && (
   (sepcon (memory_block sh (t_run_size) (p)) (memory_block sh (PGSIZE - t_run_size)
   (offset_val t_run_size p)))).
@@ -67,15 +63,19 @@ forall  (sh: share) (n: Z) (p: val),
       /\ 0 < (sizeof t_run) <= PGSIZE 
       /\ match p with
          | Vptr _ ofs => Ptrofs.unsigned ofs + PGSIZE < Ptrofs.modulus
-         | _ => True
+         | _ => False
          end
-      (*/\  maybe some alignment and physical address checks here *))
-  && ((*sepcon (pointer_within_size_range p) *)
+    )
+  && (
   (sepcon (memory_block sh (t_run_size) (p)) (memory_block sh (PGSIZE - t_run_size)
   (offset_val t_run_size p))) ).
 Proof.
   intros. apply pred_ext.
-  - unfold kalloc_token_sz. entailer.
+  - unfold kalloc_token_sz. entailer. 
+     unfold pointer_within_size_range in H0. 
+     specialize (H0 PGSIZE). 
+     unfold malloc_compatible in H0. destruct H0 as [H0 [HH1 [HH2 HH3]]].
+     entailer!. destruct p; auto_contradict. destruct HH3. auto.
   - unfold kalloc_token_sz. entailer!.
 Qed.
 
