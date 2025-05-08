@@ -17,21 +17,17 @@ Definition t_run_size := sizeof t_run.
 (* ================================================================= *)
 (** ** Size-based kalloc tokens *)
 
-Definition pointer_within_size_range p : Prop :=
+Definition pointer_malloc_compatible p : Prop :=
   (forall n : Z, (0 < n <= PGSIZE /\ ((isptr p /\ 0 < n <= PGSIZE /\ malloc_compatible (n) p)))).
 
 Definition kalloc_token_sz (sh: share) (n: Z) (p: val) : mpred :=
   !! (
       0 < n <= PGSIZE 
-      /\ pointer_within_size_range p
+      /\ pointer_malloc_compatible p
       /\ writable_share sh
       /\ field_compatible t_run [] p (* ensure p is compatible with the layout of t_run *)
       /\ malloc_compatible (sizeof t_run) p 
       /\ 0 < (sizeof t_run) <= PGSIZE 
-      /\ match p with
-         | Vptr _ ofs => Ptrofs.unsigned ofs + PGSIZE < Ptrofs.modulus
-         | _ => True (* we don't reach this, because p must be a pointer according to pointer_within_size_range *)
-         end
   ) && (
   (sepcon (memory_block sh (t_run_size) (p)) (memory_block sh (PGSIZE - t_run_size)
   (offset_val t_run_size p)))).
@@ -49,7 +45,7 @@ Lemma  kalloc_token_sz_local_facts :
    kalloc_token_sz sh n p |-- !! malloc_compatible n p.
 Proof.
   intros. 
-  unfold kalloc_token_sz. Intros. entailer. unfold pointer_within_size_range in H0.
+  unfold kalloc_token_sz. Intros. entailer. unfold pointer_malloc_compatible in H0.
   specialize (H0 n). entailer!.
   destruct H0 as [HH0 [HH1 [HH2 HH3]]].
   auto. 
@@ -60,7 +56,7 @@ forall  (sh: share) (n: Z) (p: val),
   kalloc_token_sz sh n p =
   !! (
       0 < n <= PGSIZE 
-      /\ pointer_within_size_range p
+      /\ pointer_malloc_compatible p
       /\ writable_share sh
       /\ field_compatible t_run [] p (* make sure t_run fits*)
       /\ malloc_compatible (sizeof t_run) p 
@@ -70,12 +66,12 @@ forall  (sh: share) (n: Z) (p: val),
          | _ => True
          end
       (*/\  maybe some alignment and physical address checks here *))
-  && ((*sepcon (pointer_within_size_range p) *)
+  && ((*sepcon (pointer_malloc_compatible p) *)
   (sepcon (memory_block sh (t_run_size) (p)) (memory_block sh (PGSIZE - t_run_size)
   (offset_val t_run_size p))) ).
 Proof.
   intros. apply pred_ext.
-  - unfold kalloc_token_sz. entailer.
+  - unfold kalloc_token_sz. entailer. unfold pointer_malloc_compatible in H0. specialize (H0 PGSIZE). unfold malloc_compatible in H0. destruct p; auto_contradict. destruct H0 as [HH0 [HH1 [HH2 [HH3 HH4]]]]. entailer!.
   - unfold kalloc_token_sz. entailer!.
 Qed.
 
@@ -146,7 +142,7 @@ Fixpoint freelistrep (sh: share) (il: list val) (p: val) : mpred :=
             | Vptr _ ofs => Ptrofs.unsigned ofs + PGSIZE < Ptrofs.modulus
             | _ => True
             end
-         /\ pointer_within_size_range p
+         /\ pointer_malloc_compatible p
         ) 
       && (
         (* Ensure that at location p, there is a t_run structure with value next *)
