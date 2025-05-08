@@ -59,10 +59,11 @@ forward_if (
         * Exists v ls. entailer. 
             rewrite mem_mgr_unfold. entailer!.
             -- destruct ls.
-                ++ left; split; auto. rewrite <- H12; auto.
+                ++ left; split; auto. rewrite <- H11; auto.
                 ++ right. split; unfold not; intros; auto_contradict.
-                rewrite <- H13. auto_contradict.
-            -- rewrite kalloc_token_sz_unfold. entailer!. apply data_at_memory_block.
+                rewrite <- H12. auto_contradict.
+            -- rewrite kalloc_token_sz_unfold. entailer!. safe_to_store_PGSIZE H3 orig_head. 
+                apply data_at_memory_block.
 - forward. if_tac_auto_contradict. entailer. rewrite mem_mgr_unfold. entailer.
 - if_tac; forward.
 Qed.

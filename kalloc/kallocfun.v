@@ -63,7 +63,7 @@ forall  (sh: share) (n: Z) (p: val),
       /\ 0 < (sizeof t_run) <= PGSIZE 
       /\ match p with
          | Vptr _ ofs => Ptrofs.unsigned ofs + PGSIZE < Ptrofs.modulus
-         | _ => True
+         | _ => False
          end
       (*/\  maybe some alignment and physical address checks here *))
   && ((*sepcon (pointer_malloc_compatible p) *)
@@ -132,16 +132,11 @@ Qed.
 (* ================================================================= *)
 (** ** Defining freelistrep *)
 
-(* NOTE: assume PGSIZE is greater than sizeof t_run *)
 Fixpoint freelistrep (sh: share) (il: list val) (p: val) : mpred := 
   (* The list contains the next pointer in the freelist *)
   match il with
   | next::il' =>
       (!!(malloc_compatible (sizeof t_run) p 
-         /\ match p with
-            | Vptr _ ofs => Ptrofs.unsigned ofs + PGSIZE < Ptrofs.modulus
-            | _ => True
-            end
          /\ pointer_malloc_compatible p
         ) 
       && (
@@ -168,7 +163,7 @@ Proof.
     + split; auto.
     + split; try lia. intros. simpl in *. auto_contradict. intros; auto_contradict.
   - unfold freelistrep. fold freelistrep. destruct p; entailer!. split.
-    + split; intros; inversion H5.
+    + split; intros; inversion H4.
     + split; intros; auto. unfold not; intros. auto_contradict.
    Qed.
 #[export] Hint Resolve freelistrep_local_prop : saturate_local.
@@ -188,6 +183,10 @@ Ltac refold_freelistrep :=
   unfold freelistrep;
   fold freelistrep.
 
-Definition freelistrep_safe sh il p :=
-  !! NoDup il && freelistrep sh il p.
+Ltac safe_to_store_PGSIZE H p :=
+  unfold pointer_malloc_compatible in H;
+  specialize (H PGSIZE);
+  destruct H as [Hyp1 [Hyp2 [Hyp3 H]]];
+  unfold malloc_compatible in H;
+  destruct p; auto_contradict; destruct H; auto.
 
