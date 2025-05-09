@@ -18,7 +18,7 @@ Definition t_run_size := sizeof t_run.
 (** ** Size-based kalloc tokens *)
 
 Definition pointer_malloc_compatible p : Prop :=
-  (forall n : Z, (0 < n <= PGSIZE /\ ((isptr p /\ 0 < n <= PGSIZE /\ malloc_compatible (n) p)))).
+  (forall n : Z, ((isptr p /\ malloc_compatible (n) p))).
 
 Definition kalloc_token_sz (sh: share) (n: Z) (p: val) : mpred :=
   !! (
@@ -47,9 +47,16 @@ Proof.
   intros. 
   unfold kalloc_token_sz. Intros. entailer. unfold pointer_malloc_compatible in H0.
   specialize (H0 n). entailer!.
-  destruct H0 as [HH0 [HH1 [HH2 HH3]]].
+  destruct H0 as [HH0 HH3].
   auto. 
 Qed.
+
+Ltac safe_to_store_PGSIZE H p :=
+  unfold pointer_malloc_compatible in H;
+  specialize (H PGSIZE);
+  destruct H as [Hyp1 H];
+  unfold malloc_compatible in H;
+  destruct p; auto_contradict; destruct H; auto.
 
 Lemma kalloc_token_sz_unfold:
 forall  (sh: share) (n: Z) (p: val),
@@ -71,7 +78,7 @@ forall  (sh: share) (n: Z) (p: val),
   (offset_val t_run_size p))) ).
 Proof.
   intros. apply pred_ext.
-  - unfold kalloc_token_sz. entailer. unfold pointer_malloc_compatible in H0. specialize (H0 PGSIZE). unfold malloc_compatible in H0. destruct p; auto_contradict. destruct H0 as [HH0 [HH1 [HH2 [HH3 HH4]]]]. entailer!.
+  - unfold kalloc_token_sz. entailer. safe_to_store_PGSIZE H0 p. entailer!.
   - unfold kalloc_token_sz. entailer!.
 Qed.
 
@@ -183,10 +190,5 @@ Ltac refold_freelistrep :=
   unfold freelistrep;
   fold freelistrep.
 
-Ltac safe_to_store_PGSIZE H p :=
-  unfold pointer_malloc_compatible in H;
-  specialize (H PGSIZE);
-  destruct H as [Hyp1 [Hyp2 [Hyp3 H]]];
-  unfold malloc_compatible in H;
-  destruct p; auto_contradict; destruct H; auto.
+
 
