@@ -161,7 +161,7 @@ forward.
                     KAF_globals gv sh ls xx v
                 )
                 )
-            )%assert;destruct H as [HH1 HH2]; destruct HH2 as [HH2 HH3].
+            )%assert; destruct H as [HH1 HH2]; destruct HH2 as [HH2 HH3].
         ++ unfold tarray in HH3. rewrite sizeof_Tarray in HH3.
         assert (Z.max 0 n <= PGSIZE / (sizeof tint)). {  apply Zdiv_le_lower_bound. simpl; try rep_lia. auto. rewrite Z.mul_comm. auto. }
         assert (n <= PGSIZE / (sizeof tint)); try rep_lia. apply (Z.le_trans) with (PGSIZE / sizeof tint); try rep_lia.
@@ -218,7 +218,7 @@ forward.
         ++ forward. (* the loop invariant (and negation of the loop condition) is a strong enough precondition to proceed and complete the proof after the loop. *)
         Exists orig_head v ls. entailer!. unfold tmp_array_42_rep, array_42_rep. 
         replace (n - n) with 0; try rep_lia. 
-        rewrite Zrepeat_0, app_nil_r. entailer!.
+        rewrite Zrepeat_0, app_nil_r. entailer.
 Qed.
 
 Lemma body_kalloc_int_array_fail: semax_body KAFVprog KAFGprog f_kalloc_int_array kalloc_int_array_spec_fail.
