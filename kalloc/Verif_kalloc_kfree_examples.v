@@ -359,24 +359,6 @@ Definition kfree_kfree_kalloc_spec :=
                 else both_is_pointers_case
         ).
 
-Definition kalloc_write_42_kfree_kfree_spec : ident * funspec :=
-    DECLARE _kalloc_write_42_kfree_kfree
-    WITH sh : share, orig_head:val, xx:Z, ls:list val, gv:globals
-    PRE [ ] 
-        PROP () PARAMS() GLOBALS(gv) 
-        SEP (KAF_globals gv sh ls xx orig_head )
-    POST [ tint ] 
-        EX r,
-        PROP ( ) RETURN (r) SEP (
-            (if eq_dec orig_head nullval then
-                (!! (r = Vint (Int.repr 0)) &&
-                KAF_globals gv sh ls xx orig_head)
-            else
-                (!! ( r = Vint (Int.repr 42) ) &&
-                KAF_globals gv sh ls xx orig_head)
-            )
-        ).
-
 Definition kfree_kfree_kalloc_kalloc_spec := 
     DECLARE _kfree_kfree_kalloc_kalloc
     WITH sh : share, pa1:val, pa2:val, orig_head:val, xx:Z, gv:globals, ls : list val, next:val
@@ -749,47 +731,6 @@ forward_call (kfree_spec_sub KAF_APD t_run) (pa2, gv, sh , orig_head::ls, xx,pa1
     forward. Exists pa2. unfold KAF_globals, type_kalloc_token. entailer!.
     inversion H6.
     entailer.
-Qed.
-        
-
-Lemma body_kalloc_write_42_kfree_kfree: semax_body KAFVprog KAFGprog f_kalloc_write_42_kfree_kfree kalloc_write_42_kfree_kfree_spec.
-Proof.
-start_function.
-Intros.
-forward.
-- forward_call (kalloc_spec_sub KAF_APD tint) (gv, sh , ls, xx, orig_head ). (* kalloc *)
-+ unfold KAF_globals. entailer!.
-+ if_tac_auto_contradict.
-    * forward_if.
-        -- rewrite H in H0; auto_contradict.
-        -- forward_call (kfree_spec_sub KAF_APD t_run) (orig_head, gv, sh , ls, xx,orig_head). (* call kfree*)
-        ++ if_tac_auto_contradict. entailer!.
-        ++ rewrite H. simpl. auto.
-        ++ if_tac_auto_contradict. 
-        forward. Exists (Vint(Int.repr 0)). entailer.
-    * Intros ab.
-    destruct ls; auto_contradict.
-    forward_if.
-      -- unfold type_kalloc_token. rewrite kalloc_token_sz_unfold.
-      destruct orig_head eqn:eo; inversion H0; auto_contradict.
-      assert_PROP (Ptrofs.unsigned i + PGSIZE < Ptrofs.modulus). { Intros. entailer!. }
-      rewrite token_merge with (b:= b) (i:= i); auto.
-      2: { try rep_lia. }
-      Intros.
-      rewrite <- token_merge_size with (b:= b) (i:= i) (sz:=sizeof tint); auto; try rep_lia.
-      rewrite memory_block_data_at_; auto. rewrite data_at__eq. Intros.
-      repeat forward.
-      forward_call (kfree_spec_sub KAF_APD tint) (Vptr b i, gv, sh , snd ab, xx, (fst ab)). (* call kfree *)
-        ++ if_tac_auto_contradict.
-            unfold type_kalloc_token. rewrite kalloc_token_sz_unfold. entailer!.
-            sep_apply data_at_memory_block. 
-            rewrite token_merge with (b:= b) (i:= i); auto; try rep_lia.
-            rewrite <- token_merge_size with (b:= b) (i:= i) (sz:=sizeof tint); auto; try rep_lia.
-            entailer!.
-        ++ if_tac_auto_contradict.
-        forward. Exists (Vint (Int.repr 42)). unfold KAF_globals. entailer.
-      --  forward_call (kfree_spec_sub KAF_APD tint) (orig_head, gv, sh , snd ab, xx, (fst ab)); if_tac_auto_contradict. (* call kfree *)
-            Unshelve. rewrite H1 in H. auto_contradict.
 Qed.
 
 

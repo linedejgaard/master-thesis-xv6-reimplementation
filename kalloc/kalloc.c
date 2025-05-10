@@ -117,20 +117,6 @@ int kalloc_write_42_kfree(void) {
   return 0;
 }
 
-int kalloc_write_42_kfree_kfree(void) {
-  int *pa;
-  pa = 0;
-  pa = (int*)kalloc();           // cast to int pointer
-  if (pa) {
-    *pa = 42;
-    int X = *pa;
-    kfree(pa);
-    return X;
-  }
-  kfree(pa); // make sure it is free and we are back to scratch
-  return 0;
-}
-
 void *kfree_kalloc_twice(void *pa1, void *pa2) {
   kfree_kalloc(pa1);
   return kfree_kalloc(pa2);
