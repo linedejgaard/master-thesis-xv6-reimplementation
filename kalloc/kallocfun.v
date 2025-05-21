@@ -189,6 +189,3 @@ Qed.
 Ltac refold_freelistrep :=
   unfold freelistrep;
   fold freelistrep.
-
-
-

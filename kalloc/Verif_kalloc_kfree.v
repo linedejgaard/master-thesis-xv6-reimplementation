@@ -67,6 +67,3 @@ forward_if (
 - forward. if_tac_auto_contradict. entailer. rewrite mem_mgr_unfold. entailer.
 - if_tac; forward.
 Qed.
-
-
-

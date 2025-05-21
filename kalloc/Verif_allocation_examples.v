@@ -216,7 +216,7 @@ forward.
         rewrite HH21; auto.
         ** rewrite Zlength_app. rewrite array_42_length. rewrite Zlength_Zrepeat; try rep_lia.
         ++ forward. (* the loop invariant (and negation of the loop condition) is a strong enough precondition to proceed and complete the proof after the loop. *)
-        Exists orig_head v ls. entailer!. unfold tmp_array_42_rep, array_42_rep. 
+        Exists orig_head v ls. entailer. unfold tmp_array_42_rep, array_42_rep. 
         replace (n - n) with 0; try rep_lia. 
         rewrite Zrepeat_0, app_nil_r. entailer.
 Qed.
@@ -263,5 +263,5 @@ forward_call (kalloc_spec_sub KAF_APD t_struct_pipe) (gv, sh , ls, xx, orig_head
         rewrite mem_mgr_unfold.
         entailer!.
         * forward.
-        entailer!.
+        entailer.
 Qed.

@@ -7,10 +7,10 @@ struct struct_kmem { // Rocq wants it to be named
   struct run *freelist; 
 } kmem;
 
-// Free the page of physical memory pointed at by pa,
-// which normally should have been returned by a
-// call to kalloc().  (The exception is when
-// initializing the allocator; see kinit above.)
+// Adapted from the original xv6 implementation:
+// Frees the physical memory page pointed to by 'pa'.
+// This pointer should typically come from a prior call to kalloc(),
+// except during allocator initialization (see kinit in xv6).
 void kfree(void *pa)
 {
   struct run *r;
@@ -22,9 +22,10 @@ void kfree(void *pa)
   r->next = kmem.freelist;
   kmem.freelist = r;
 }
-// Allocate one 4096-byte page of physical memory.
-// Returns a pointer that the kernel can use.
-// Returns 0 if the memory cannot be allocated.
+
+// Adapted from the original xv6 implementation:
+// Allocates one 4096-byte page of physical memory.
+// Returns a pointer usable by the kernel, or 0 if allocation fails.
 void *kalloc(void)
 {
   struct run *r;
@@ -179,7 +180,3 @@ void* kfree_loop_kalloc(void *pa_start, int n) {
   kfree_loop(pa_start, n);
   return kalloc();
 }
-
-
-
-

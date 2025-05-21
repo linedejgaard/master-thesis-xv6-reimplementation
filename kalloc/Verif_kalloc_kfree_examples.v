@@ -771,7 +771,7 @@ forward_call (kfree_spec_sub KAF_APD t_run) (pa1, gv, sh , ls, xx, orig_head). (
     + unfold type_kalloc_token. entailer!. 
 - if_tac_auto_contradict. rewrite H0 in H. auto_contradict.
     forward_call (kfree_spec_sub KAF_APD t_run) (pa1, gv, sh , orig_head::ls, xx, pa1).
-    +  if_tac_auto_contradict. (*rewrite H2 in H0; auto_contradict.*)
+    +  if_tac_auto_contradict.
     unfold type_kalloc_token.
     entailer!.
     + if_tac_auto_contradict.
